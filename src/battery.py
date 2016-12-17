@@ -3,7 +3,7 @@
 
 # File:     battery.py
 # Purpose:  Battery-related classes
-# Author:   Ryan Adams
+# Author:   Ryan Adams (@ninetimeout)
 # Date:     2016-Dec-16
 
 from power import PowerSource
