@@ -54,7 +54,7 @@ if __name__ == "__main__":
     import argparse
     import datetime
     
-    parser = argparse.ArgumentParser(description="Battery code and demonstrator")
+    parser = argparse.ArgumentParser(description="Battery class and drain simulation utility")
     parser.add_argument('-s', '--fixed_timestep_usec', help="Timestep of the simulation in microseconds", required=False)
     parser.add_argument('-n', '--n_records', help="Number of records to generate", required=False)
     parser.add_argument('-c', '--capacity_amp_hrs', help="Capacity of the battery in amp-hours", required=False)
