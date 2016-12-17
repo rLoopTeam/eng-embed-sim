@@ -6,17 +6,12 @@ class BrakeModel:
     """
     
     def __init__(self):
-        power = None  # Should be a power object
-        motor = None
+        self.actuators = {}
+        self.sensors = {}
         
-
-
-# Usage:
-"""
-
-pod.brakes['left'].power.draw(dt)
-
-
-
-
-"""
+    def add_actuator(self, name, actuator):
+        pass
+        
+    def add_sensor(self, name, sensor):
+        pass
+        

@@ -47,8 +47,8 @@ echo "Installing Anaconda in $ANACONDA_PREFIX"
 # NOTE: RUN THESE COMMANDS MANUALLY
 #alias conda="$SCRIPT_PATH/anaconda/bin/conda"
 #conda update conda
-#conda create -n venv python=2.7 anaconda
-#source ./anaconda/envs/venv/bin/activate
+#conda create python=2.7 anaconda --prefix "$SCRIPT_PATH/venv" -y
+#source ./venv/bin/activate
 # @todo: Figure out how to change the prompt (it's currently "(root)")
 
 

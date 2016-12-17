@@ -8,7 +8,7 @@
 
 from power import PowerSource
 
-# @todo: specify values for configuration -- should be able to be taken from a battery data sheet?
+# @todo: specify values for battery configuration -- should be able to be taken from a battery data sheet?
 
 class Battery(PowerSource):
     
