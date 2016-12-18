@@ -6,6 +6,8 @@
 # Author:   Ryan Adams (@ninetimeout)
 # Date:     2016-Dec-16
 
+# NOTE: Please add your name to 'Author:' if you work on this file. Thanks!
+
 from power import PowerSource
 
 # @todo: specify values for battery configuration -- should be able to be taken from a battery data sheet?
@@ -56,11 +58,11 @@ if __name__ == "__main__":
     
     parser = argparse.ArgumentParser(description="Battery class and drain simulation utility")
     parser.add_argument('-s', '--fixed_timestep_usec', help="Timestep of the simulation in microseconds", required=False)
-    parser.add_argument('-n', '--n_records', help="Number of records to generate", required=False)
     parser.add_argument('-c', '--capacity_amp_hrs', help="Capacity of the battery in amp-hours", required=False)
     parser.add_argument('-i', '--initial_charge_amp_hrs', help="Initial charge of the battery in amp-hours", required=False)
     parser.add_argument('-a', '--max_amps', help="Maximum amperage that can be supplied by the battery", required=False)
     parser.add_argument('-d', '--drain_amps', help="Rate to drain the battery (amps?)", required=False)
+    parser.add_argument('-n', '--n_records', help="Number of records to generate", default=1000, required=False)
     args = parser.parse_args()
     
     battery_config = {
@@ -78,7 +80,7 @@ if __name__ == "__main__":
     
     # test simulation
     print "{},{},{},{}".format("t_usec","charge_amp_hrs","charge_pct","processing_usec") # Header
-    for i in xrange(int(args.n_records) or 1000):
+    for i in xrange(int(args.n_records)):
         t = i * fixed_timestep_usec
         start = datetime.datetime.now()
         b.drain(drain_amps, fixed_timestep_usec)
