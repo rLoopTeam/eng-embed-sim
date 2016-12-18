@@ -7,9 +7,14 @@
 # Author:   Ryan Adams (@ninetimeout)
 # Date:     2016-Dec-17
 
+# NOTE: Please add your name to 'Author:' if you work on this file. Thanks!
+
+
 # Sketch of the environment model
 
 # What units to use for pressure? Atm/sec? Pascals/s? Probably want to standardize on SI...
+
+from heat import *
 
 class Environment: 
     """ Model of the environment. Acts as a heat sink (and heat source?), maybe among other things """
@@ -29,3 +34,5 @@ class Environment:
         # Note: rate can be positive or negative. 
         self.pressure_in_appropriate_units -= rate * dt_usec * 1000000 # Assuming rate is [something] per second
         self.heat_sink.sink_rate = # (some calculation based on our pressure -- sink rate reduces as pressure decreases. Just needs to be approximate)
+        
+        

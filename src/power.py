@@ -1,4 +1,13 @@
 #!/usr/bin/env python
+# coding=UTF-8
+
+# File:     battery.py
+# Purpose:  Battery-related classes
+# Author:   Ryan Adams (@ninetimeout)
+# Date:     2016-Dec-16
+
+# NOTE: Please add your name to 'Author:' if you work on this file. Thanks!
+
 
 # @todo: complete this
 
@@ -34,8 +43,10 @@ class PowerSource:
         # @todo: Throw a fault if we're drawing too much power? 
         pass
 
-        
-    
 
-        
+class PowerConnection:  # ?
+    
+    def __init__(self, source, sink, parameters):
+        pass
+    
     
