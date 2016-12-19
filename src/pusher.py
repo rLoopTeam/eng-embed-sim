@@ -15,7 +15,8 @@ from __future__ import division
 class Pusher:
     
     def __init__(self, acceleration=0, velocity=0, position=0):
-        # Volatile variables
+
+        # Actual position (volatile variables)
         self.acceleration = acceleration  # meters per second ^2
         self.velocity = velocity          # meters per second
         self.position = position          # meters
