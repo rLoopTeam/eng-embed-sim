@@ -15,14 +15,24 @@ from __future__ import division
 class Pusher:
     
     def __init__(self, acceleration=0, velocity=0, position=0):
+        # Volatile variables
         self.acceleration = acceleration  # meters per second ^2
         self.velocity = velocity          # meters per second
         self.position = position          # meters
         
-        print self.__dict__
+        # State Machine (HOLD, PUSH, COAST, BRAKE)
+        self.state = 'INIT'
+        self.coast_timer = 0
         
-    def push(self, acceleration, dt_usec):
-        self.acceleration = acceleration
+        # Configuration (these are defaults -- you can also set these directly at some later point)
+        self.push_accel = 9.8             # meters per second ^2
+        self.max_velocity = 150.0         # meters per second
+        self.coast_time_usec = 2000000    # microseconds
+        self.brake_accel = -14.7          # meters per second ^2
+        
+    def update(self, dt_usec):
+        """ Update position and velocity based on current acceleration """
+        
         t_sec = dt_usec / 1000000
         
         # v*t + 1/2*a*t^2
@@ -31,17 +41,45 @@ class Pusher:
         # vf = v0 + at
         self.velocity = self.velocity + self.acceleration * t_sec
 
-    def coast(self, dt_usec):
-        self.acceleration = 0
-        # Not much else to do
-        
-    def brake(self, acceleration, dt_usec):
-        # We'll just use a negative 'push'
-        self.push(acceleration, dt_usec)
+
+    # -------------------------
+    # Simulation methods
+    # -------------------------
 
     def step(self, dt_usec):
         """ Handle the pusher state machine and simulation interactions """
-        pass
+
+        if self.state == "HOLD":
+            pass
+        elif self.state == "PUSH":
+            if self.velocity < self.max_velocity:
+                self.acceleration = self.push_accel
+            else:
+                self.acceleration = 0.0
+                self.state = "COAST"
+        elif self.state == "COAST":
+            if self.coast_timer > self.coast_time_usec:
+                self.state = "BRAKE"
+                self.coast_timer = 0
+            else:
+                self.coast_timer += dt_usec
+        elif self.state == "BRAKE":
+            if self.velocity >= 0.0:
+                self.acceleration = self.brake_accel
+            else:
+                self.acceleration = 0.0
+                self.velocity = 0.0  # In case we overshot due to resolution
+                self.state = "HOLD"
+                
+        self.update(dt_usec)
+
+    # -------------------------
+    # Control hooks
+    # -------------------------
+    
+    def start_push(self):
+        self.state = "PUSH"
+    
 
 
 if __name__ == "__main__":
@@ -59,16 +97,19 @@ if __name__ == "__main__":
     parser.add_argument('-n', '--n_records', help="Number of records to generate", default=1001, required=False)
 
     args = parser.parse_args()
-    pusher = Pusher(args.acceleration, args.velocity, args.position)
+    pusher = Pusher(float(args.acceleration), float(args.velocity), float(args.position))
 
     # Simulation settings
     fixed_timestep_usec = int(args.fixed_timestep_usec)
     
-    # test simulation -- just outputs a constant acceleration of 1g
+    # Start pushing right at the beginning. Could set up a wait before it, but not right now
+    pusher.start_push()
+    
+    # test simulation -- Does a push/coast/brake cycle 
     print "{},{},{},{},{}".format("t_usec","acceleration","velocity","position","processing_usec") # Header
     for i in xrange(int(args.n_records)):
         t = i * fixed_timestep_usec  # Note: need to offset -- what we're printing is *after* the step
         start = datetime.datetime.now()
         duration_usec = datetime.datetime.now() - start
         print "{},{},{},{},{}".format(t, pusher.acceleration, pusher.velocity, pusher.position, duration_usec.microseconds)        
-        pusher.push(9.8, fixed_timestep_usec)
+        pusher.step(fixed_timestep_usec)
