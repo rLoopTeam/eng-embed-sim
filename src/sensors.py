@@ -46,5 +46,5 @@ class Accelerometer:
         
     def create_sample(self):
         pass
-        # sample = self.pod.acceleration + fuzzing
+        # sample = self.pod.acceleration + fuzzing?
         # return (x, y, z)
