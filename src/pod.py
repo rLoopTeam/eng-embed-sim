@@ -21,8 +21,16 @@ class Pod:
         # Actual physical values (volatile variables)
         self.acceleration = acceleration  # meters per second ^2
         self.velocity = velocity          # meters per second
-        self.position = position          # meters
+        self.position = position          # meters. Position relative to the tube (?) No, we want to handle reference frames elsewhere
+        self.tube_position = None         # Meters. This starts as the distance to the end of the tube (e.g. -4200m)
 
+        # Distance from the pod center of mass to the back of the pusher plate
+        self.pusher_plate_com_offset = -2.1  # meters, pod reference frame @todo: what's the actual x distance from the pusher plate to center of mass?
+        
+        # Distance from the pusher to the back of the pusher plate when it disconnects (there's a lever that extends over the pusher rod)
+        self.pusher_disconnect_length = 0.12 # meters @todo: what's the actual distance? 
+        
+        """ Sketch:
         # Pod components
         self.fcu = FcuModel()
 
@@ -39,7 +47,7 @@ class Pod:
             'brake_l': BrakeModel(self),
             'brake_r': BrakeModel(self)
         }
-    
+        """
 
     # -------------------------
     # Simulation methods
@@ -51,7 +59,16 @@ class Pod:
     def step(self, dt_usec):
         pass
         
-        
+    
+    # -------------------------
+    # Physical methods
+    # -------------------------
+    def attach_pusher(self, pusher):
+        self.pusher = pusher
+        self.pusher.position = self.position - self.pusher_plate_com_offset  # relative to pod
+        self.BRAKE_MECH_INTERLOCK = True  # @todo: move this into a brakes structure? Maybe in FCU? Maybe this just tracks the physical...    
+    
+    
     # -------------------------
     # State machine helpers
     # -------------------------
