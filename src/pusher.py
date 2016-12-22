@@ -14,11 +14,11 @@ from __future__ import division
 
 class Pusher:
     
-    def __init__(self, acceleration=0, velocity=0, position=0):
+    def __init__(self, position=0):
 
         # Actual position (volatile variables) - pod reference frame
-        self.acceleration = acceleration  # meters per second ^2
-        self.velocity = velocity          # meters per second
+        self.acceleration = 0             # meters per second ^2
+        self.velocity = 0                 # meters per second
         self.position = position          # meters
                 
         # State Machine (HOLD, PUSH, COAST, BRAKE)
@@ -30,7 +30,6 @@ class Pusher:
         self.max_velocity = 150.0         # meters per second
         self.coast_time_usec = 2000000    # microseconds
         self.brake_accel = -14.7          # meters per second ^2
-        
         
     def update_physical(self, dt_usec):
         """ Update position and velocity based on current acceleration """
@@ -91,23 +90,31 @@ class Pusher:
         self.state = "PUSH"
     
 
-
 if __name__ == "__main__":
 
     import argparse
     import datetime
     
+    # Command line parsing
     parser = argparse.ArgumentParser(description="Battery class and drain simulation utility")
     parser.add_argument('-s', '--fixed_timestep_usec', help="Timestep of the simulation in microseconds", default=100000, required=False)
-    parser.add_argument('-a', '--acceleration', help="Acceleration in m/s^2", default=0, required=False)
-    parser.add_argument('-v', '--velocity', help="Initial velocity in m/s", default=0, required=False)
     parser.add_argument('-p', '--position', help="Initial position in meters", default=0, required=False)
-    
-    # For testing purposes only -- change over to generate as many as needed based on conditions
-    parser.add_argument('-n', '--n_records', help="Number of records to generate", default=1001, required=False)
 
+    parser.add_argument('-a', '--acceleration', help="Acceleration during push in m/s^2 (e.g. 9.8 = 1G)", default=9.8, required=False)
+    parser.add_argument('-c', '--coast', help="Coast time in microseconds", default=1000000, required=False)
+    parser.add_argument('-b', '--brake', help="Acceleration during braking in m/s^2 (e.g. -14.7 = 1.5G)", default=-14.7, required=False)
+    parser.add_argument('-m', '--max_v', help="Maximum push velocity in m/s", default=150, required=False)
+    # @todo: For testing purposes only -- change over to generate as many as needed based on conditions if not provided
+    parser.add_argument('-n', '--n_records', help="Number of records to generate", default=1001, required=False)
     args = parser.parse_args()
-    pusher = Pusher(float(args.acceleration), float(args.velocity), float(args.position))
+    
+    # Pusher setup
+    pusher = Pusher(float(args.position))
+    
+    pusher.push_accel = float(args.acceleration)
+    pusher.coast_time_usec = float(args.coast)
+    pusher.brake_accel = float(args.brake)
+    pusher.max_velocity = float(args.max_v)
 
     # Simulation settings
     fixed_timestep_usec = int(args.fixed_timestep_usec)
