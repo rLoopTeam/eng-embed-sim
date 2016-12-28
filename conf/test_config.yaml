@@ -1,0 +1,51 @@
+---
+sim:
+    fixed_timestep: 1000 usec
+    tube:
+        length: 1500 m
+        ambient_pressure: 14.7 psi  # need to convert to pascals, or use units (e.g. 14.7 psi)
+        pumpdown_pressure: .125 psi
+        pumpdown_air_density: 
+    pod:
+        mass: 350 kg
+        drag_area: 800 in^2
+        drag_coefficient: 1.1
+        air_density: 0.1841 kg / m^3  # see http://www.engineeringtoolbox.com/standard-atmosphere-d_604.html, 30000m (this is a WAG)
+        sensors:
+            CONTRAST_1: 
+                pod_ref_x_offset: -0.5m
+            CONTRAST_2:
+                pod_ref_x_offset: -0.7m
+            CONTRAST_3:
+                pod_ref_x_offset: -0.9m                
+            LASER_DIST:
+                pod_ref_x_offset: 0.8m    
+            ACCEL_1:
+                # The accelerometer is not going to be perfectly zeroed, so let's give it a bit of an initial error that will need to be mathematically corrected
+                mount_roll:
+                mount_pitch: 
+                mount_yaw:  
+        actuators:
+            lgu_actuators:  "Should be a list or something"
+        physical:
+            nose_tip_offset: 1.0m
+            pusher_plate_offset: -2.9m
+        brakes:
+            BRAKE_L:
+                sensors: pass
+                actuators: pass
+            BRAKE_R:
+                sensors: pass
+                actuators: pass
+        landing_gear:
+            LG_FL: pass
+            LG_FR: pass
+            LG_RL: pass
+            LG_RR: pass            
+    pusher:
+        push_force: 8000 N
+        max_velocity: 150.0 m/s
+        coast_time_usec: 1000000 usec
+        brake_force: -8000 N   # Doesn't really matter, just needs to be big and negative
+        
+        

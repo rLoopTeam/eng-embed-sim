@@ -14,11 +14,51 @@
 
 from collections import deque
 
-class LaserDistanceSensor:
+class BaseSensor:
+    """ Base sensor class. """
     
+    """
+    Note: Sensors will need inputs from the outside world -- sensors will need to 'sample' the world. 
+          - How do we connect a sensor to what it needs to measure? In the constructor? 
+          - Probably want an id as well for logging purposes.
+    
+    
+    """
+
     def __init__(self):
-        pass
+
+        # Sensor value access
+        self.fifo = deque()
         
+        # Configuration
+        self.sampling_rate_hz = 0
+
+        # Internal handling
+        self.__sample_overflow = 0.0
+    
+    def create_sample(self):
+        """ Create a single measurement and return it. """
+        pass
+    
+    def step(self, dt_usec):
+        """ Fill the queue with values based on the amount of time that's passed """
+        # Add samples to the buffer based on how much time has passed and our sampling rate
+        n_samples = self.__sample_overflow + self.sampling_rate_hz * dt_usec / 1000000.0
+        self.__sample_overflow = n_samples - int(n_samples)  # Save off the remainder
+        n_samples = int(n_samples)  # Discard the remainder
+                
+        for i in xrange(n_samples):
+            self.fifo.appendleft(self.create_sample())        
+
+
+import random
+
+class LaserDistanceSensor(BaseSensor):
+    
+    def create_sample(self):
+        # @todo: fix this up
+        return 18.3 + random.random() * 0.01
+                
         
 class Accelerometer:
     
@@ -42,9 +82,20 @@ class Accelerometer:
         n_samples = int(n_samples)  # Discard the remainder
         
         for i in xrange(n_samples):
-            self.fifo.push(self.create_sample())
+            self.fifo.pushleft(self.create_sample())
         
     def create_sample(self):
         pass
         # sample = self.pod.acceleration + fuzzing?
         # return (x, y, z)
+        
+        
+if __name__ == "__main__":
+    
+    dt_usec = 100002
+    sensor = LaserDistanceSensor()
+    sensor.sampling_rate_hz = 200
+    for i in xrange(10):
+        sensor.step(dt_usec)
+        print len(sensor.fifo)
+    

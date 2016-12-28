@@ -11,24 +11,50 @@
 # Note: all units are SI: meters/s^2, meters/s, and meters. Time is in microseconds (?)
 
 from __future__ import division
-
+import logging
+from units import Units
 from brakes import *
+
+class PodComponent:
+    def __init__(self, name, type, location, sim_obj):
+        self.name = name
+        self.type = component_type
+        self.pod_location_ref = None  # A vector from the physical location of the component to the pod reference point. In this sim, probably just the x component of that vector
+        self.sim_obj = sim_obj  # A steppable object (e.g. sensor, actuator, physical component)
+        
 
 class Pod:
     
-    def __init__(self, acceleration=0, velocity=0, position=0):
+    def __init__(self, sim, config):
 
-        # Actual physical values (volatile variables)
-        self.acceleration = acceleration  # meters per second ^2
-        self.velocity = velocity          # meters per second
-        self.position = position          # meters. Position relative to the tube (?) No, we want to handle reference frames elsewhere
-        self.tube_position = None         # Meters. This starts as the distance to the end of the tube (e.g. -4200m)
+        self.logger = logging.getLogger("Pod")
+        self.logger.info("Initializing pod")
 
-        # Distance from the pod center of mass to the back of the pusher plate
-        self.pusher_plate_com_offset = -2.1  # meters, pod reference frame @todo: what's the actual x distance from the pusher plate to center of mass?
+        self.sim = sim
+        self.config = config
+
+        # Pod physical properties
+        # *** NOTE: all distances are in the tube reference frame, origin is pod location reference (centerpoint of fwd crossbar).  +x is forward, +y is left, +z is up.
+        # @see http://confluence.rloop.org/display/SD/2.+Determine+Pod+Kinematics
+
+        self.mass = Units.SI(self.config.mass)
+        print "Config mass: " + str(self.config.mass)
+
+        # Forces that can act on the pod (note: these are cleared at the end of each step)        
+        self.net_force = 0  # This will change, and may affect acceleration
+
+        # Actual physical values (volatile variables). All refer to action in the x dimension only. 
+        self.acceleration = 0.0      # meters per second ^2
+        self.velocity = 0.0          # meters per second
+        self.position = 0.0          # meters. Position relative to the tube; start position is 0m
         
-        # Distance from the pusher to the back of the pusher plate when it disconnects (there's a lever that extends over the pusher rod)
-        self.pusher_disconnect_length = 0.12 # meters @todo: what's the actual distance? 
+        self.elapsed_time_usec = 0
+        
+        # Pre-calculated values
+        
+        # @see http://www.softschools.com/formulas/physics/air_resistance_formula/85/
+        self.air_resistance_k = Units.SI(self.config.air_density) * self.config.drag_coefficient * Units.SI(self.config.drag_area) / 2
+
         
         """ Sketch:
         # Pod components
@@ -49,26 +75,104 @@ class Pod:
         }
         """
 
+
+    def apply_force(self, force):
+        """ Apply force to the pod in the x direction. Note the forces are cleared after each step() """
+        self.net_force += force
+        self.logger.debug("Force {} applied (total force is {})".format(force, self.net_force))
+
+
+    def get_aero_drag(self):
+        """ Calculate the drag on the pod due to air (return a negative force) """
+        # @todo: use speed and tube pressure to get the aero drag. Return a negative force (-x)
+        return -self.air_resistance_k * self.velocity ** 2
+
+    def get_brake_drag(self):
+        """ Calculate the drag on the pod contributed by the brakes (return a negative force) """
+        pass
+
+    def get_hover_engine_drag(self):
+        """ Calculate the drag on the pod contributed by the hover engines (return a negative force)"""
+        pass
+
+    def get_gimballing_force(self):
+        """ Get the positive or negative force contributed by the current gimbaling of the engines """
+        pass
+    
+    def get_csv_row(self):
+        out = []
+        
+        out.append(self.elapsed_time_usec)
+        out.append(self.net_force)
+        out.append(self.acceleration)
+        out.append(self.velocity)
+        out.append(self.position)
+        
+        return ",".join([str(x) for x in out])
+            
+    def apply_forces(self):        
+        self.apply_force(self.get_aero_drag())
+        #self.apply_force(self.get_brake_drag())
+        #self.apply_force(self.get_hover_engine_drag())
+        #self.apply_force(self.get_gimballing_force())
+
+    
     # -------------------------
     # Simulation methods
     # -------------------------
 
-    def update(self, dt_usec):
-        pass
+    def update_physics(self, dt_usec):
+        """ Step the physics of the pod (forces, a/v/p, etc.) """
+        # F = ma, a = F/m
+        self.acceleration = self.net_force / self.mass
+        
+        t_sec = dt_usec / 1000000
+        
+        # v*t + 1/2*a*t^2
+        self.position += self.velocity * t_sec + 0.5 * self.acceleration * (t_sec ** 2)
+        
+        # vf = v0 + at
+        self.velocity = self.velocity + self.acceleration * t_sec
+
+        # @todo: change this to log to a data stream or file? 
+        self.logger.info(self.get_csv_row())
+
+        # Update time
+        self.elapsed_time_usec += dt_usec
+
+        # Clear forces for the next step
+        self.net_force = 0
 
     def step(self, dt_usec):
-        pass
+        #self.step_physics(dt_usec)
+        #self.step_sensors(dt_usec)
+        #self.step_controls(dt_usec)
+        
+        # Apply forces
+        self.apply_forces()  # @todo: make this work
+        
+        # Update physics
+        self.update_physics(dt_usec)
+        
+        # Do other things? Update sensors? 
         
     
     # -------------------------
     # Physical methods
     # -------------------------
-    def attach_pusher(self, pusher):
+    def connect_pusher(self, pusher):
+        """ Update internal state to reflect that the pusher is connected """
+        # @todo: make this work
         self.pusher = pusher
-        self.pusher.position = self.position - self.pusher_plate_com_offset  # relative to pod
-        self.BRAKE_MECH_INTERLOCK = True  # @todo: move this into a brakes structure? Maybe in FCU? Maybe this just tracks the physical...    
+        # @todo: set internal flags that emulate the physical and electronic brake lockout
+        pass
     
+    def disconnect_pusher(self):
+        """ Update the internal state to reflect a disconnection of the pusher """
+        # @todo: make this work
+        pass
     
+
     # -------------------------
     # State machine helpers
     # -------------------------

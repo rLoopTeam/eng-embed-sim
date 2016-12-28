@@ -1,0 +1,14 @@
+sim:
+    fixed_timestep_usec: 1000000
+    world: 
+        physics: 
+            gravity: 9.8
+    pod:
+        name: "Petunia"
+        mass: 350.0
+    pusher:
+        name: "Gloria"
+        push_force: 1000000
+        
+    tube:
+        pumpdown_pressure: 10000

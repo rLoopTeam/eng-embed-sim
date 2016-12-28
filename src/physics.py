@@ -16,15 +16,27 @@ class PhysicsBody1D:
         self.velocity = 0.0        # m/s
         self.position = 0.0        # m
         
-        self.net_force = 0.0       # Newtons
+        self.net_force = 0.0       # Newtons, in the x direction. Note that this is cleared after each step.
         
         
     def step(self, dt_usec):
         """ Take a single step (called during simulation) """
         # @todo: update acceleration, velocity, and position based on self.net_force applied over dt_usec
-        pass
         
+        t_sec = dt_usec / 1000000
         
+        # F = ma, a = F/m
+        self.acceleration = self.net_force / self.mass
+        
+        # v*t + 1/2*a*t^2
+        # @todo: update position before velocity? 
+        self.position += self.velocity * t_sec + 0.5 * self.acceleration * t_sec * t_sec
+        
+        # vf = v0 + at
+        self.velocity = self.velocity + self.acceleration * t_sec
+        
+            
+
 if __name__ == "__main__":
     body = PhysicsBody1D()
     body.mass = 250
