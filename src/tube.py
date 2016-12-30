@@ -21,10 +21,13 @@ class Tube:
         self.pressurize_time_sec = 600  # 600 = 10 minutes
         self.pumpdown_target_pressure = 12665.63  # Pa -- .125Atm = 12665.63 Pa
         
-        # Reference
+        # Reference for the reflective stripes
         self.reflective_strip_width = 0.1016      # meters (4 inches)
         self.reflective_pattern_interval = 30.48  # meters (100 feet)
         self.reflective_pattern_spacing = 0.1016  # meters -- distance between stripes in a pattern
+
+        self.track_gap_width = 0.005 # Width of the gap in the subtrack in meters (probably worst scenario, more realistic 1-2 mm)
+        self.track_gap_interval = 2  # Interval between the gaps in the subtrack in meters (Length of the aluminium plate)
 
         self.atmospheric_pressure = 101325.0
 
@@ -33,6 +36,19 @@ class Tube:
         self._init_reflective_strips()
         # self._init_strips_distance_remaining()  # @todo: finish this? or put it in the pod? 
         
+        self.track_gaps = []
+        self._init_track_gaps()
+
+    def _init_track_gaps(self):
+
+        cursor = self.length # not sure if "cursor" can be used again
+
+        while cursor > self.track_gap_interval:  # Note: we'll put one in negative territory if we use 0 here
+        cursor -= self.track_gap_interval
+        self.track_gaps.append(cursor)
+
+        self.track_gaps = sorted(self.track_gaps)
+
     def _init_reflective_strips(self):
         # Add in the 100' strips (backwards)
 
@@ -41,6 +57,7 @@ class Tube:
 
         cursor = self.length
         counter = 1  # 1 to account for the end of the tube
+
         while cursor > self.reflective_pattern_interval:  # Note: we'll put one in negative territory if we use 0 here
             cursor -= self.reflective_pattern_interval
             counter += 1
