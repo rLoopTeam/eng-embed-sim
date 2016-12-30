@@ -1,6 +1,6 @@
 ---
 sim:
-    fixed_timestep: 1000 usec
+    fixed_timestep: 10000 usec
     tube:
         length: 1500 m
         ambient_pressure: 14.7 psi  # need to convert to pascals, or use units (e.g. 14.7 psi)
@@ -30,6 +30,15 @@ sim:
         physical:
             nose_tip_offset: 1.0m
             pusher_plate_offset: -2.9m
+        hover_engines:
+            # @see pod.py -- these are for a single hover engine drag based on velocity and height 
+            mu_naught: 4 *pi 
+            z_naught: 
+            mag_dipole_strength:
+            mag_permeability: 
+            material_thickness: 0.416 in
+            material_density: 
+            # With this and velocity, we can get F_lift and F_drag? 
         brakes:
             BRAKE_L:
                 sensors: pass

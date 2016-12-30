@@ -55,6 +55,36 @@ class Pod:
         # @see http://www.softschools.com/formulas/physics/air_resistance_formula/85/
         self.air_resistance_k = Units.SI(self.config.air_density) * self.config.drag_coefficient * Units.SI(self.config.drag_area) / 2
 
+        # HE Drag
+        """
+        Drag for a single hover engine (keep in mind that we have 8):
+        
+        Constants:
+        w: Comes from solving 3d maxwell's equations (@whiplash) and using other fancy math -- provided by @whiplash -- not dependent on velocity, just depends on magnetic characteristics
+        mu_0: Absolute permeability of the vacuum (constant) -- permeability constant, magnetic constant, etc. -- permeability of free space
+        m: Magnetic dipole strength (constant, but depends on how magnets are arranged)
+        h: thickness of conducting material (rail in this case)
+        rho: density of conducting material (aluminum in this case)
+
+        Variables: 
+        z_0: Distance between magnet and conducting surface
+        v: Velocity
+        
+        Calculated:        
+        w = 2 * rho / (mu_0 * h)
+        F_lift / F_drag = v / w
+        F_lift = ((3 * mu_0 * m**2) / (32 * 3.14159 * z_0**4)) * (1 - w * (v**2 + w**2)**(-1/2))
+
+        Values (from @whiplash): 
+        mu_0: 4 pi x10e-7
+        rho: 2.7 g/cubic centimeter
+        h: 0.5 in
+        m: (@whiplash will need to calculate this -- it's a vector quantity, need to draw a magnetic circuit) 
+        """
+        
+        # Brakes
+        # ?
+
         
         """ Sketch:
         # Pod components

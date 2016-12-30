@@ -13,6 +13,7 @@
 # Note: all units are SI: meters/s^2, meters/s, and meters. Time is in microseconds (?)
 
 from collections import deque
+import numpy as np
 
 class BaseSensor:
     """ Base sensor class. """
@@ -39,7 +40,7 @@ class BaseSensor:
     def create_sample(self):
         """ Create a single measurement and return it. """
         pass
-    
+        
     def step(self, dt_usec):
         """ Fill the queue with values based on the amount of time that's passed """
         # Add samples to the buffer based on how much time has passed and our sampling rate
@@ -72,7 +73,7 @@ class Accelerometer:
         # Configuration
         self.sampling_rate_hz = 800
         self.buffer_size = 32
-        self.precision = 14
+        self.precision = 14  # 14 bits
         self.buffer_mode = "something"   # Circular? 
     
     def step(self, dt_usec):
@@ -88,9 +89,103 @@ class Accelerometer:
         pass
         # sample = self.pod.acceleration + fuzzing?
         # return (x, y, z)
+    
+class AccelData:
+    def __init__(self):
+        """
+        # @see eng-software-pod/FIRMWARE/PROJECT_CODE/LCCM655__RLOOP__FCU_CORE/ACCELEROMETERS/fcu__accel__ethernet.c
+        //fault flags
+        vNUMERICAL_CONVERT__Array_U32(pu8Buffer, u32MMA8451__Get_FaultFlags(u8Device));
+        pu8Buffer += 4U;
+
+        //X Raw
+        vNUMERICAL_CONVERT__Array_S16(pu8Buffer, s16MMA8451_FILTERING__Get_Average(u8Device, AXIS_X));
+        pu8Buffer += 2U;
+
+        //Y Raw
+        vNUMERICAL_CONVERT__Array_S16(pu8Buffer, s16MMA8451_FILTERING__Get_Average(u8Device, AXIS_Y));
+        pu8Buffer += 2U;
+
+        //Z Raw
+        vNUMERICAL_CONVERT__Array_S16(pu8Buffer, s16MMA8451_FILTERING__Get_Average(u8Device, AXIS_Z));
+        pu8Buffer += 2U;
+
+        //X Accel
+        vNUMERICAL_CONVERT__Array_F32(pu8Buffer, f32MMA8451_MATH__Get_GForce(u8Device, AXIS_X));
+        pu8Buffer += 4U;
+
+        //Y Accel
+        vNUMERICAL_CONVERT__Array_F32(pu8Buffer, f32MMA8451_MATH__Get_GForce(u8Device, AXIS_Y));
+        pu8Buffer += 4U;
+
+        //Z Accel
+        vNUMERICAL_CONVERT__Array_F32(pu8Buffer, f32MMA8451_MATH__Get_GForce(u8Device, AXIS_Z));
+        pu8Buffer += 4U;
+
+        //Pitch
+        vNUMERICAL_CONVERT__Array_F32(pu8Buffer, f32MMA8451_MATH__Get_PitchAngle(u8Device));
+        pu8Buffer += 4U;
+
+        //Roll
+        vNUMERICAL_CONVERT__Array_F32(pu8Buffer, f32MMA8451_MATH__Get_RollAngle(u8Device));
+        pu8Buffer += 4U;
         
+        """
+
+
+        self.dtype = np.dtype([
+                ('fault_flags', np.uint32),
+                ('raw_x', np.int16),
+                ('raw_y', np.int16),
+                ('raw_z', np.int16),
+                ('accel_x', np.float32),
+                ('accel_y', np.float32),
+                ('accel_z', np.float32),                
+                ('pitch', np.float32),
+                ('roll', np.float32),                
+        ])
         
+        self._accel_indices = [0, 4, 5, 6]
+        
+        self.data = np.array([(0, 0.1, 12, 1234, 0.12345678901234, 0.12345678901234, 0.12345678901234, 0.12345678901234, 0.12345678901234)], dtype=self.dtype)
+        self.data['fault_flags'] = 0
+        self.data['raw_x'] = 0.1
+        self.data['raw_y'] = 12
+        self.data['raw_z'] = 31929
+        self.data['accel_x'] = 0.12345678901234
+        self.data['accel_y'] = 0.23456789012345
+        self.data['accel_z'] = 0.34567890123456
+        self.data['pitch'] = 0.1000
+        self.data['roll'] = 0.2000
+
+
+        print len(self.data.tostring(order="C"))
+                
+    def pack_safeudp_full(self):
+        return self.data.tostring(order="C")
+        
+    def pack_safeudp_cal(self):
+        print self.data[0]
+        
+        return self.data[0].tostring()
+
+class AccelData2:
+    
+    def __init__(self):
+        self.dtype = np.dtype('uint32, int16, int16, int16, float32, float32, float32, float32, float32')
+        self.data = np.array([(0, 1, 12, 1234, 0.12345678901234, 0.12345678901234, 0.12345678901234, 0.12345678901234, 0.12345678901234)], dtype=self.dtype)
+        print np.asmatrix(self.data)
+
+
 if __name__ == "__main__":
+
+    ad2 = AccelData2()
+    exit()
+    
+    ad = AccelData()
+    print len(ad.pack_safeudp_full())
+    print len(ad.pack_safeudp_cal())
+    print ""
     
     dt_usec = 100002
     sensor = LaserDistanceSensor()
