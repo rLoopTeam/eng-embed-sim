@@ -26,10 +26,10 @@ class Tube:
         self.reflective_pattern_interval = 30.48  # meters (100 feet)
         self.reflective_pattern_spacing = 0.1016  # meters -- distance between stripes in a pattern
 
-        self.track_gap_width = 0.005 # Width of the gap in the subtrack in meters (probably worst scenario, more realistic 1-2 mm)
-        self.track_gap_interval = 2  # Interval between the gaps in the subtrack in meters (Length of the aluminium plate)
+        self.track_gap_width = Units.SI(config.track_gap_width) # Width of the gap in the subtrack in meters (probably worst scenario, more realistic 1-2 mm)
+        self.track_gap_interval = Units.SI(config.track_gap_interval)  # Interval between the gaps in the subtrack in meters (Length of the aluminium plate)
 
-        self.atmospheric_pressure = 101325.0
+        self.atmospheric_pressure = 101325.0  # @todo: do we still need this?
 
         # Initialize 
         self.reflective_strips = []

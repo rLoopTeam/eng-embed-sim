@@ -6,7 +6,7 @@ sim:
         length: 1500 m
         ambient_pressure: 14.7 psi  # need to convert to pascals, or use units (e.g. 14.7 psi)
         pumpdown_pressure: .125 psi
-        max_track_gap: 5mm
+        track_gap_width: 5mm
         track_gap_interval: 2m
     pusher:
         push_force: 8000 N
