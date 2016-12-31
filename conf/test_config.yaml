@@ -8,9 +8,11 @@ sim:
         pumpdown_air_density: 
     pod:
         mass: 350 kg
-        drag_area: 800 in^2
-        drag_coefficient: 1.1
-        air_density: 0.1841 kg / m^3  # see http://www.engineeringtoolbox.com/standard-atmosphere-d_604.html, 30000m (this is a WAG)
+        forces:
+            aero:
+                drag_area: 800 in^2
+                drag_coefficient: 1.1
+                air_density: 0.1841 kg / m^3  # see http://www.engineeringtoolbox.com/standard-atmosphere-d_604.html, 30000m (this is a WAG)
         sensors:
             CONTRAST_1: 
                 pod_ref_x_offset: -0.5m

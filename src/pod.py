@@ -15,6 +15,15 @@ import logging
 from units import Units
 from brakes import *
 
+# Forces
+from force_aero import AeroForce
+from force_brakes import BrakeForce
+from force_gimbals import GimbalForce
+from force_hover_engines import HoverEngineForce
+from force_landing_gear import LandingGearForce
+from force_lateral_stability import LateralStabilityForce
+
+
 class PodComponent:
     def __init__(self, name, type, location, sim_obj):
         self.name = name
@@ -41,7 +50,8 @@ class Pod:
         print "Config mass: " + str(self.config.mass)
 
         # Forces that can act on the pod (note: these are cleared at the end of each step)        
-        self.net_force = 0  # This will change, and may affect acceleration
+        self.net_force = 0.0  # Newtons, in the x direction This will change, and may affect acceleration
+        self.net_lift = 0.0
 
         # Actual physical values (volatile variables). All refer to action in the x dimension only. 
         self.acceleration = 0.0      # meters per second ^2
@@ -49,12 +59,17 @@ class Pod:
         self.position = 0.0          # meters. Position relative to the tube; start position is 0m
         
         self.elapsed_time_usec = 0
-        
+
+        self.forces = []
+        self.forces.append( AeroForce(self.sim, self.config.forces.aero) )
+        self.forces.append( BrakeForce(self.sim, self.config.forces.brakes) )
+        self.forces.append( GimbalForce(self.sim, self.config.forces.gimbals) )
+        self.forces.append( HoverEngineForce(self.sim, self.config.forces.hover_engines) )
+        self.forces.append( LateralStabilityForce(self.sim, self.config.forces.lateral_stability) )
+        self.forces.append( LandingGearForce(self.sim, self.config.forces.landing_gear) )
+
         # Pre-calculated values
         
-        # @see http://www.softschools.com/formulas/physics/air_resistance_formula/85/
-        self.air_resistance_k = Units.SI(self.config.air_density) * self.config.drag_coefficient * Units.SI(self.config.drag_area) / 2
-
         # HE Drag
         """
         Drag for a single hover engine (keep in mind that we have 8):
@@ -111,23 +126,10 @@ class Pod:
         self.net_force += force
         self.logger.debug("Force {} applied (total force is {})".format(force, self.net_force))
 
-
-    def get_aero_drag(self):
-        """ Calculate the drag on the pod due to air (return a negative force) """
-        # @todo: use speed and tube pressure to get the aero drag. Return a negative force (-x)
-        return -self.air_resistance_k * self.velocity ** 2
-
-    def get_brake_drag(self):
-        """ Calculate the drag on the pod contributed by the brakes (return a negative force) """
-        pass
-
-    def get_hover_engine_drag(self):
-        """ Calculate the drag on the pod contributed by the hover engines (return a negative force)"""
-        pass
-
-    def get_gimballing_force(self):
-        """ Get the positive or negative force contributed by the current gimbaling of the engines """
-        pass
+    def apply_lift(self, lift_force):
+        self.net_lift += lift_force
+        if lift_force != 0:
+            self.logger.debug("Lift {} applied (total lift is {})".format(force, self.net_force))
     
     def get_csv_row(self):
         out = []
@@ -141,11 +143,11 @@ class Pod:
         return ",".join([str(x) for x in out])
             
     def apply_forces(self):        
-        self.apply_force(self.get_aero_drag())
-        #self.apply_force(self.get_brake_drag())
-        #self.apply_force(self.get_hover_engine_drag())
-        #self.apply_force(self.get_gimballing_force())
-
+        """ Apply all forces provided by the exerters, in order. This happens every step, and all forces are then cleared for the next step. """
+        for exerter in self.forces:
+            self.apply_force(exerter.get_force())
+            self.apply_lift(exerter.get_lift())
+    
     
     # -------------------------
     # Simulation methods

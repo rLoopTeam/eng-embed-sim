@@ -44,8 +44,8 @@ class Tube:
         cursor = self.length # not sure if "cursor" can be used again
 
         while cursor > self.track_gap_interval:  # Note: we'll put one in negative territory if we use 0 here
-        cursor -= self.track_gap_interval
-        self.track_gaps.append(cursor)
+            cursor -= self.track_gap_interval
+            self.track_gaps.append(cursor)
 
         self.track_gaps = sorted(self.track_gaps)
 
