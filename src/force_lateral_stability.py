@@ -10,7 +10,7 @@ class LateralStabilityForce:
 
     def get_force(self):
         """ Get x force (drag -- return a negative number) provided by the lateral stability wheels. """
-        # @todo: decide whether or not we want to have gimbaling provide x force and lift for 4 of the engines, or to do x force (drag) for all engines here...
+        # Note: You can get pod velocity/acceleration/position using e.g. self.sim.pod.velocity (see pod.py __init__() for vars)
         return 0.0
         
     def get_lift(self):
