@@ -1,18 +1,36 @@
 ---
+# NOTE: You must include units with all quantities that are not unitless. Units will be automatically converted to SI. 
 sim:
     fixed_timestep: 10000 usec
     tube:
         length: 1500 m
         ambient_pressure: 14.7 psi  # need to convert to pascals, or use units (e.g. 14.7 psi)
         pumpdown_pressure: .125 psi
-        pumpdown_air_density: 
+        max_track_gap: 5mm
+        track_gap_interval: 2m
+    pusher:
+        push_force: 8000 N
+        max_velocity: 150.0 m/s
+        coast_time_usec: 1000000 usec
+        brake_force: -8000 N   # Doesn't really matter, just needs to be big and negative
     pod:
         mass: 350 kg
         forces:
             aero:
+                # Put aero drag/lift force constants and configuration here
                 drag_area: 800 in^2
                 drag_coefficient: 1.1
                 air_density: 0.1841 kg / m^3  # see http://www.engineeringtoolbox.com/standard-atmosphere-d_604.html, 30000m (this is a WAG)
+            brakes:
+                # Put brake drag/lift force constants and configuration here. Include units! (any provided units will be converted to SI)
+            gimbals:
+                # Put gimbal drag/lift force constants and configuration here. Include units! (any provided units will be converted to SI)
+            hover_engines:
+                # Put hover engine drag/lift force constants and configuration here. Include units! (any provided units will be converted to SI)
+            landing_gear:
+                # Put landing gear drag/lift force constants and configuration here. Include units! (any provided units will be converted to SI)
+            lateral_stability:
+                # Put lateral stability drag/lift force constants and configuration here. Include units! (any provided units will be converted to SI)
         sensors:
             CONTRAST_1: 
                 pod_ref_x_offset: -0.5m
@@ -38,7 +56,7 @@ sim:
             z_naught: 
             mag_dipole_strength:
             mag_permeability: 
-            material_thickness: 0.416 in
+            material_thickness: 0.5 in
             material_density: 
             # With this and velocity, we can get F_lift and F_drag? 
         brakes:
@@ -53,10 +71,5 @@ sim:
             LG_FR: pass
             LG_RL: pass
             LG_RR: pass            
-    pusher:
-        push_force: 8000 N
-        max_velocity: 150.0 m/s
-        coast_time_usec: 1000000 usec
-        brake_force: -8000 N   # Doesn't really matter, just needs to be big and negative
         
         
