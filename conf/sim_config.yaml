@@ -15,11 +15,13 @@ sim:
         brake_force: -8000 N   # Doesn't really matter, just needs to be big and negative
     sensors:
         laser_opto_1:
+            pod_height_offset: 18.3mm  # Note: this should be the x distance between the sensor and the pod reference point (once pod height is calculated)
             sampling_rate: 500 Hz
-            buffer_size: 1000
+            buffer_size: 1000   # This is not used right now
             dtype: 'f'
             noise:
-                scale: .01              
+                scale: 0.01
+                center: 0.0         
     pod:
         mass: 350 kg
         forces:

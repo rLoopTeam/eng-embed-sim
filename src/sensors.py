@@ -69,8 +69,8 @@ class PollingSensor:
         self.sampling_rate = Units.SI(self.config.sampling_rate)  # Hz
 
         # @see self._add_noise() and numpy.random.normal
-        self.noise_center = self.config.noise_center or 0.0
-        self.noise_scale = self.config.noise_scale or 0.0
+        self.noise_center = self.config.noise.center or 0.0
+        self.noise_scale = self.config.noise.scale or 0.0
 
         # Volatile
         #self.buffer = RingBuffer(config.buffer_size, config.dtype)   # @todo: How to specify dtype in configuration? There should be a string rep of dtype I think 
@@ -97,7 +97,7 @@ class PollingSensor:
         """
     
     def step(self, dt_usec):
-        # @todo: what do we do here? Just update next_start? Get samples and do something with them? 
+        """ Step the sensor and put the results of create_step_samples() into the buffer """
         if self.next_start >= 1:
             self.next_start -= 1
             return
@@ -118,6 +118,8 @@ class PollingSensor:
         #return self.buffer.get()  # @todo: fix this to work with whatever data structure we use for the buffer
         
     def pop_all(self):
+        """ Get all values in the buffer as a numpy array and clear the buffer """
+        # Note: 
         out = np.array(self.buffer)
         self.buffer.clear()
         return out
@@ -142,11 +144,12 @@ class LaserOptoSensor(PollingSensor):
         self.logger = logging.getLogger("LaserOptoSensor")
         
         # Get the height offset for this sensor?
-        pass
+        self.pod_height_offset = Units.SI(self.config.pod_height_offset) * 1000  # We want mm here -- maybe have a function in Units for that? 
 
     def create_step_samples(self):
         # Create height samples
         height_samples = self._lerp(self.sim.pod.last_height, self.sim.pod.height)
+        height_samples += self.pod_height_offset
         
         # Add noise. @todo: we might want to do this after we adjust for gaps? 
         height_samples += self._get_gaussian_noise(height_samples, self.noise_center, self.noise_scale)
