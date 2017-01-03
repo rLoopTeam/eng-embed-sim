@@ -38,7 +38,8 @@ class Sim:
         self.pod.step(dt_usec)
         
         #self.fcu.step(dt_usec)
-        self.logger.debug(self.laser_opto_1.get_step_samples_with_gap())
+        self.laser_opto_1.step(dt_usec)
+        self.logger.debug(list(self.laser_opto_1.pop_all()))
         
 
     def run(self):
