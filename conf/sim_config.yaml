@@ -1,26 +1,32 @@
 ---
 # NOTE: You must include units with all quantities that are not unitless. Units will be automatically converted to SI. 
 sim:
-    fixed_timestep: 10000 usec
+    fixed_timestep: 1000 usec
     tube:
         length: 1500 m
         ambient_pressure: 14.7 psi  # need to convert to pascals, or use units (e.g. 14.7 psi)
         pumpdown_pressure: .125 psi
-        track_gap_width: 5mm
+        track_gap_width: 50mm
         track_gap_interval: 2m
     pusher:
         push_force: 8000 N
         max_velocity: 150.0 m/s
         coast_time_usec: 1000000 usec
         brake_force: -8000 N   # Doesn't really matter, just needs to be big and negative
+    sensors:
+        laser_opto_1:
+            sampling_rate: 5000 Hz
+            noise:
+                scale: .01              
     pod:
         mass: 350 kg
         forces:
             aero:
                 # Put aero drag/lift force constants and configuration here
-                drag_area: 800 in^2
-                drag_coefficient: 1.1
-                air_density: 0.1841 kg / m^3  # see http://www.engineeringtoolbox.com/standard-atmosphere-d_604.html, 30000m (this is a WAG)
+                # @see https://rloop.slack.com/archives/eng-numsim/p1483130166001034 and https://rloop.slack.com/archives/eng-numsim/p1483130642001039
+                drag_area: 1.14 m^2
+                drag_coefficient: 1.1849
+                air_density: 0.100098 kg/m^3
             brakes:
                 # Put brake drag/lift force constants and configuration here. Include units! (any provided units will be converted to SI)
             gimbals:

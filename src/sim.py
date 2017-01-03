@@ -2,6 +2,7 @@
 from pod import Pod
 from tube import Tube
 from pusher import Pusher
+#from fcu import fcu
 
 import logging
 from units import *
@@ -19,10 +20,15 @@ class Sim:
 
         self.pusher = Pusher(self, self.config.pusher)
         self.tube = Tube(self, self.config.tube)
-        self.pod = Pod(self, self.config.pod)        
+        self.pod = Pod(self, self.config.pod)      
+        #self.fcu = Fcu(self, self.config.fcu)  
 
         # Initial setup
         self.pusher.start_push()
+        
+        # Testing only
+        from sensors import LaserOptoSensor
+        self.laser_opto_1 = LaserOptoSensor(self, self.config.sensors.laser_opto_1)
         
     def step(self, dt_usec):        
         # Step the pusher first (will apply pressure and handle disconnection)
@@ -31,11 +37,15 @@ class Sim:
         # Step the pod (will handle all other forces and pod physics)
         self.pod.step(dt_usec)
         
+        #self.fcu.step(dt_usec)
+        self.logger.debug(self.laser_opto_1.get_step_samples_with_gap())
+        
 
     def run(self):
         self.logger.info("Starting simulation")
         while(True):
             self.step(self.fixed_timestep_usec)
+            # @todo: Add in a stop condition for when the pod stops before the end
             if self.pod.position > self.tube.length:
                 break
         

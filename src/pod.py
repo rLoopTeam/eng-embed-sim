@@ -58,8 +58,18 @@ class Pod:
         self.velocity = 0.0          # meters per second
         self.position = 0.0          # meters. Position relative to the tube; start position is 0m
         
+        self.height = 0.0  # Probably need to set this with the config (starting height? What about the landing gear? )
+
         self.elapsed_time_usec = 0
 
+        # Values from the previous step (for lerping and whatnot)
+        self.last_acceleration = 0.0
+        self.last_velocity = 0.0
+        self.last_position = 0.0
+        self.last_height = 0.0
+
+
+        # Handle forces that act on the pod
         self.forces = []
         self.forces.append( AeroForce(self.sim, self.config.forces.aero) )
         self.forces.append( BrakeForce(self.sim, self.config.forces.brakes) )
@@ -124,12 +134,12 @@ class Pod:
     def apply_force(self, force):
         """ Apply force to the pod in the x direction. Note the forces are cleared after each step() """
         self.net_force += force
-        self.logger.debug("Force {} applied (total force is {})".format(force, self.net_force))
+        #self.logger.debug("Force {} applied (total force is {})".format(force, self.net_force))
 
     def apply_lift(self, lift_force):
         self.net_lift += lift_force
-        if lift_force != 0:
-            self.logger.debug("Lift {} applied (total lift is {})".format(force, self.net_force))
+        #if lift_force != 0:
+        #    self.logger.debug("Lift {} applied (total lift is {})".format(force, self.net_force))
     
     def get_csv_row(self):
         out = []
@@ -155,6 +165,12 @@ class Pod:
 
     def update_physics(self, dt_usec):
         """ Step the physics of the pod (forces, a/v/p, etc.) """
+        
+        # Save off our current values
+        self.last_acceleration = self.acceleration
+        self.last_velocity = self.velocity
+        self.last_position = self.position
+
         # F = ma, a = F/m
         self.acceleration = self.net_force / self.mass
         
