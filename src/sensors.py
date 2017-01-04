@@ -50,10 +50,11 @@ class PollingSensor:
     
     """
     Note: Sensors will need inputs from the outside world -- sensors will need to 'sample' the world. 
-          - How do we connect a sensor to what it needs to measure? In the constructor? 
-          - Probably want an id as well for logging purposes.
-    
-    
+          - Q: How do we connect a sensor to what it needs to measure? 
+            A: This is done in the get_step_samples() method by directly accesing self.sim
+          - Q: What about recording the 'time' (lerp'd) for each sample? 
+            A: ...
+          - Probably want an id as well for logging purposes -- put that in config? Insert into config during setup (using the name of the sensor?)
     """
 
     def __init__(self, sim, config):
@@ -65,7 +66,6 @@ class PollingSensor:
         # Configuration
 
         # Grab the fixed timestep from the sim. If we wanted to use a variable timestep we would need to do the next calculations in the lerp function
-        self.fixed_timestep = Units.SI(self.sim.config.fixed_timestep)
         self.sampling_rate = Units.SI(self.config.sampling_rate)  # Hz
 
         # @see self._add_noise() and numpy.random.normal
@@ -74,10 +74,17 @@ class PollingSensor:
 
         # Volatile
         #self.buffer = RingBuffer(config.buffer_size, config.dtype)   # @todo: How to specify dtype in configuration? There should be a string rep of dtype I think 
-        self.buffer = deque()
+        self.buffer = deque()  # @todo: switch this out for something more capable/fast (numpy array or something)
+        self.sample_times = deque()
         self.next_start = 0.0
         self.step_lerp_pcts = None  # Set during step
-        
+
+        # Communications
+        self.step_listeners = []
+    
+    def register_step_listener(self, listener):
+        self.step_listeners.append(listener)
+    
     def create_step_samples(self):
         """ Get the step samples """
         pass  # Deferred to subclasses
@@ -108,7 +115,15 @@ class PollingSensor:
         self.step_lerp_pcts = np.arange(self.next_start, 1, sample_pct_of_step)
 
         # Call get_step_samples() (implemented in subclasses) to get the samples and add them to the buffer
-        self.buffer.extend(self.create_step_samples())
+        samples = self.create_step_samples()
+        sample_times = self._get_sample_times(dt_usec)
+        self.buffer.extend(samples)
+        self.sample_times.extend(sample_times)
+
+        # Send our data to any attached listeners
+        self.logger.debug("Sending samples to {} step listeners".format(len(self.step_listeners)))
+        for step_listener in self.step_listeners:
+            step_listener.callback(self, sample_times, samples)
 
         # Update or start pct for the next step
         self.next_start = sample_pct_of_step - (1 - self.step_lerp_pcts[-1])
@@ -130,11 +145,16 @@ class PollingSensor:
         """ Lerp between the two values using the self.step_lerp_pcts vector and return a vector of lerp'd values """
         return start_value + self.step_lerp_pcts * (end_value - start_value)
     
+    
     def _get_gaussian_noise(self, samples, noise_center=0.0, noise_scale=0.1):
         if noise_scale > 0:
             return np.random.normal(noise_center, noise_scale, len(samples))
         else:
             return 0
+    
+    def _get_sample_times(self, dt_usec):
+        start_time = self.sim.elapsed_time_usec  # Note: this is updated last in Sim.step()
+        return self._lerp(start_time, start_time + dt_usec).astype(int)  # as ints because microseconds
 
 
 class LaserOptoSensor(PollingSensor):
@@ -196,7 +216,53 @@ class LaserOptoSensor(PollingSensor):
         
 # ---------------------------
 # Just notes/sketches below here        
+
+class SensorStepListener:
+    """ Listens to a sensor -- called after each step with the samples produced during that step. """
+    def __init__(self, config):
+        self.config = config   # Config can hold a file to log to, logger settings, or whatever you want
+
+    def callback(self, sensor, times, samples):
+        # @todo: do something with the samples from this step
+        pass # Defer to subclasses
+
+    def step(self, dt_usec):
+        # @todo: do we need this? Where would it be called? What would it do? 
+        pass  # Defer to subclasses
+        # If we need to do anything on step. @todo: Where is this called? 
+
+
+# Sketch of a pin state change listener that fires interrupts
+class PinChangeListener(SensorStepListener):
+    def __init__(self, config):
+        SensorStepListener.__init__(self, config)
+
+        self.pin_state = False
         
+    def callback(self, sensor, times, samples):
+        # Check to see if we changed state and call the interrupt if so. @todo: maybe schedule interrupts? 
+        # Note: may want to use a sample listener on this to emulate interrupts so they can be called during the sensor step
+        # Note: 
+        for sample in samples:
+            # Q: What would the pin value be? 1 or 0? a float? 
+            if bool(sample) != self.pin_state:
+                self.pin_state = bool(sample)
+                self.call_isr_or_something(self.pin_state)
+        
+    def call_isr_or_something(self, pin_state):
+        pass  # do something here
+        
+        
+class SensorConsoleWriter():
+    
+    def __init__(self, config=None):
+        self.config = config  # @todo: define config for this, if needed (e.g. format, etc.)
+        
+    def callback(self, sensor, times, samples):
+        # Write values to the console
+        for i, t in enumerate(times):
+            print "{},{}".format(t, samples[i])
+            
         
 class DataCollector:
     
@@ -351,7 +417,7 @@ class AccelData:
         self.data['roll'] = 0.2000
 
 
-        print len(self.data.tostring(order="C"))
+        #print len(self.data.tostring(order="C"))
                 
     def pack_safeudp_full(self):
         return self.data.tostring(order="C")

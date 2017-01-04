@@ -25,10 +25,14 @@ class Sim:
 
         # Initial setup
         self.pusher.start_push()
+
+        # Volatile
+        self.elapsed_time_usec = 0
         
         # Testing only
-        from sensors import LaserOptoSensor
+        from sensors import LaserOptoSensor, SensorConsoleWriter  # @todo: move this to the top once we're done testing
         self.laser_opto_1 = LaserOptoSensor(self, self.config.sensors.laser_opto_1)
+        self.laser_opto_1.register_step_listener(SensorConsoleWriter())  # Write data directly to the console
         
     def step(self, dt_usec):        
         # Step the pusher first (will apply pressure and handle disconnection)
@@ -39,8 +43,9 @@ class Sim:
         
         #self.fcu.step(dt_usec)
         self.laser_opto_1.step(dt_usec)
-        self.logger.debug(list(self.laser_opto_1.pop_all()))
+        #self.logger.debug(list(self.laser_opto_1.pop_all()))
         
+        self.elapsed_time_usec += dt_usec
 
     def run(self):
         self.logger.info("Starting simulation")
