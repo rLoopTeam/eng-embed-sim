@@ -213,7 +213,18 @@ class LaserOptoSensor(PollingSensor):
         """ Adjust the samples at the given indices as if they were over a gap """
         samples[indices] += 50.48 # @todo: adjust appropriately to match data collected at test weekend
 
+
+class SensorConsoleWriter():
+    
+    def __init__(self, config=None):
+        self.config = config  # @todo: define config for this, if needed (e.g. format, etc.)
         
+    def callback(self, sensor, times, samples):
+        # Write values to the console
+        for i, t in enumerate(times):
+            print "{},{}".format(t, samples[i])
+            
+            
 # ---------------------------
 # Just notes/sketches below here        
 
@@ -252,17 +263,7 @@ class PinChangeListener(SensorStepListener):
     def call_isr_or_something(self, pin_state):
         pass  # do something here
         
-        
-class SensorConsoleWriter():
-    
-    def __init__(self, config=None):
-        self.config = config  # @todo: define config for this, if needed (e.g. format, etc.)
-        
-    def callback(self, sensor, times, samples):
-        # Write values to the console
-        for i, t in enumerate(times):
-            print "{},{}".format(t, samples[i])
-            
+
         
 class DataCollector:
     
