@@ -82,7 +82,7 @@ class PollingSensor:
         # Communications
         self.step_listeners = []
     
-    def register_step_listener(self, listener):
+    def add_step_listener(self, listener):
         """ 
         Register a listener that will be called every step. 
         A step listener can be any class that implements the following method:
@@ -301,7 +301,7 @@ class CompoundSensorListener(object):
         for listener in self.step_listeners:
             listener.step_callback(sensor, times, samples)
     
-    def register_step_listener(self, listener):
+    def add_step_listener(self, listener):
         self.step_listeners.append(listener)
 
 
