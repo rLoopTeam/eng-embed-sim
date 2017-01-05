@@ -1,7 +1,7 @@
 ---
 # NOTE: You must include units with all quantities that are not unitless. Units will be automatically converted to SI. 
 sim:
-    fixed_timestep: 50000 usec
+    fixed_timestep: 100 usec
     tube:
         length: 1500 m
         ambient_pressure: 14.7 psi  # need to convert to pascals, or use units (e.g. 14.7 psi)
@@ -16,7 +16,7 @@ sim:
     sensors:
         laser_opto_1:
             pod_height_offset: 18.3mm  # Note: this should be the x distance between the sensor and the pod reference point (once pod height is calculated)
-            sampling_rate: 10000 Hz
+            sampling_rate: 2500 Hz
             buffer_size: 1000   # This is not used right now
             dtype: 'f'
             noise:
@@ -24,6 +24,9 @@ sim:
                 center: 0.0         
     pod:
         mass: 350 kg
+        position: 0.0 m  # from start of track
+        velocity: 0.0 m/s
+        acceleration: 0.0 m/s^2
         forces:
             aero:
                 # Put aero drag/lift force constants and configuration here

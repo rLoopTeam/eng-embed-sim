@@ -54,9 +54,9 @@ class Pod:
         self.net_lift = 0.0
 
         # Actual physical values (volatile variables). All refer to action in the x dimension only. 
-        self.acceleration = 0.0      # meters per second ^2
-        self.velocity = 0.0          # meters per second
-        self.position = 0.0          # meters. Position relative to the tube; start position is 0m
+        self.acceleration = Units.SI(self.config.acceleration) or 0.0  # meters per second ^2
+        self.velocity = Units.SI(self.config.velocity) or 0.0          # meters per second
+        self.position = Units.SI(self.config.position) or 0.0          # meters. Position relative to the tube; start position is 0m
         
         self.height = 0.0  # Probably need to set this with the config (starting height? What about the landing gear? )
 
@@ -183,7 +183,7 @@ class Pod:
         self.velocity = self.velocity + self.acceleration * t_sec
 
         # @todo: change this to log to a data stream or file? 
-        self.logger.info(self.get_csv_row())
+        #self.logger.info(self.get_csv_row())  # @todo: change this to a listener
 
         # Update time
         self.elapsed_time_usec += dt_usec

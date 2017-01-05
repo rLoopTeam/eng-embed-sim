@@ -1,0 +1,18 @@
+---
+sim:
+    fixed_timestep: 2002 usec  # 2002 gives REALLY bad sample misses for some reason when we don't fix the floating point errors (see sensors.py)
+    #fixed_timestep: 100 usec
+    tube:
+        length: 1500 m
+        track_gap_width: 5mm
+        track_gap_interval: 2m
+    pusher:
+        push_force: 0N
+    pod:
+        velocity: 100m/s
+        forces:
+            aero:
+                enable: False  # Could put true here -- should that override the higher level enable? Probably?
+                drag_coefficient: 0
+        
+        

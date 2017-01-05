@@ -74,8 +74,8 @@ class PollingSensor:
 
         # Volatile
         #self.buffer = RingBuffer(config.buffer_size, config.dtype)   # @todo: How to specify dtype in configuration? There should be a string rep of dtype I think 
-        self.buffer = deque()  # @todo: switch this out for something more capable/fast (numpy array or something)
-        self.sample_times = deque()
+        self.buffer = None     # Note: we depend on our listeners to handle any buffering/saving/sending of sensor values. Buffer is cleard after each step.
+        self.sample_times = None
         self.next_start = 0.0
         self.step_lerp_pcts = None  # Set during step
 
@@ -110,47 +110,48 @@ class PollingSensor:
     
     def step(self, dt_usec):
         """ Step the sensor and put the results of create_step_samples() into the buffer """
-        if self.next_start >= 1:
-            self.next_start -= 1
+
+        # If we have no listeners, don't waste time calculating samples
+        # @todo: Maybe calculate self.next_step so that we can add sensors during sim, but only if it turns out to be necessary
+        if len(self.step_listeners) == 0:
             return
         
+        # If the start of our next sample is greater than 1 (step), skip creating samples for this step
+        if self.next_start >= 1.0:
+            self.next_start -= 1
+            return
+                
         samples_per_step = self.sampling_rate * dt_usec / 1000000.
-        sample_pct_of_step = 1.0/samples_per_step  # For lerping
+        sample_pct_of_step = 1.0/samples_per_step + 0.00000001  # For lerping -- add a tiny amount to eliminate floating point errors (doesn't affect the sim at this scale)
 
-        self.step_lerp_pcts = np.arange(self.next_start, 1, sample_pct_of_step)
+        self.step_lerp_pcts = np.arange(self.next_start, 1.0, sample_pct_of_step)
 
         # Call get_step_samples() (implemented in subclasses) to get the samples and add them to the buffer
-        samples = self.create_step_samples()
-        sample_times = self._get_sample_times(dt_usec)
-        self.buffer.extend(samples)
-        self.sample_times.extend(sample_times)
+        self.samples = self.create_step_samples()
+        self.sample_times = self._get_sample_times(dt_usec)
 
         # Send our data to any attached listeners
         #self.logger.debug("Sending samples to {} step listeners".format(len(self.step_listeners)))
         for step_listener in self.step_listeners:
-            step_listener.step_callback(self, sample_times, samples)
+            step_listener.step_callback(self, self.sample_times, self.samples)
+
+        # Now that we've called all of our listeners, clear the buffer
+        # @todo: do we need to do this? Can we just use local variables and not save to the sensor? 
+        self.samples = None
+        self.sample_times = None
 
         # Update or start pct for the next step
+        # @TODO: If we don't add .0000001 (or any tiny number, really) here the number of samples taken will be off by quite a bit at smaller step sizes. Probably floating point error....
+        #self.next_start = sample_pct_of_step - (1 - self.step_lerp_pcts[-1]) +.0000001  # Works, but moved this to sample_pct_of_step calculation
         self.next_start = sample_pct_of_step - (1 - self.step_lerp_pcts[-1])
-
-    def pop(self):
-        pass
-        #return self.buffer.get()  # @todo: fix this to work with whatever data structure we use for the buffer
         
-    def pop_all(self):
-        """ Get all values in the buffer as a numpy array and clear the buffer """
-        # Note: 
-        out = np.array(self.buffer)
-        self.buffer.clear()
-        return out
     
     # Helper methods
         
     def _lerp(self, start_value, end_value):
         """ Lerp between the two values using the self.step_lerp_pcts vector and return a vector of lerp'd values """
-        return start_value + self.step_lerp_pcts * (end_value - start_value)
-    
-    
+        return (1.0-self.step_lerp_pcts)*start_value + self.step_lerp_pcts*end_value
+        
     def _get_gaussian_noise(self, samples, noise_center=0.0, noise_scale=0.1):
         if noise_scale > 0:
             return np.random.normal(noise_center, noise_scale, len(samples))
@@ -229,7 +230,7 @@ class LaserOptoSensor(PollingSensor):
         # If we're traversing any gaps this step...
         if len(gap_positions_in_step_range):
 
-            # Get the x position of each sample in this step to see if it is over a crack
+            # Get the x position of each sample in this step to see if it is over a gap
             sample_positions = self._lerp(pod_start_pos, pod_end_pos)
             
             # Find the samples that are over a gap (if any)
@@ -267,7 +268,7 @@ class LaserContrastSensor:
 
         gaps = np.array(self.sim.tube.track_gaps)
 
-        gap_indices_in_step_range = np.nonzero(np.logical_and(gaps >= pod_start_pos, gaps <= pod_end_pos))[0]  # [0] because np.nonzero deals with n dimensions, but we only have one
+        gap_indices_in_step_range = np.nonzero(np.logical_and(gaps >= pod_start_pos, gaps < pod_end_pos))[0]  # [0] because np.nonzero deals with n dimensions, but we only have one
         #self.logger.debug("Gap indices in step range {} to {}: {}".format(pod_start_pos, pod_end_pos, gap_indices_in_step_range))
         gap_positions_in_step_range = np.array(gaps)[gap_indices_in_step_range]
         
@@ -294,24 +295,26 @@ class CompoundSensorListener(object):
 
     def __init__(self, config=None):
         self.config = config
-        self.listeners = []
+        self.step_listeners = []
         
     def step_callback(self, sensor, times, samples):
-        for listener in self.listeners:
+        for listener in self.step_listeners:
             listener.step_callback(sensor, times, samples)
     
     def register_step_listener(self, listener):
-        self.listeners.append(listener)
+        self.step_listeners.append(listener)
 
 
 class LaserOptoTestListener(object):
     def __init__(self, config=None):
         self.config = config
+        self.n_gaps = 0
         
     def step_callback(self, sensor, times, samples):
         for i, t in enumerate(times):
             if samples[i] > 40.0:
-                print "GAP FOUND! {},{}".format(t, samples[i])
+                self.n_gaps += 1
+                #print "GAP FOUND! {},{} -- {} found so far".format(t, sensor.sim.pod.position, self.n_gaps)
 
 # ---------------------------
 # Just notes/sketches below here        
