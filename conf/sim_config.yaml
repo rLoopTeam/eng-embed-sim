@@ -6,7 +6,7 @@ sim:
         length: 1500 m
         ambient_pressure: 14.7 psi  # need to convert to pascals, or use units (e.g. 14.7 psi)
         pumpdown_pressure: .125 psi
-        track_gap_width: 50mm
+        track_gap_width: 5mm
         track_gap_interval: 2m
     pusher:
         push_force: 8000 N
@@ -16,7 +16,7 @@ sim:
     sensors:
         laser_opto_1:
             pod_height_offset: 18.3mm  # Note: this should be the x distance between the sensor and the pod reference point (once pod height is calculated)
-            sampling_rate: 500 Hz
+            sampling_rate: 10000 Hz
             buffer_size: 1000   # This is not used right now
             dtype: 'f'
             noise:

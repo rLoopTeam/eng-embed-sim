@@ -83,6 +83,11 @@ class PollingSensor:
         self.step_listeners = []
     
     def register_step_listener(self, listener):
+        """ 
+        Register a listener that will be called every step. 
+        A step listener can be any class that implements the following method:
+        - step_callback(self, sensor, times, samples)
+        """
         self.step_listeners.append(listener)
     
     def create_step_samples(self):
@@ -121,9 +126,9 @@ class PollingSensor:
         self.sample_times.extend(sample_times)
 
         # Send our data to any attached listeners
-        self.logger.debug("Sending samples to {} step listeners".format(len(self.step_listeners)))
+        #self.logger.debug("Sending samples to {} step listeners".format(len(self.step_listeners)))
         for step_listener in self.step_listeners:
-            step_listener.callback(self, sample_times, samples)
+            step_listener.step_callback(self, sample_times, samples)
 
         # Update or start pct for the next step
         self.next_start = sample_pct_of_step - (1 - self.step_lerp_pcts[-1])
@@ -156,6 +161,33 @@ class PollingSensor:
         start_time = self.sim.elapsed_time_usec  # Note: this is updated last in Sim.step()
         return self._lerp(start_time, start_time + dt_usec).astype(int)  # as ints because microseconds
 
+    # ---------------------------
+    # Format conversion
+    # ---------------------------
+
+    def to_csv(self, samples):
+        """ 
+        Convert the samples to csv format. It is assumed the samples came from this sensor.
+        Return an object (or headers/data?) that represents csv
+        """
+        pass  # Defer to subclasses
+        """
+        Example
+        # @todo: provide an example
+        """
+    
+    def to_safeudp_list(self, samples):
+        """ Return a list of safeudp formatted packets """
+        pass
+        
+    def to_json(self, samples):
+        """ Return all of the samples in a single JSON string """
+        pass
+        
+    def to_json_list(self, samples):
+        """ Return a list of 1 json object per sample """
+        pass
+
 
 class LaserOptoSensor(PollingSensor):
     
@@ -168,6 +200,9 @@ class LaserOptoSensor(PollingSensor):
 
     def create_step_samples(self):
         # Create height samples
+        
+        # @todo: check error if step straddles a gap
+
         height_samples = self._lerp(self.sim.pod.last_height, self.sim.pod.height)
         height_samples += self.pod_height_offset
         
@@ -180,13 +215,17 @@ class LaserOptoSensor(PollingSensor):
         pod_end_pos = self.sim.pod.position
 
         gaps = np.array(self.sim.tube.track_gaps)
+        
+        # Calculate the gap indices that we want to check. Make sure to include gaps that start before the beginning position but straddle the start
+        # Note: We might check an extra gap index here or there, but it will be handled properly by the calculations below
+        gap_check_start_pos = pod_start_pos - self.sim.tube.track_gap_width # Check for gap starts a little before the pod start position
+        gap_indices_in_step_range = np.nonzero(np.logical_and(gaps >= gap_check_start_pos, gaps <= pod_end_pos))[0]  # [0] because np.nonzero deals with n dimensions, but we only have one
 
-        gap_indices_in_step_range = np.nonzero(np.logical_and(gaps >= pod_start_pos, gaps <= pod_end_pos))[0]  # [0] because np.nonzero deals with n dimensions, but we only have one
         #self.logger.debug("Gap indices in step range {} to {}: {}".format(pod_start_pos, pod_end_pos, gap_indices_in_step_range))
         gap_positions_in_step_range = np.array(gaps)[gap_indices_in_step_range]
         
         #self.logger.debug("Gap positions in step range: {}".format(gap_positions_in_step_range))
-        
+                
         # If we're traversing any gaps this step...
         if len(gap_positions_in_step_range):
 
@@ -214,17 +253,66 @@ class LaserOptoSensor(PollingSensor):
         samples[indices] += 50.48 # @todo: adjust appropriately to match data collected at test weekend
 
 
+class LaserContrastSensor:
+    def __init__(self, sim, config):
+        self.config = config
+        
+        self.current_value = 0  # 0 = non-reflective, 1 = reflective
+        
+    def create_step_samples(self):
+        # Gap positions
+        # Pod positioning so that we can check for gap traversal
+        pod_start_pos = self.sim.pod.last_position
+        pod_end_pos = self.sim.pod.position
+
+        gaps = np.array(self.sim.tube.track_gaps)
+
+        gap_indices_in_step_range = np.nonzero(np.logical_and(gaps >= pod_start_pos, gaps <= pod_end_pos))[0]  # [0] because np.nonzero deals with n dimensions, but we only have one
+        #self.logger.debug("Gap indices in step range {} to {}: {}".format(pod_start_pos, pod_end_pos, gap_indices_in_step_range))
+        gap_positions_in_step_range = np.array(gaps)[gap_indices_in_step_range]
+        
+
+    def on_rising_edge(self):
+        pass
+        
+    def on_falling_edge(self):
+        pass
+        
 class SensorConsoleWriter():
-    
+    """ A sensor step listener that writes to the console """
     def __init__(self, config=None):
         self.config = config  # @todo: define config for this, if needed (e.g. format, etc.)
         
-    def callback(self, sensor, times, samples):
+    def step_callback(self, sensor, times, samples):
         # Write values to the console
         for i, t in enumerate(times):
             print "{},{}".format(t, samples[i])
             
-            
+
+class CompoundSensorListener(object):
+    """ A listener object that just calls other listeners """
+
+    def __init__(self, config=None):
+        self.config = config
+        self.listeners = []
+        
+    def step_callback(self, sensor, times, samples):
+        for listener in self.listeners:
+            listener.step_callback(sensor, times, samples)
+    
+    def register_step_listener(self, listener):
+        self.listeners.append(listener)
+
+
+class LaserOptoTestListener(object):
+    def __init__(self, config=None):
+        self.config = config
+        
+    def step_callback(self, sensor, times, samples):
+        for i, t in enumerate(times):
+            if samples[i] > 40.0:
+                print "GAP FOUND! {},{}".format(t, samples[i])
+
 # ---------------------------
 # Just notes/sketches below here        
 
@@ -233,7 +321,7 @@ class SensorStepListener:
     def __init__(self, config):
         self.config = config   # Config can hold a file to log to, logger settings, or whatever you want
 
-    def callback(self, sensor, times, samples):
+    def step_callback(self, sensor, times, samples):
         # @todo: do something with the samples from this step
         pass # Defer to subclasses
 
@@ -250,7 +338,7 @@ class PinChangeListener(SensorStepListener):
 
         self.pin_state = False
         
-    def callback(self, sensor, times, samples):
+    def step_callback(self, sensor, times, samples):
         # Check to see if we changed state and call the interrupt if so. @todo: maybe schedule interrupts? 
         # Note: may want to use a sample listener on this to emulate interrupts so they can be called during the sensor step
         # Note: 

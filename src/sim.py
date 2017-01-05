@@ -30,9 +30,10 @@ class Sim:
         self.elapsed_time_usec = 0
         
         # Testing only
-        from sensors import LaserOptoSensor, SensorConsoleWriter  # @todo: move this to the top once we're done testing
+        from sensors import LaserOptoSensor, SensorConsoleWriter, LaserOptoTestListener  # @todo: move this to the top once we're done testing
         self.laser_opto_1 = LaserOptoSensor(self, self.config.sensors.laser_opto_1)
-        self.laser_opto_1.register_step_listener(SensorConsoleWriter())  # Write data directly to the console
+        #self.laser_opto_1.register_step_listener(SensorConsoleWriter())  # Write data directly to the console
+        self.laser_opto_1.register_step_listener(LaserOptoTestListener())
         
     def step(self, dt_usec):        
         # Step the pusher first (will apply pressure and handle disconnection)
