@@ -14,8 +14,8 @@ class AeroForce:
         
     def get_force(self):
         """ Get the drag force (based on pod velocity, negative in the x direction since it's drag) """
-        return -self.air_resistance_k * self.sim.pod.velocity ** 2
+        x = -self.air_resistance_k * self.sim.pod.velocity ** 2
+        y = 0 # No y force. y force isn't used in the simulator right now
+        z = 0 # No z force for aero
+        return (x, y, z)
     
-    def get_lift(self):
-        """ Get lift provided by this force provider (none in this case) """
-        return 0.0

@@ -11,8 +11,4 @@ class LateralStabilityForce:
     def get_force(self):
         """ Get x force (drag -- return a negative number) provided by the lateral stability wheels. """
         # Note: You can get pod velocity/acceleration/position using e.g. self.sim.pod.velocity (see pod.py __init__() for vars)
-        return 0.0
-        
-    def get_lift(self):
-        """ Get lift provided by the lateral stability wheels (probably none) """
-        return 0.0
+        return (0,0,0)

@@ -16,15 +16,6 @@ class BrakeForce:
         # A34 data -- drag is for both brakes, lift is for one brake. Force_y has to do with the difference in force due to magnetic interactions and can be disregarded
         velocity = 0
         air_gap = 0
-        
-        
+            
+        return (0, 0, 0)
 
-        return 0.0
-        
-    def get_lift(self):
-        """ 
-        Get lift provided by the brakes. Note that this is NOT 'lift' 
-        against the rail, but refers to horizontal lift. This will
-        will probably remain 0.0. 
-        """
-        return 0.0

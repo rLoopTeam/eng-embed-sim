@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 from units import Units
+import math
 
 class HoverEngineForce:
     
@@ -8,16 +9,33 @@ class HoverEngineForce:
         self.sim = sim
         self.config = config 
 
+        """
+        self.a = self.config.a
+        self.b = self.config.b
+        self.c = self.config.c
+        self.k = self.config.k
+        """
+        
     def get_force(self):
-        """ Get x force provided by the hover engines. Note that this does NOT include force provided by gimbaling. """
-        # @todo: decide whether or not we want to have gimbaling provide x force and lift for 4 of the engines, or to do x force (drag) for all engines here...
-        return 0.0
-        
-    def get_lift(self):
         """ 
-        Get lift provided by hover engines """
-        return 0.0
+        Get lift provided by hover engines 
+        @see rPod Engine Model v2 from @ashtorak
         
+        F(height, velocity, RPM) = a*e^(b*h) * tan^-1( c(v + kr) ) 
+        
+        """
+        
+        
+        """
+        height = self.sim.pod.height
+        velocity = self.sim.pod.velocity
+        rpm = self.sim.pod.hover_engines.rpm  # @todo: implement this. Do we want to split the hover engines? 
+    
+        lift_force = self.a * math.exp(self.b * height) * math.atan(self.c * (velocity + self.k * rpm))
+        return lift_force * 8
+        """
+        
+        return (0, 0, 0)
         
     # If hover engines are turning, the drag is reduced but not zero
     # HE lift and drag for different velocities? One that Keith saw (about 3 months ago)

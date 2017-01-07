@@ -12,6 +12,9 @@
 
 from __future__ import division
 import logging
+import numpy as np
+
+# Our stuff
 from units import Units
 from brakes import *
 
@@ -50,8 +53,7 @@ class Pod:
         print "Config mass: " + str(self.config.mass)
 
         # Forces that can act on the pod (note: these are cleared at the end of each step)        
-        self.net_force = 0.0  # Newtons, in the x direction This will change, and may affect acceleration
-        self.net_lift = 0.0
+        self.net_force = np.array((0.0, 0.0, 0.0))  # Newtons; (x, y, z). +x pushes the pod forward, +z force lifts the pod, y is not currently used. 
 
         # Actual physical values (volatile variables). All refer to action in the x dimension only. 
         self.acceleration = Units.SI(self.config.acceleration) or 0.0  # meters per second ^2
@@ -133,13 +135,8 @@ class Pod:
 
     def apply_force(self, force):
         """ Apply force to the pod in the x direction. Note the forces are cleared after each step() """
-        self.net_force += force
+        self.net_force += np.array(force)  # Note that net_force is a numpy array, so adding a tuple to it works e.g. np.array((1,2,3)) + (4,5,6) => np.array([5,7,9])
         #self.logger.debug("Force {} applied (total force is {})".format(force, self.net_force))
-
-    def apply_lift(self, lift_force):
-        self.net_lift += lift_force
-        #if lift_force != 0:
-        #    self.logger.debug("Lift {} applied (total lift is {})".format(force, self.net_force))
     
     def get_csv_row(self):
         out = []
@@ -156,7 +153,6 @@ class Pod:
         """ Apply all forces provided by the exerters, in order. This happens every step, and all forces are then cleared for the next step. """
         for exerter in self.forces:
             self.apply_force(exerter.get_force())
-            self.apply_lift(exerter.get_lift())
     
     
     # -------------------------
@@ -171,8 +167,9 @@ class Pod:
         self.last_velocity = self.velocity
         self.last_position = self.position
 
+        # X physics onlyw
         # F = ma, a = F/m
-        self.acceleration = self.net_force / self.mass
+        self.acceleration = self.net_force[0] / self.mass
         
         t_sec = dt_usec / 1000000
         
@@ -189,7 +186,7 @@ class Pod:
         self.elapsed_time_usec += dt_usec
 
         # Clear forces for the next step
-        self.net_force = 0
+        self.net_force = (0, 0, 0)  # x, y, z
 
     def step(self, dt_usec):
         #self.step_physics(dt_usec)

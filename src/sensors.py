@@ -251,34 +251,51 @@ class LaserOptoSensor(PollingSensor):
             
     def _adjust_samples_for_gaps(self, samples, indices):
         """ Adjust the samples at the given indices as if they were over a gap """
+        print "adjust_samples_for_gaps indices: " + str(indices) + str(len(samples))
         samples[indices] += 50.48 # @todo: adjust appropriately to match data collected at test weekend
 
 
-class LaserContrastSensor:
+class LaserContrastSensor():  # inherits InterruptingSensor? 
     def __init__(self, sim, config):
+        self.sim = sim
         self.config = config
         
-        self.current_value = 0  # 0 = non-reflective, 1 = reflective
-        
     def create_step_samples(self):
-        # Gap positions
+        
+        # Stripe positions
+        strip_starts = self.sim.tube.reflective_strips
+        strip_ends = self.sim.tube.reflective_strip_ends
+
         # Pod positioning so that we can check for gap traversal
         pod_start_pos = self.sim.pod.last_position
         pod_end_pos = self.sim.pod.position
-
-        gaps = np.array(self.sim.tube.track_gaps)
-
-        gap_indices_in_step_range = np.nonzero(np.logical_and(gaps >= pod_start_pos, gaps < pod_end_pos))[0]  # [0] because np.nonzero deals with n dimensions, but we only have one
-        #self.logger.debug("Gap indices in step range {} to {}: {}".format(pod_start_pos, pod_end_pos, gap_indices_in_step_range))
-        gap_positions_in_step_range = np.array(gaps)[gap_indices_in_step_range]
         
+        strip_start_indices_in_step_range = np.nonzero(np.logical_and(strip_starts >= pod_start_pos, strip_starts < pod_end_pos))[0]  # [0] because np.nonzero deals with n dimensions, but we only have one
+        strip_end_indices_in_step_range = np.nonzero(np.logical_and(strip_ends >= pod_start_pos, strip_ends < pod_end_pos))[0]  # [0] because np.nonzero deals with n dimensions, but we only have one
 
+        strip_start_positions_in_step_range = np.array(strip_starts)[strip_start_indices_in_step_range]
+        strip_end_positions_in_step_range = np.array(strip_ends)[strip_end_indices_in_step_range]
+        
+        
+        
+    def _lerp_map(self, x_vals, a0, a1, b0, b1):
+        """ 
+        Map the x_values in range [a0, a1] to their equivalent positions in range [b0, b1] 
+        Example: 
+            [a0, a1] = [12, 24], x_vals = [13, 22, 17], [b0, b1] = [100, 200]:
+                => returns [ 108.33333333,  183.33333333,  141.66666667]
+        """
+        return b0 + (b1 - b0) * ((np.array(x_vals) - a0) / (a1 - a0))
+
+
+    # @todo: move this to a listener; preferably one that can call the interrupts in "real" time
     def on_rising_edge(self):
         pass
         
     def on_falling_edge(self):
         pass
         
+
 class SensorConsoleWriter():
     """ A sensor step listener that writes to the console """
     def __init__(self, config=None):

@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+import numpy as np
+
 from units import Units
 
 class Tube:
@@ -14,34 +16,26 @@ class Tube:
         #       For the tube reference frame, x=0 at the start of the track, and x = length at the end.
         #       For the pod, x=0 is ahead and below the pod, with x+ being toward the read of the pod.
         self.length = Units.SI(config.length)     # meters -- Length from pod start position to end of track
-        self.pressure = Units.SI(config.ambient_pressure)   # Pascals (1atm = 101325Pa)
-
-        self.state = "HOLD"  # {HOLD, PUMPDOWN, PRESSURIZE}
-        self.pumpdown_time_sec = 2400   # 2400 = 40 minutes
-        self.pressurize_time_sec = 600  # 600 = 10 minutes
-        self.pumpdown_target_pressure = 12665.63  # Pa -- .125Atm = 12665.63 Pa
         
         # Reference for the reflective stripes
-        self.reflective_strip_width = 0.1016      # meters (4 inches)
-        self.reflective_pattern_interval = 30.48  # meters (100 feet)
-        self.reflective_pattern_spacing = 0.1016  # meters -- distance between stripes in a pattern
+        self.reflective_strip_width = Units.SI(config.reflective_strip_width)      # meters (4 inches)
+        self.reflective_pattern_interval = Units.SI(config.reflective_pattern_interval)  # meters (100 feet)
+        self.reflective_pattern_spacing = Units.SI(config.reflective_pattern_spacing)  # meters -- distance between stripes in a pattern
 
         self.track_gap_width = Units.SI(config.track_gap_width) # Width of the gap in the subtrack in meters (probably worst scenario, more realistic 1-2 mm)
         self.track_gap_interval = Units.SI(config.track_gap_interval)  # Interval between the gaps in the subtrack in meters (Length of the aluminium plate)
 
-        self.atmospheric_pressure = 101325.0  # @todo: do we still need this?
-
         # Initialize 
-        self.reflective_strips = []
-        self._init_reflective_strips()
-        # self._init_strips_distance_remaining()  # @todo: finish this? or put it in the pod? 
-        
+        self.reflective_strips = None  # Will be a numpy array after initialization
+        self._init_reflective_strips(config.enable_strip_patterns)
+        self.reflective_strip_ends = self.reflective_strips + self.reflective_strip_width   # Pre-calc the ends for use in LaserContrastSensor
+
         self.track_gaps = []
         self._init_track_gaps()
 
     def _init_track_gaps(self):
 
-        cursor = self.length # not sure if "cursor" can be used again
+        cursor = self.length
 
         while cursor > self.track_gap_interval:  # Note: we'll put one in negative territory if we use 0 here
             cursor -= self.track_gap_interval
@@ -49,7 +43,7 @@ class Tube:
 
         self.track_gaps = sorted(self.track_gaps)
 
-    def _init_reflective_strips(self):
+    def _init_reflective_strips(self, enable_patterns):
         # Add in the 100' strips (backwards)
 
         # Calculate the distance between strip edges in a pattern
@@ -57,26 +51,29 @@ class Tube:
 
         cursor = self.length
         counter = 1  # 1 to account for the end of the tube
-
+        
+        reflective_strips = []
         while cursor > self.reflective_pattern_interval:  # Note: we'll put one in negative territory if we use 0 here
             cursor -= self.reflective_pattern_interval
             counter += 1
-            self.reflective_strips.append(cursor)
+            reflective_strips.append(cursor)
 
-            # Handle 500' pattern (5 strips)
-            if counter == 5:
-                # Add the other 4 strips (we already added the 100' strip)
-                pattern = [cursor + (x+1) * pattern_offset for x in xrange(4)]
-                self.reflective_strips.extend(pattern)
+            # If we have the 500' and 1000' patterns (SpaceX may or may not have these for the competition -- we may be able to choose)
+            if enable_patterns:
+                # Handle 500' pattern (5 strips)
+                if counter == 5:
+                    # Add the other 4 strips (we already added the 100' strip)
+                    pattern = [cursor + (x+1) * pattern_offset for x in xrange(4)]
+                    reflective_strips.extend(pattern)
             
-            # Handle 1000' pattern (10 strips)
-            if counter == 10:
-                # Add the other 9 strips (we already added the 100' strip)
-                pattern = [cursor + (x+1) * pattern_offset for x in xrange(9)]
-                self.reflective_strips.extend(pattern)
+                # Handle 1000' pattern (10 strips)
+                if counter == 10:
+                    # Add the other 9 strips (we already added the 100' strip)
+                    pattern = [cursor + (x+1) * pattern_offset for x in xrange(9)]
+                    reflective_strips.extend(pattern)
             
         # Sort and reverse for easy handling during the run
-        self.reflective_strips = sorted(self.reflective_strips)
+        self.reflective_strips = np.array(sorted(reflective_strips))
 
     def reflective_strips_distance_remaining_mm(self):
         # @todo: rename this or move it to a utils class/script

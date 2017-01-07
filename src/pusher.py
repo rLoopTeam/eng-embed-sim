@@ -45,7 +45,7 @@ class Pusher:
             pass
         elif self.state == "PUSH":
             if self.sim.pod.velocity < self.max_velocity:
-                self.sim.pod.apply_force(self.push_force)
+                self.sim.pod.apply_force((self.push_force, 0, 0))
             else:
                 self.set_state("COAST")
         elif self.state == "COAST":
