@@ -1,7 +1,7 @@
 ---
 # NOTE: You must include units with all quantities that are not unitless. Units will be automatically converted to SI. 
 sim:
-    fixed_timestep: 100000 usec
+    fixed_timestep: 10000 usec
     tube:
         length: 1500 m
         ambient_pressure: 14.7 psi  # need to convert to pascals, or use units (e.g. 14.7 psi)
@@ -26,12 +26,14 @@ sim:
     sensors:
         laser_opto_1:
             pod_height_offset: 18.3mm  # Note: this should be the x distance between the sensor and the pod reference point (once pod height is calculated)
-            sampling_rate: 10000 Hz
+            sampling_rate: 250 Hz
             buffer_size: 1000   # This is not used right now
             dtype: 'f'
             noise:
                 scale: 0.01
-                center: 0.0         
+                center: 0.0
+        laser_contrast_1:
+            something: 1
     pod:
         mass: 350 kg
         position: 0.0 m  # from start of track
@@ -50,10 +52,25 @@ sim:
                 # Put gimbal drag/lift force constants and configuration here. Include units! (any provided units will be converted to SI)
             hover_engines:
                 # Put hover engine drag/lift force constants and configuration here. Include units! (any provided units will be converted to SI)
+                lift:
+                    a: 1142
+                    b: -99.144
+                    c: 0.089501
+                    k: 0.00932005
             landing_gear:
                 # Put landing gear drag/lift force constants and configuration here. Include units! (any provided units will be converted to SI)
             lateral_stability:
                 # Put lateral stability drag/lift force constants and configuration here. Include units! (any provided units will be converted to SI)
+                damping_coefficient: 0.01 N*s/m  # 0.01 is a placeholder @todo: update to actual value
+        landing_gear:
+            # Heights relative to the bottoms of the hover engines
+            min_height: 6mm
+            max_height: 16mm
+            initial_height: 6mm
+            down_speed_loaded: something
+            down_speed_unloaded: something
+            up_speed_loaded: something
+            down_speed_loaded: something
         sensors:
             CONTRAST_1: 
                 pod_ref_x_offset: -0.5m
@@ -89,10 +106,5 @@ sim:
             BRAKE_R:
                 sensors: pass
                 actuators: pass
-        landing_gear:
-            LG_FL: pass
-            LG_FR: pass
-            LG_RL: pass
-            LG_RR: pass            
-        
+
         

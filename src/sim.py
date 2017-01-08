@@ -35,11 +35,17 @@ class Sim:
         self.end_listeners = []
         
         # Testing only
-        from sensors import LaserOptoSensor, SensorConsoleWriter, LaserOptoTestListener  # @todo: move this to the top once we're done testing
+        from sensors import SensorConsoleWriter   # @todo: move this to the top once we're done testing
+        from sensor_laser_opto import LaserOptoSensor, LaserOptoTestListener
         self.laser_opto_1 = LaserOptoSensor(self, self.config.sensors.laser_opto_1)
         #self.laser_opto_1.register_step_listener(SensorConsoleWriter())  # Write data directly to the console
         self.lotl = LaserOptoTestListener()
         self.laser_opto_1.add_step_listener(self.lotl) 
+
+        from sensor_laser_contrast import LaserContrastSensor, LaserContrastTestListener
+        self.laser_contrast_1 = LaserContrastSensor(self, self.config.sensors.laser_opto_1)
+        self.lctl = LaserContrastTestListener()
+        self.laser_contrast_1.add_step_listener(self.lctl)
         
     def step(self, dt_usec):        
 
@@ -52,6 +58,7 @@ class Sim:
         #self.fcu.step(dt_usec)
         self.laser_opto_1.step(dt_usec)
         #self.logger.debug(list(self.laser_opto_1.pop_all()))
+        self.laser_contrast_1.step(dt_usec)
         
         self.elapsed_time_usec += dt_usec
         self.n_steps_taken += 1
@@ -75,7 +82,7 @@ class Sim:
 
         sim_end_t = time.time()
         sim_time = sim_end_t - sim_start_t
-        print "LaserOptoTestListener: detected {} gaps".format(self.lotl.n_gaps)
+        print "LaserOptoTestListener: gap sensor took {} samples that were within a gap.".format(self.lotl.n_gaps)
         print "Simulated {} steps/{} seconds in {} actual seconds.".format(self.n_steps_taken, self.elapsed_time_usec/1000000, sim_time)
         
         
@@ -103,7 +110,7 @@ class SimEndListener(object):
 
         # If we've hit the wall...
         if sim.pod.position >= sim.tube.length:
-            self.logger.info("BOOM!")
+            self.logger.info("Pod has destroyed the tube and everything within a 10 mile radius.")
             return True
 
         return False

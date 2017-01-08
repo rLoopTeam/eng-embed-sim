@@ -55,10 +55,15 @@ class Pod:
         # Forces that can act on the pod (note: these are cleared at the end of each step)        
         self.net_force = np.array((0.0, 0.0, 0.0))  # Newtons; (x, y, z). +x pushes the pod forward, +z force lifts the pod, y is not currently used. 
 
-        # Actual physical values (volatile variables). All refer to action in the x dimension only. 
+        # Initialize actual physical values (volatile variables). All refer to action in the x dimension only. 
         self.acceleration = Units.SI(self.config.acceleration) or 0.0  # meters per second ^2
         self.velocity = Units.SI(self.config.velocity) or 0.0          # meters per second
         self.position = Units.SI(self.config.position) or 0.0          # meters. Position relative to the tube; start position is 0m
+        
+        # @todo: this is just a sketch, for use with the hover engine calculations. Maybe switch accel, velocity, and position to coordinates? hmmmm...
+        self.z_acceleration = 0.0
+        self.z_velocity = 0.0
+        self.z_position = Units.mm(self.config.landing_gear.initial_height)  # This should be gotten from the starting height of the lift mechanism
         
         self.height = 0.0  # Probably need to set this with the config (starting height? What about the landing gear? )
 
@@ -69,7 +74,6 @@ class Pod:
         self.last_velocity = 0.0
         self.last_position = 0.0
         self.last_height = 0.0
-
 
         # Handle forces that act on the pod
         self.forces = []
@@ -167,7 +171,10 @@ class Pod:
         self.last_velocity = self.velocity
         self.last_position = self.position
 
-        # X physics onlyw
+        # -------------------
+        # X physics
+        # -------------------
+        
         # F = ma, a = F/m
         self.acceleration = self.net_force[0] / self.mass
         
@@ -181,6 +188,15 @@ class Pod:
 
         # @todo: change this to log to a data stream or file? 
         #self.logger.info(self.get_csv_row())  # @todo: change this to a listener
+
+
+        # -------------------
+        # Z physics
+        # -------------------
+        
+        # Subtract gravity
+        self.net_force[2] += -9.80665 * self.mass
+        
 
         # Update time
         self.elapsed_time_usec += dt_usec

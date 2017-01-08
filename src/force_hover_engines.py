@@ -9,22 +9,22 @@ class HoverEngineForce:
         self.sim = sim
         self.config = config 
 
-        """
-        self.a = self.config.a
-        self.b = self.config.b
-        self.c = self.config.c
-        self.k = self.config.k
-        """
+        self.lift_a = self.config.lift.a
+        self.lift_b = self.config.lift.b
+        self.lift_c = self.config.lift.c
+        self.lift_k = self.config.lift.k
         
     def get_force(self):
         """ 
         Get lift provided by hover engines 
         @see rPod Engine Model v2 from @ashtorak
         
+        "a", "b", "c" are fit parameters
+        "k" relates RPM to velocity
+
         F(height, velocity, RPM) = a*e^(b*h) * tan^-1( c(v + kr) ) 
         
         """
-        
         
         """
         height = self.sim.pod.height
@@ -34,8 +34,18 @@ class HoverEngineForce:
         lift_force = self.a * math.exp(self.b * height) * math.atan(self.c * (velocity + self.k * rpm))
         return lift_force * 8
         """
+        height = self.sim.pod.height  # This won't work -- we need hover engine height in meters
+        height = .008  # just for testing -- need to get this somewhere
+        velocity = self.sim.pod.velocity
+        #rpm = self.sim.pod.hover_engines.rpm  # @todo: implement this. Do we want to split the hover engines? 
+        rpm = 0
         
-        return (0, 0, 0)
+        # Lift
+        p1 = math.exp(self.lift_b * height)
+        p2 = math.atan(self.lift_c * (velocity + self.lift_k * rpm))
+        z = self.lift_a * p1 * p2
+        print "Hover engine lift: {} (RPM: {}, pod velocity: {})".format(z, rpm, velocity)
+        return (0, 0, z)
         
     # If hover engines are turning, the drag is reduced but not zero
     # HE lift and drag for different velocities? One that Keith saw (about 3 months ago)

@@ -14,6 +14,10 @@ class Units:
     @classmethod
     def usec(cls, quantity_time):
         return cls.ureg.parse_expression(quantity_time).to(cls.ureg.microsecond).magnitude
+
+    @classmethod
+    def mm(cls, quantity_distance):
+        return cls.ureg.parse_expression(quantity_distance).to(cls.ureg.millimeter).magnitude
     
 if __name__ == "__main__":
     a = ['1.25m', '3ft', '18psi', '4m/s', "100usec", '10min']

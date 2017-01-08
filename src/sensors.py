@@ -45,7 +45,27 @@ def ringbuff_numpy_test():
         ringbuff.get() #read
 """
 
-class PollingSensor:
+class Sensor(object):
+    def __init__(self, sim, config):
+        self.sim = sim
+        self.config = config
+
+        # Communications
+        self.step_listeners = []
+
+    def add_step_listener(self, listener):
+        """ 
+        Register a listener that will be called every step. 
+        A step listener can be any class that implements the following method:
+        - step_callback(self, sensor, times, samples)
+        """
+        self.step_listeners.append(listener)
+
+    def create_step_samples(self):
+        pass  #deferred to subclasses
+        
+
+class PollingSensor(Sensor):
     """ Sensor that provides a data stream  """
     
     """
@@ -58,9 +78,8 @@ class PollingSensor:
     """
 
     def __init__(self, sim, config):
-        
-        self.sim = sim
-        self.config = config
+        Sensor.__init__(self, sim, config)
+
         self.logger = logging.getLogger("PollingSensor")
 
         # Configuration
@@ -79,16 +98,6 @@ class PollingSensor:
         self.next_start = 0.0
         self.step_lerp_pcts = None  # Set during step
 
-        # Communications
-        self.step_listeners = []
-    
-    def add_step_listener(self, listener):
-        """ 
-        Register a listener that will be called every step. 
-        A step listener can be any class that implements the following method:
-        - step_callback(self, sensor, times, samples)
-        """
-        self.step_listeners.append(listener)
     
     def create_step_samples(self):
         """ Get the step samples """
@@ -127,18 +136,12 @@ class PollingSensor:
         self.step_lerp_pcts = np.arange(self.next_start, 1.0, sample_pct_of_step)
 
         # Call get_step_samples() (implemented in subclasses) to get the samples and add them to the buffer
-        self.samples = self.create_step_samples()
-        self.sample_times = self._get_sample_times(dt_usec)
+        samples = self.create_step_samples(dt_usec)  # Format np.array([<sample time>, <sample data 1>, ...])
 
         # Send our data to any attached listeners
         #self.logger.debug("Sending samples to {} step listeners".format(len(self.step_listeners)))
         for step_listener in self.step_listeners:
-            step_listener.step_callback(self, self.sample_times, self.samples)
-
-        # Now that we've called all of our listeners, clear the buffer
-        # @todo: do we need to do this? Can we just use local variables and not save to the sensor? 
-        self.samples = None
-        self.sample_times = None
+            step_listener.step_callback(self, samples)
 
         # Update or start pct for the next step
         # @TODO: If we don't add .0000001 (or any tiny number, really) here the number of samples taken will be off by quite a bit at smaller step sizes. Probably floating point error....
@@ -190,121 +193,37 @@ class PollingSensor:
         pass
 
 
-class LaserOptoSensor(PollingSensor):
-    
+class InterruptingSensor(Sensor):
+
     def __init__(self, sim, config):
-        PollingSensor.__init__(self, sim, config)  # @todo: is this right? 
-        self.logger = logging.getLogger("LaserOptoSensor")
-        
-        # Get the height offset for this sensor?
-        self.pod_height_offset = Units.SI(self.config.pod_height_offset) * 1000  # We want mm here -- maybe have a function in Units for that? 
+        super(InterruptingSensor, self).__init__(sim, config)
 
-    def create_step_samples(self):
-        # Create height samples
-        
-        # @todo: check error if step straddles a gap
+    def step(self, dt_usec):
+        """ Step the sensor and put the results of create_step_samples() into the buffer """
 
-        height_samples = self._lerp(self.sim.pod.last_height, self.sim.pod.height)
-        height_samples += self.pod_height_offset
-        
-        # Add noise. @todo: we might want to do this after we adjust for gaps? 
-        height_samples += self._get_gaussian_noise(height_samples, self.noise_center, self.noise_scale)
-        
-        # Gap positions
-        # Pod positioning so that we can check for gap traversal
-        pod_start_pos = self.sim.pod.last_position
-        pod_end_pos = self.sim.pod.position
+        # If we have no listeners, don't waste time calculating samples
+        # @todo: Maybe calculate self.next_step so that we can add sensors during sim, but only if it turns out to be necessary
+        if len(self.step_listeners) == 0:
+            return
+                        
+        # Call get_step_samples() (implemented in subclasses) to get the samples and add them to the buffer
+        samples = self.create_step_samples(dt_usec)  # Note: samples for interrupting sensors include the time as the first column
 
-        gaps = np.array(self.sim.tube.track_gaps)
-        
-        # Calculate the gap indices that we want to check. Make sure to include gaps that start before the beginning position but straddle the start
-        # Note: We might check an extra gap index here or there, but it will be handled properly by the calculations below
-        gap_check_start_pos = pod_start_pos - self.sim.tube.track_gap_width # Check for gap starts a little before the pod start position
-        gap_indices_in_step_range = np.nonzero(np.logical_and(gaps >= gap_check_start_pos, gaps <= pod_end_pos))[0]  # [0] because np.nonzero deals with n dimensions, but we only have one
+        # Send our data to any attached listeners
+        #self.logger.debug("Sending samples to {} step listeners".format(len(self.step_listeners)))
+        for step_listener in self.step_listeners:
+            step_listener.step_callback(self, samples)
 
-        #self.logger.debug("Gap indices in step range {} to {}: {}".format(pod_start_pos, pod_end_pos, gap_indices_in_step_range))
-        gap_positions_in_step_range = np.array(gaps)[gap_indices_in_step_range]
-        
-        #self.logger.debug("Gap positions in step range: {}".format(gap_positions_in_step_range))
-                
-        # If we're traversing any gaps this step...
-        if len(gap_positions_in_step_range):
-
-            # Get the x position of each sample in this step to see if it is over a gap
-            sample_positions = self._lerp(pod_start_pos, pod_end_pos)
-            
-            # Find the samples that are over a gap (if any)
-            over_gap_indices = []  # Note: can't use a np array here since no extending
-            for gap_start_pos in gap_positions_in_step_range:
-                gap_end_pos = gap_start_pos + self.sim.tube.track_gap_width
-                over_gap_indices.extend(np.nonzero(np.logical_and(sample_positions >= gap_start_pos, sample_positions <= gap_end_pos))[0].tolist())
-
-            #self.logger.debug("Over gap indices: {}".format(over_gap_indices))
-
-            # Adjust the samples that are over gaps
-            if len(over_gap_indices) > 0:
-                self._adjust_samples_for_gaps(height_samples, over_gap_indices)
-
-        # Return our (possibly adjusted) height samples
-        #self.logger.debug("Created {} samples".format(len(height_samples)))
-        return height_samples
-            
-    def _adjust_samples_for_gaps(self, samples, indices):
-        """ Adjust the samples at the given indices as if they were over a gap """
-        print "adjust_samples_for_gaps indices: " + str(indices) + str(len(samples))
-        samples[indices] += 50.48 # @todo: adjust appropriately to match data collected at test weekend
-
-
-class LaserContrastSensor():  # inherits InterruptingSensor? 
-    def __init__(self, sim, config):
-        self.sim = sim
-        self.config = config
-        
-    def create_step_samples(self):
-        
-        # Stripe positions
-        strip_starts = self.sim.tube.reflective_strips
-        strip_ends = self.sim.tube.reflective_strip_ends
-
-        # Pod positioning so that we can check for gap traversal
-        pod_start_pos = self.sim.pod.last_position
-        pod_end_pos = self.sim.pod.position
-        
-        strip_start_indices_in_step_range = np.nonzero(np.logical_and(strip_starts >= pod_start_pos, strip_starts < pod_end_pos))[0]  # [0] because np.nonzero deals with n dimensions, but we only have one
-        strip_end_indices_in_step_range = np.nonzero(np.logical_and(strip_ends >= pod_start_pos, strip_ends < pod_end_pos))[0]  # [0] because np.nonzero deals with n dimensions, but we only have one
-
-        strip_start_positions_in_step_range = np.array(strip_starts)[strip_start_indices_in_step_range]
-        strip_end_positions_in_step_range = np.array(strip_ends)[strip_end_indices_in_step_range]
-        
-        
-        
-    def _lerp_map(self, x_vals, a0, a1, b0, b1):
-        """ 
-        Map the x_values in range [a0, a1] to their equivalent positions in range [b0, b1] 
-        Example: 
-            [a0, a1] = [12, 24], x_vals = [13, 22, 17], [b0, b1] = [100, 200]:
-                => returns [ 108.33333333,  183.33333333,  141.66666667]
-        """
-        return b0 + (b1 - b0) * ((np.array(x_vals) - a0) / (a1 - a0))
-
-
-    # @todo: move this to a listener; preferably one that can call the interrupts in "real" time
-    def on_rising_edge(self):
-        pass
-        
-    def on_falling_edge(self):
-        pass
-        
 
 class SensorConsoleWriter():
     """ A sensor step listener that writes to the console """
     def __init__(self, config=None):
         self.config = config  # @todo: define config for this, if needed (e.g. format, etc.)
         
-    def step_callback(self, sensor, times, samples):
+    def step_callback(self, sensor, samples):
         # Write values to the console
-        for i, t in enumerate(times):
-            print "{},{}".format(t, samples[i])
+        for sample in samples:
+            print ",".join(sample)
             
 
 class CompoundSensorListener(object):
@@ -314,24 +233,12 @@ class CompoundSensorListener(object):
         self.config = config
         self.step_listeners = []
         
-    def step_callback(self, sensor, times, samples):
+    def step_callback(self, sensor, samples):
         for listener in self.step_listeners:
-            listener.step_callback(sensor, times, samples)
+            listener.step_callback(sensor, samples)
     
     def add_step_listener(self, listener):
         self.step_listeners.append(listener)
-
-
-class LaserOptoTestListener(object):
-    def __init__(self, config=None):
-        self.config = config
-        self.n_gaps = 0
-        
-    def step_callback(self, sensor, times, samples):
-        for i, t in enumerate(times):
-            if samples[i] > 40.0:
-                self.n_gaps += 1
-                #print "GAP FOUND! {},{} -- {} found so far".format(t, sensor.sim.pod.position, self.n_gaps)
 
 # ---------------------------
 # Just notes/sketches below here        
@@ -390,24 +297,6 @@ class DataCollector:
         """
         
 
-
-# Inherit from someone? 
-class InterruptingSensor():
-    """ A sensor that can call a function if it detects an event during a step """
-    def __init__(self, sim, config):
-        self.sim = sim
-        self.config = config
-        
-    def step(self, dt_usec):
-        """ Detect event(s) and call the callback if detected """
-        """
-        if some_event_happened: 
-            self.callback(pin_state)  # Does it get pin state here? 
-        """
-
-    def set_pin_change_callback(self, fn):
-        self.callback = fn
-        
     
 
 
