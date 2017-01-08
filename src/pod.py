@@ -63,17 +63,15 @@ class Pod:
         # @todo: this is just a sketch, for use with the hover engine calculations. Maybe switch accel, velocity, and position to coordinates? hmmmm...
         self.z_acceleration = 0.0
         self.z_velocity = 0.0
-        self.z_position = Units.mm(self.config.landing_gear.initial_height)  # This should be gotten from the starting height of the lift mechanism
+        self.he_height = Units.SI(self.config.landing_gear.initial_height)  # This should be gotten from the starting height of the lift mechanism
         
-        self.height = 0.0  # Probably need to set this with the config (starting height? What about the landing gear? )
-
         self.elapsed_time_usec = 0
 
         # Values from the previous step (for lerping and whatnot)
         self.last_acceleration = 0.0
         self.last_velocity = 0.0
         self.last_position = 0.0
-        self.last_height = 0.0
+        self.last_he_height = 0.0
 
         # Handle forces that act on the pod
         self.forces = []
@@ -139,7 +137,7 @@ class Pod:
 
     def apply_force(self, force):
         """ Apply force to the pod in the x direction. Note the forces are cleared after each step() """
-        self.net_force += np.array(force)  # Note that net_force is a numpy array, so adding a tuple to it works e.g. np.array((1,2,3)) + (4,5,6) => np.array([5,7,9])
+        self.net_force += np.array(force)
         #self.logger.debug("Force {} applied (total force is {})".format(force, self.net_force))
     
     def get_csv_row(self):
@@ -170,6 +168,8 @@ class Pod:
         self.last_acceleration = self.acceleration
         self.last_velocity = self.velocity
         self.last_position = self.position
+        self.last_he_height = self.he_height
+        self.last_z_velocity = self.z_velocity
 
         # -------------------
         # X physics
@@ -196,7 +196,20 @@ class Pod:
         
         # Subtract gravity
         self.net_force[2] += -9.80665 * self.mass
+
+        # Calculate z acceleration, velocity, and height for this step. 
+        self.z_acceleration = self.net_force[2] / self.mass
+        self.z_velocity = self.z_acceleration * t_sec  # Note: we're considering momentum to be negligible here, so no velocity addition here
+        self.he_height += (self.z_velocity * t_sec + 0.5 * self.z_acceleration * (t_sec ** 2)) / 2
         
+        # @todo: make this work
+        #if self.he_height < self.landing_gear.he_height:
+        #    self.he_height = self.landing_gear.he_height
+        if self.he_height < Units.SI(self.config.landing_gear.initial_height):  # @todo: remove this in favor of getting the actual height of the landing gear
+            self.he_height = Units.SI(self.config.landing_gear.initial_height)
+
+        #print "Net z force: {}, accel {}, velocity {}, he_height {}".format(self.net_force[2], self.z_acceleration, self.z_velocity, self.he_height)
+        print self.he_height
 
         # Update time
         self.elapsed_time_usec += dt_usec

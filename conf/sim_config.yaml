@@ -1,5 +1,13 @@
 ---
 # NOTE: You must include units with all quantities that are not unitless. Units will be automatically converted to SI. 
+# pod reference point: 
+# - to bottom of frame: 82.5mm
+# - from bottom of frame to bottom of he, mounted (no shims, so give or take a bit -- probably 1/10", or +~2.54mm): 62.4mm
+# - from reference to bottom of HE = 82.5 + 62.4 + 2.54mm = 147.44 (reference to bottom of hover engines)
+# - sensor_laser_opto: normal readings at 6mm height (?) were at about 18.3, +25mm built-in offset, so 43.3mm - 6mm = 37.3mm distance above bottom of HE (approx)
+#     ref to bottom of he (147.44) - 37.3 = 110.14 (reference to bottom of laser opto sensor ** Remember to add in the built-in 25mm offset for calculations **)
+
+
 sim:
     fixed_timestep: 10000 usec
     tube:
@@ -25,7 +33,7 @@ sim:
         brake_force: -8000 N   # Doesn't really matter, just needs to be big and negative
     sensors:
         laser_opto_1:
-            pod_height_offset: 18.3mm  # Note: this should be the x distance between the sensor and the pod reference point (once pod height is calculated)
+            he_height_offset: 12.3mm  # Note: This is the height of the laser sensor above the bottom of the hover engine. 
             sampling_rate: 250 Hz
             buffer_size: 1000   # This is not used right now
             dtype: 'f'

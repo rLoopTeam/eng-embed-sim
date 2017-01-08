@@ -34,8 +34,8 @@ class HoverEngineForce:
         lift_force = self.a * math.exp(self.b * height) * math.atan(self.c * (velocity + self.k * rpm))
         return lift_force * 8
         """
-        height = self.sim.pod.height  # This won't work -- we need hover engine height in meters
-        height = .008  # just for testing -- need to get this somewhere
+        height = self.sim.pod.he_height
+        #height = .008  # just for testing -- need to get this somewhere
         velocity = self.sim.pod.velocity
         #rpm = self.sim.pod.hover_engines.rpm  # @todo: implement this. Do we want to split the hover engines? 
         rpm = 0
@@ -44,8 +44,30 @@ class HoverEngineForce:
         p1 = math.exp(self.lift_b * height)
         p2 = math.atan(self.lift_c * (velocity + self.lift_k * rpm))
         z = self.lift_a * p1 * p2
-        print "Hover engine lift: {} (RPM: {}, pod velocity: {})".format(z, rpm, velocity)
-        return (0, 0, z)
+        #print "Hover engine lift: {} (RPM: {}, pod velocity: {})".format(z, rpm, velocity)
+    
+    
+        # Drag (thanks @capsulecorplab!)
+        # Note: this doesn't take into account the RPM
+        v = velocity
+    	h = height
+    	#RPM = self.sim.pod.hover_engines.RPM
+    	if v < 15:
+     		x = - ( (0.035557*h - 0.057601) * v**3 + (- 0.8*h + 12.56) * v**2 + (2.1777*h - 27.9994) * v)
+    	elif v > 30:
+    		x = - ( (-0.000565367*h + 0.009223) * v**2 + (0.17878*h - 3.02658)*v + (-29.71 * h + 500.93))
+    	else:
+    		x = - ( (-0.008889*h + 0.0120001) * v**2 + (-0.244438*h + 2.59993)*v + (-25.667 * h + 450))
+
+        # @todo: is the drag for a single hover engine or all 8? 
+        return (0, 0, z * 8)  # *8 because 8 hover engines
+
+        """
+        Another possible way:
+        coeff 150 = 6mm hover height, coeff 65 = 12mm hover height
+        drag = coeff * (-exp(-.16x)+1) * (1.6*exp(-0.2x) + 1)  # Found by manual fitting to curves in rPod Engine Model v2.xlsx
+        
+        """
         
     # If hover engines are turning, the drag is reduced but not zero
     # HE lift and drag for different velocities? One that Keith saw (about 3 months ago)

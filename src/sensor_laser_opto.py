@@ -20,7 +20,7 @@ class LaserOptoSensor(PollingSensor):
         
         # @todo: check error if step straddles a gap
 
-        height_samples = self._lerp(self.sim.pod.last_height, self.sim.pod.height)
+        height_samples = self._lerp(self.sim.pod.last_he_height, self.sim.pod.he_height)
         height_samples += self.pod_height_offset
         
         # Add noise. @todo: we might want to do this after we adjust for gaps? 
@@ -87,6 +87,6 @@ class LaserOptoTestListener(object):
     def step_callback(self, sensor, samples):
         for sample in samples:
             # Note: sample[0] is the sample time, sample[1] is the height value
-            if sample[1] > 28:  # we're adding 12.7 mm or so for right now to test this
+            if sample[1] > 48:  # we're adding 12.7 mm or so for right now to test this
                 self.n_gaps += 1
                 #print "GAP FOUND! {},{} -- {} found so far".format(t, sensor.sim.pod.position, self.n_gaps)

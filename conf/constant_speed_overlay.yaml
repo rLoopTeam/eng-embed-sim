@@ -1,7 +1,7 @@
 ---
 sim:
-    fixed_timestep: 2002 usec  # 2002 gives REALLY bad sample misses for some reason when we don't fix the floating point errors (see sensors.py)
-    #fixed_timestep: 100 usec
+    #fixed_timestep: 2002 usec  # 2002 gives REALLY bad sample misses for some reason when we don't fix the floating point errors (see sensors.py)
+    fixed_timestep: 10000 usec
     tube:
         length: 1500 m
         track_gap_width: 5mm
