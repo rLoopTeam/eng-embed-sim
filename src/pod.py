@@ -209,7 +209,7 @@ class Pod:
             self.he_height = Units.SI(self.config.landing_gear.initial_height)
 
         #print "Net z force: {}, accel {}, velocity {}, he_height {}".format(self.net_force[2], self.z_acceleration, self.z_velocity, self.he_height)
-        print self.he_height
+        #print self.he_height
 
         # Update time
         self.elapsed_time_usec += dt_usec

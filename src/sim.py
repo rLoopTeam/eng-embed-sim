@@ -95,16 +95,17 @@ class SimEndListener(object):
 
     def __init__(self):
         self.logger = logging.getLogger("SimEndListener")
+        self.pushed = False
         
     def is_finished(self, sim):
 
         # Check to see if we should end the sim
 
         # If we've stopped (after being pushed)
-        if sim.pod.velocity >= 0:
+        if sim.pod.velocity >= 0.0001:
             self.pushed = True  # set pushed to true when we've moved some
         elif self.pushed == True:  # Next time around, if we've been pushed, check to see if we've stopped.
-            if sim.pod.velocity <= 0:
+            if sim.pod.velocity <= 0.001:  # arrg floating points
                 self.logger.info("Ending simulation because reasons")
                 return True
 

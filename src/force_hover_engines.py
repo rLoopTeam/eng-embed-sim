@@ -2,6 +2,7 @@
 
 from units import Units
 import math
+import numpy as np
 
 class HoverEngineForce:
     
@@ -49,6 +50,8 @@ class HoverEngineForce:
     
         # Drag (thanks @capsulecorplab!)
         # Note: this doesn't take into account the RPM
+        """
+        NOTE: the following doesn't work (problem with the >30 calculation it seems...)
         v = velocity
     	h = height
     	#RPM = self.sim.pod.hover_engines.RPM
@@ -59,8 +62,19 @@ class HoverEngineForce:
     	else:
     		x = - ( (-0.008889*h + 0.0120001) * v**2 + (-0.244438*h + 2.59993)*v + (-25.667 * h + 450))
 
+        #print "Drag force for 1 hover engine is {}".format(x)
+        """
+        
+        # Alternative method for HE drag (manual curve fitting and linear system solving for o1 and o2 (f(0.006) = 150, f(0.012) = 65))
+        o1 = 235
+        o2 = -14166.667
+        coeff = height * o2 + o1
+        x = - coeff * (-np.exp(-.16*velocity)+1) * (1.6*np.exp(-0.2*velocity) + 1)
+
+        #print "Calculated he drag (1 engine) at height {} and velocity {}: {}".format(height, velocity, x)
+
         # @todo: is the drag for a single hover engine or all 8? 
-        return (0, 0, z * 8)  # *8 because 8 hover engines
+        return (8*x, 0, z * 8)  # *8 because 8 hover engines
 
         """
         Another possible way:
