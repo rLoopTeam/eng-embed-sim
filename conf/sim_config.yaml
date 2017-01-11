@@ -9,11 +9,11 @@
 
 
 sim:
-    fixed_timestep: 100 usec
+    fixed_timestep: 10000 usec
     pusher:
         max_velocity: 150.0 m/s
         push_end_position: 475m  # NOTE: This is where the push will stop regardless of speed -- @todo: work this into the pusher
-        push_force: 8000 N
+        push_force: 80000 N
         coast_time_usec: 1000000 usec
         brake_force: -8000 N   # Doesn't really matter, just needs to be big and negative
     tube:

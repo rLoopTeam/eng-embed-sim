@@ -41,11 +41,17 @@ class Sim:
         #self.laser_opto_1.register_step_listener(SensorConsoleWriter())  # Write data directly to the console
         self.lotl = LaserOptoTestListener()
         self.laser_opto_1.add_step_listener(self.lotl) 
-
+        
+        # Testing laser contrast sensor
         from sensor_laser_contrast import LaserContrastSensor, LaserContrastTestListener
         self.laser_contrast_1 = LaserContrastSensor(self, self.config.sensors.laser_opto_1)
         self.lctl = LaserContrastTestListener()
         self.laser_contrast_1.add_step_listener(self.lctl)
+        
+        # Testing brakes
+        from brakes import Brake
+        self.brake_1 = Brake(self, None)
+        self.brake_1.gap = 0.0025 # Set it to minimum to test forces
         
     def step(self, dt_usec):        
 
@@ -55,10 +61,15 @@ class Sim:
         # Step the pod (will handle all other forces and pod physics)
         self.pod.step(dt_usec)
         
+        # Testing only
+        
         #self.fcu.step(dt_usec)
         self.laser_opto_1.step(dt_usec)
         #self.logger.debug(list(self.laser_opto_1.pop_all()))
         self.laser_contrast_1.step(dt_usec)
+        self.brake_1.step(dt_usec)
+        
+        # Done testing
         
         self.elapsed_time_usec += dt_usec
         self.n_steps_taken += 1

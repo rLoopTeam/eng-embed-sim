@@ -25,6 +25,8 @@ class BrakeForce:
         gap_coefficient = 5632 * np.exp(-202 * air_gap)
         f_drag = gap_coefficient * (-np.exp(-.3*v) + 1) * (1.5 * np.exp(-.02*v)+1)
         #print "Brake drag at air gap {}: {}".format(air_gap, -f_drag)
+
+        f_drag = self.sim.brake_1.drag_force * 2  # *2 for both brakes. Just testing right now
             
-        return (-f_drag, 0, 0)
+        return (f_drag, 0, 0)
 

@@ -33,6 +33,9 @@ F_lift(gap, v) = (3265.1 * e^(-209.4*gap)) * ln(v + 1) - (2636.7 * e^(-207*gap))
 F_drag(gap, v) = (5632 * e^(-202*gap)) * (-e^(-.3*v) + 1) * (1.5 * e^(-.02*v) + 1)
 """
 
+import numpy as np
+import logging
+
 class Brakes:
     """ Model of brake system (both brakes) """
     def __init__(self, sim, config):
@@ -50,9 +53,12 @@ class Brake:
         self.sim = sim
         self.config = config
 
+        self.logger = logging.getLogger("Brake")
+
         # Volatile
         #self.gap = Units.SI(self.config.initial_gap)  # @todo: make this work 
         self.gap = .025  # mm -- @todo: move this to configuration and get the correct fully retracted gap
+        self.deployed_pct = 0.0  # @todo: need to calculate this based on the initial position. Or let this set the initial gap? Probably calculate it from max_gap and 
 
         self.lift_force = 0.0  # N -- lift against the rail; +lift is away from the rail
         self.drag_force = 0.0  # N -- drag on the pod; -drag is toward the back of the pod
@@ -60,7 +66,8 @@ class Brake:
         self.last_lift_force = 0.0
         self.last_drag_force = 0.0
 
-        self.motor = None  # Should be a model of a motor
+        # Components
+        self.motor = None  # Should be a model of a motor?
         
         # Configuration
         self.negator_torque = 0.7  # Nm -- @todo: move this to config
@@ -70,19 +77,20 @@ class Brake:
 
         # Lead Screw
         # revs per cm=2.5  There are 4 mm per single lead so 2.5 turns move the carriage 1 cm
+        # Formulas: http://www.nookindustries.com/LinearLibraryItem/Ballscrew_Torque_Calculations
         self.screw_pitch = .004  # Meters @todo: move to config
         self.drive_efficiency = 0.90  # @todo: to config
         self.backdrive_efficiency = 0.80  # @todo: to config
-        self._drive_torque_multiplier = self.screw_pitch / (self.drive_efficiency * 2 * 3.14))
-        self._backdrive_torque_multiplier = (self.screw_pitch * self.backdrive_efficiency) / ( 2 * 3.14))
+        
+        # Lead Screw Precalculated Values
+        self._drive_torque_multiplier = self.screw_pitch / (self.drive_efficiency * 2 * 3.14)
+        self._backdrive_torque_multiplier = (self.screw_pitch * self.backdrive_efficiency) / ( 2 * 3.14)
         
         # Motor  @todo: move this to the motor
         # 1.8 deg per full step
         # Step size: .05  # Half steps
         # => 400 steps per revolution at half steps
         
-        # Volatile
-        self.deployed_pct = 0.0  # @todo: need to calculate this based on the initial position. Or let this set the initial gap? Probably calculate it from max_gap and 
         
     def step(self, dt_usec):
         """ Calculate our movement this step, and the forces that are acting on us. Notify if, for instance, brake force overcomes motor torque """
@@ -96,19 +104,23 @@ class Brake:
         
         # Calculate lift and drag
         # @see https://rloop.slack.com/archives/eng-numsim/p1484029898001697
-        F_lift = (3265.1 * e^(-209.4*gap)) * ln(v + 1) - (2636.7 * e^(-207*gap)) * (v + .6) * e ^ (-.16*v)  # Newtons, For one brake
-        # F_drag(gap, v) = (5632 * e^(-202*gap)) * (-e^(-.3*v) + 1) * (1.5 * e^(-.02*v) + 1)  # For both brakes
-        F_drag = - (2816 * e^(-202*gap)) * (-e^(-.3*v) + 1) * (1.5 * e^(-.02*v) + 1)  # Newtons, For one brake
+        
+        F_lift = (3265.1 * np.exp(-209.4*gap)) * np.log(v + 1) - (2636.7 * np.exp(-207*gap)) * (v + .6) * np.exp(-.16*v)  # Newtons, For one brake
+        
+        # F_drag(gap, v) = (5632 * np.exp(-202*gap)) * (-np.exp(-.3*v) + 1) * (1.5 * np.exp(-.02*v) + 1)  # For both brakes
+        F_drag = - (2816 * np.exp(-202*gap)) * (-np.exp(-.3*v) + 1) * (1.5 * np.exp(-.02*v) + 1)  # Newtons, For one brake
 
-        self.logger.debug("F_lift = {}; F_drag = {}".format(F_lift, F_drag))
+        # Save the drag force (to be used by force_brakes.py)
+        self.drag_force = F_drag
 
         # Get linear force acting on lead screw due to the brakes
         # Note: Formula has a 17 degree angle to the rail. Lift force is normal to the rail, drag force is parallel to it. 
         # Force applied to screw is lift*sin(17) + drag*cos(17)
         F_screw = F_lift * 0.292371705 + F_drag * 0.956304756
-        self.logger.debug("F_on_screw = {}".format(F_on_screw))
+        #self.logger.debug("Brakes: F_lift = {}; F_drag = {}; F_screw = {}".format(F_lift, F_drag, F_screw))
         
-        # Convert to drive (motor driven) and backdrive (driven by linear force on the screw) torques
+        # Convert linear force to drive torque (motor driven) and backdrive torque (driven by linear force on the screw)
+        # Note: Drive torque is the torque required to move the load, and backdrive torque is the torque required for the load to turn the screw on its own
         """
         Should we use back driving torque formuala here? Or torque to lift load? 
         Let's see:
@@ -119,8 +131,18 @@ class Brake:
             - Use lowering torque eqn if motor is driving in the same direction as load torque
         """
         # Formulas: http://www.nookindustries.com/LinearLibraryItem/Ballscrew_Torque_Calculations
-        drive_torque = ((F_screw * self.screw_pitch ) / (.9 * 2 * 3.14))
-        backdrive_torque = ((F_screw * self.screw_pitch * .8) / ( 2 * 3.14))
+        # Note: Drive and backdrive torques are only used to see if the motor can handle the load
+        drive_torque = F_screw * self._drive_torque_multiplier
+        backdrive_torque = F_screw * self._backdrive_torque_multiplier
+        
+        # Negator Torque. Since the negator attempts to drive the screw in the -x direction (which deploys the brakes), we subtract it
+        tl_drive_torque = drive_torque - self.negator_torque
+        tl_backdrive_torque = backdrive_torque - self.negator_torque
+        
+        #self.logger.debug("Brakes: v={}, Gap={}, F_lift={}, F_drag={}, F_screw={}, dr_tq={}, bd_tq={}".format(v, self.gap, F_lift, F_drag, F_screw, drive_torque, backdrive_torque))
+        p = self.sim.pod.position
+        a = self.sim.pod.acceleration
+        self.logger.debug("\t".join([str(x) for x in (p, v, a, self.gap, F_lift, F_drag, F_screw, drive_torque, backdrive_torque, tl_drive_torque, tl_backdrive_torque)]))
 
         # Calculate new gap based on motor / slipping movement
         
@@ -135,20 +157,6 @@ class Brake:
         # Take into account that the max holding torque is different from the max torque. How do we know if the motor is holding or moving? 
         # How do we control the stepper motor? Where are the routines for that? 
         
-        
-
-class LeadScrew:
-    def __init__(self, sim, config):
-        self.sim = sim
-        self.config = config
-        
-    def _get_driving_torque(self, force):
-        """ Get the torque required to drive the force """
-        pass
-        
-    def _get_backdriving_torque(self, force):
-        """ Get the torque applied by an external force to the nut """
-        pass
         
 
 class Motor:
