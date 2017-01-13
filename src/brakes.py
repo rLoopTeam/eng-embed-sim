@@ -57,7 +57,7 @@ class Brake:
 
         # Volatile
         #self.gap = Units.SI(self.config.initial_gap)  # @todo: make this work 
-        self.gap = .025  # mm -- @todo: move this to configuration and get the correct fully retracted gap
+        self.gap = .025  # m -- @todo: move this to configuration and get the correct fully retracted gap
         self.deployed_pct = 0.0  # @todo: need to calculate this based on the initial position. Or let this set the initial gap? Probably calculate it from max_gap and 
 
         self.lift_force = 0.0  # N -- lift against the rail; +lift is away from the rail

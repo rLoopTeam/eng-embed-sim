@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 
 from pod import Pod
 from tube import Tube
@@ -7,6 +8,7 @@ from pusher import Pusher
 import time
 import logging
 from units import *
+from config import Config
 
 class Sim:
     
@@ -34,24 +36,39 @@ class Sim:
         # Simulator control
         self.end_listeners = []
         
+        # Testing laser opto sensor class
+        from sensor_laser_opto import *
+        self.laser_opto_sensors = LaserOptoSensors(self, self.config.sensors.laser_opto)
+        
+        
         # Testing only
-        from sensors import SensorConsoleWriter   # @todo: move this to the top once we're done testing
+        from sensors import *   # @todo: move this to the top once we're done testing
+        """
         from sensor_laser_opto import LaserOptoSensor, LaserOptoTestListener
         self.laser_opto_1 = LaserOptoSensor(self, self.config.sensors.laser_opto_1)
         #self.laser_opto_1.register_step_listener(SensorConsoleWriter())  # Write data directly to the console
         self.lotl = LaserOptoTestListener()
         self.laser_opto_1.add_step_listener(self.lotl) 
+        self.lofl = SensorCsvWriter(Config({'filename': "sensorcsvwriter_test1.csv"}))
+        self.laser_opto_1.add_step_listener(self.lofl)
+        """
         
         # Testing laser contrast sensor
         from sensor_laser_contrast import LaserContrastSensor, LaserContrastTestListener
-        self.laser_contrast_1 = LaserContrastSensor(self, self.config.sensors.laser_opto_1)
+        self.laser_contrast_1 = LaserContrastSensor(self, self.config.sensors.laser_contrast_1)
         self.lctl = LaserContrastTestListener()
         self.laser_contrast_1.add_step_listener(self.lctl)
-        
+
+        # Testing pod sensor
+        self.pod_sensor = PodSensor(self, None)
+        self.pod_sensor_writer = SensorCsvWriter(Config({'filename': 'pod.csv'}))
+        self.pod_sensor.add_step_listener(self.pod_sensor_writer)
+
         # Testing brakes
         from brakes import Brake
         self.brake_1 = Brake(self, None)
-        self.brake_1.gap = 0.0025 # Set it to minimum to test forces
+        self.brake_1.gap = 0.025 # Set it to minimum to test forces
+        
         
     def step(self, dt_usec):        
 
@@ -63,8 +80,9 @@ class Sim:
         
         # Testing only
         
+        self.pod_sensor.step(dt_usec)
         #self.fcu.step(dt_usec)
-        self.laser_opto_1.step(dt_usec)
+        #self.laser_opto_1.step(dt_usec)
         #self.logger.debug(list(self.laser_opto_1.pop_all()))
         self.laser_contrast_1.step(dt_usec)
         self.brake_1.step(dt_usec)

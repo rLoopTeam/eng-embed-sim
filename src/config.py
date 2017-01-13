@@ -17,7 +17,7 @@ class Config:
         if not self.__internal:  # Note: empty dicts evaluate to False
             self.__internal = config_yaml
         else:
-            self.__internal = self.merge(self.__internal, config_yaml)
+            self.__internal = Config.merge(self.__internal, config_yaml)
         return self  # fluent
     
     def __getattr__(self, name):
@@ -32,15 +32,16 @@ class Config:
         
     def __repr__(self):
         return self.__str__()
-        
-    def merge(self, a, b, path=None):
+    
+    @classmethod
+    def merge(a, b, path=None):
         "merges b into a"
         # @see http://stackoverflow.com/questions/7204805/dictionaries-of-dictionaries-merge
         if path is None: path = []
         for key in b:
             if key in a:
                 if isinstance(a[key], dict) and isinstance(b[key], dict):
-                    self.merge(a[key], b[key], path + [str(key)])
+                    Config.merge(a[key], b[key], path + [str(key)])
                 elif a[key] == b[key]:
                     pass # same leaf value
                 else:

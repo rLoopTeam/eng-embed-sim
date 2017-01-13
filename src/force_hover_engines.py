@@ -15,6 +15,9 @@ class HoverEngineForce:
         self.lift_c = self.config.lift.c
         self.lift_k = self.config.lift.k
         
+        self.name = "F_hover_engine"
+        self.step_listeners = []
+        
     def get_force(self):
         """ 
         Get lift provided by hover engines 
@@ -83,17 +86,27 @@ class HoverEngineForce:
         
         """
         
-    # If hover engines are turning, the drag is reduced but not zero
-    # HE lift and drag for different velocities? One that Keith saw (about 3 months ago)
-    # Stationary engine at 2000RPM is 2 N of drag (4N if it's not spinning)
-    # At 120 m/s it has how much lift and how much drag? 
-    # 22m/s spinning 13 lbs, not spinning 27lbs drag  (not spinning is 120N per engine, or 8x that for all engines)
-    # 90 m/s stationary 4lbs, spinning 2 lbs drag
-    # To look for it more, look around August 1 2016 in the numsim channel
+        # If hover engines are turning, the drag is reduced but not zero
+        # HE lift and drag for different velocities? One that Keith saw (about 3 months ago)
+        # Stationary engine at 2000RPM is 2 N of drag (4N if it's not spinning)
+        # At 120 m/s it has how much lift and how much drag? 
+        # 22m/s spinning 13 lbs, not spinning 27lbs drag  (not spinning is 120N per engine, or 8x that for all engines)
+        # 90 m/s stationary 4lbs, spinning 2 lbs drag
+        # To look for it more, look around August 1 2016 in the numsim channel
     
-    # Note: lift is 80% at 10, 90% at 30, and slowly gets more
+        # Note: lift is 80% at 10, 90% at 30, and slowly gets more
     
-    # Arx pax -- lift at a certain mass -- will climb about 2-3 mm as we get going faster
+        # Arx pax -- lift at a certain mass -- will climb about 2-3 mm as we get going faster
     
-    # magnets are spinning at 20m/s when the motors are moving at 2000RPM
+        # magnets are spinning at 20m/s when the motors are moving at 2000RPM
     
+    
+    def add_step_listener(self, listener):
+        self.step_listeners.append(listener)
+
+    def step(self, dt_usec):
+        """ Apply the force to the pod """
+        force = self.get_force()
+        self.pod.apply_force(force)
+        for step_listener in self.step_listeners:
+            step_listener.callback(self, [force])    

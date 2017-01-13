@@ -12,8 +12,10 @@
 
 from __future__ import division
 
+from collections import namedtuple
 from units import Units
 import logging
+
 
 class Pusher:
     
@@ -33,6 +35,7 @@ class Pusher:
         self.push_force = Units.SI(config.push_force)            # Newtons -- 350 kg * 2.4G (23.53596) = 8200 N
         self.coast_time_usec = Units.SI(config.coast_time)       # Note: the pusher will not likely disconnect during coast due to drag from the pod
 
+        self.data = namedtuple('Force', ['x', 'y', 'z'])
     
     # -------------------------
     # Simulation methods
@@ -45,7 +48,7 @@ class Pusher:
             pass
         elif self.state == "PUSH":
             if self.sim.pod.velocity < self.max_velocity:
-                self.sim.pod.apply_force((self.push_force, 0, 0))
+                self.sim.pod.apply_force( self.data(self.push_force, 0, 0) )
             else:
                 self.set_state("COAST")
         elif self.state == "COAST":

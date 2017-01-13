@@ -13,11 +13,11 @@ sim:
     pusher:
         max_velocity: 150.0 m/s
         push_end_position: 475m  # NOTE: This is where the push will stop regardless of speed -- @todo: work this into the pusher
-        push_force: 80000 N
+        push_force: 8000 N
         coast_time_usec: 1000000 usec
         brake_force: -8000 N   # Doesn't really matter, just needs to be big and negative
     tube:
-        length: 1500 m
+        length: 1260 m
         ambient_pressure: 14.7 psi  # need to convert to pascals, or use units (e.g. 14.7 psi)
         pumpdown_pressure: .125 psi
 
@@ -33,15 +33,21 @@ sim:
         track_gap_interval: 2m
         
     sensors:
-        laser_opto_1:
-            he_height_offset: 12.3mm  # Note: This is the height of the laser sensor above the bottom of the hover engine. 
-            sampling_rate: 250 Hz
-            dtype: 'f'
-            noise:
-                scale: 0.01
-                center: 0.0
-        laser_contrast_1:
-            something: 1
+        laser_opto:
+            - he_height_offset: 12.3mm
+              sampling_rate: 250 Hz
+              noise:
+                  scale: .0001
+                  center: 0.0
+            - he_height_offset: 14.0 mm
+              sampling_rate: 250 Hz
+              noise:
+                  scale: .0001
+                  center: 0.0        
+
+        laser_contrast:
+        - something: 1
+
     pod:
         mass: 350 kg
         position: 0.0 m  # from start of track

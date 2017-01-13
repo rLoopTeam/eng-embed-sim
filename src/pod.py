@@ -13,19 +13,22 @@
 from __future__ import division
 import logging
 import numpy as np
+from collections import OrderedDict
 
 # Our stuff
 from units import Units
 from brakes import *
 
 # Forces
+from forces import *
+"""
 from force_aero import AeroForce
 from force_brakes import BrakeForce
 from force_gimbals import GimbalForce
 from force_hover_engines import HoverEngineForce
 from force_landing_gear import LandingGearForce
 from force_lateral_stability import LateralStabilityForce
-
+"""
 
 class PodComponent:
     def __init__(self, name, type, location, sim_obj):
@@ -45,12 +48,16 @@ class Pod:
         self.sim = sim
         self.config = config
 
+        self.name = 'pod_actual'
+
+        self.step_listeners = []
+        self.step_forces = OrderedDict()   # This will be filled in during each step
+
         # Pod physical properties
         # *** NOTE: all distances are in the tube reference frame, origin is pod location reference (centerpoint of fwd crossbar).  +x is forward, +y is left, +z is up.
         # @see http://confluence.rloop.org/display/SD/2.+Determine+Pod+Kinematics
 
         self.mass = Units.SI(self.config.mass)
-        print "Config mass: " + str(self.config.mass)
 
         # Forces that can act on the pod (note: these are cleared at the end of each step)        
         self.net_force = np.array((0.0, 0.0, 0.0))  # Newtons; (x, y, z). +x pushes the pod forward, +z force lifts the pod, y is not currently used. 
@@ -74,6 +81,7 @@ class Pod:
         self.last_he_height = 0.0
 
         # Handle forces that act on the pod
+        """
         self.forces = []
         self.forces.append( AeroForce(self.sim, self.config.forces.aero) )
         self.forces.append( BrakeForce(self.sim, self.config.forces.brakes) )
@@ -81,6 +89,23 @@ class Pod:
         self.forces.append( HoverEngineForce(self.sim, self.config.forces.hover_engines) )
         self.forces.append( LateralStabilityForce(self.sim, self.config.forces.lateral_stability) )
         self.forces.append( LandingGearForce(self.sim, self.config.forces.landing_gear) )
+        """
+        self.force_exerters = OrderedDict()
+        self.force_exerters['aero'] = AeroForce(self.sim, self.config.forces.aero)
+        self.force_exerters['brakes'] = BrakeForce(self.sim, self.config.forces.brakes) 
+        self.force_exerters['gimbals'] = GimbalForce(self.sim, self.config.forces.gimbals)
+        self.force_exerters['hover_engines'] = HoverEngineForce(self.sim, self.config.forces.hover_engines)
+        self.force_exerters['lateral_stability'] = LateralStabilityForce(self.sim, self.config.forces.lateral_stability)
+        self.force_exerters['landing_gear'] = LandingGearForce(self.sim, self.config.forces.landing_gear)
+        
+        # Forces applied during the step (for recording purposes)
+        self.step_forces = OrderedDict()
+        self.step_forces['aero'] = None
+        self.step_forces['brakes'] = None
+        self.step_forces['gimbals'] = None
+        self.step_forces['hover_engines'] = None
+        self.step_forces['lateral_stability'] = None
+        self.step_forces['landing_gear'] = None
 
         # Pre-calculated values
         
@@ -133,11 +158,29 @@ class Pod:
             'brake_r': BrakeModel(self)
         }
         """
+    
+    def add_step_listener(self, listener):
+        """ 
+        Register a listener that will be called every step. 
+        A step listener can be any class that implements the following method:
+        - step_callback(self, sensor, times, samples)
+        """
+        self.step_listeners.append(listener)
 
-
+    def apply_forces(self):        
+        """ Apply all forces provided by the exerters, in order. This happens every step, and all forces are then cleared for the next step. """
+        """
+        for exerter in self.forces:
+            self.apply_force(exerter.get_force())
+        """
+        for key, exerter in self.force_exerters.iteritems():
+            force = exerter.get_force()
+            self.step_forces[key] = force
+            self.apply_force(force)
+        
     def apply_force(self, force):
         """ Apply force to the pod in the x direction. Note the forces are cleared after each step() """
-        self.net_force += np.array(force)
+        self.net_force += np.array((force.x, force.y, force.z))  # np.array() because forces are (x,y,z)
         #self.logger.debug("Force {} applied (total force is {})".format(force, self.net_force))
     
     def get_csv_row(self):
@@ -151,10 +194,6 @@ class Pod:
         
         return ",".join([str(x) for x in out])
             
-    def apply_forces(self):        
-        """ Apply all forces provided by the exerters, in order. This happens every step, and all forces are then cleared for the next step. """
-        for exerter in self.forces:
-            self.apply_force(exerter.get_force())
     
     
     # -------------------------
@@ -215,7 +254,7 @@ class Pod:
         self.elapsed_time_usec += dt_usec
 
         # Clear forces for the next step
-        self.net_force = (0, 0, 0)  # x, y, z
+        self.net_force = np.array((0.0, 0.0, 0.0))  # x, y, z
 
     def step(self, dt_usec):
         #self.step_physics(dt_usec)
@@ -229,7 +268,8 @@ class Pod:
         self.update_physics(dt_usec)
         
         # Do other things? Update sensors? 
-        
+        for step_listener in self.step_listeners:
+            step_listener.callback(self, samples)
     
     # -------------------------
     # Physical methods

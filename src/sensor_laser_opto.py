@@ -2,26 +2,44 @@
 
 import logging
 import numpy as np
+from collections import namedtuple
 
 from units import Units
+from config import Config
 from sensors import PollingSensor
+
+class LaserOptoSensors(list):
+    def __init__(self, sim, config):
+        self.sim = sim
+        self.config = config
+        
+        for i, sensor_config in enumerate(self.config):
+            sensor_config['id'] = i   # Inject the sensor ID
+            sensor_config['name'] = "laser_opto_{}".format(i)   # Inject the sensor name
+            self.append(LaserOptoSensor(self.sim, Config(sensor_config)))
+
+    def add_step_listener(self, listener):
+        pass
 
 class LaserOptoSensor(PollingSensor):
     
     def __init__(self, sim, config):
-        PollingSensor.__init__(self, sim, config)  # @todo: is this right? 
+        PollingSensor.__init__(self, sim, config)
         self.logger = logging.getLogger("LaserOptoSensor")
         
         # Get the height offset for this sensor?
-        self.pod_height_offset = Units.SI(self.config.pod_height_offset) * 1000  # We want mm here -- maybe have a function in Units for that? 
-
+        self.he_height_offset = Units.SI(self.config.he_height_offset)
+                
+        # Data types
+        self.data = namedtuple('LaserOptoSensorData', 'time height')
+        
     def create_step_samples(self, dt_usec):
         # Create height samples
         
         # @todo: check error if step straddles a gap
 
         height_samples = self._lerp(self.sim.pod.last_he_height, self.sim.pod.he_height)
-        height_samples += self.pod_height_offset
+        height_samples += self.he_height_offset
         
         # Add noise. @todo: we might want to do this after we adjust for gaps? 
         height_samples += self._get_gaussian_noise(height_samples, self.noise_center, self.noise_scale)
@@ -69,8 +87,10 @@ class LaserOptoSensor(PollingSensor):
         # Turn the two 1d vectors of values [time, time, ...] and [height, height, ...] into a two column array like [[time, height], [time, height], ...]
         # @see http://stackoverflow.com/questions/5954603/transposing-a-numpy-array
         # Note: for other sensors, if you have multiple values for your samples (e.g. samples are like [[v0, v1], [v0, v1], ...]), you don't need to reshape the samples
-        return np.hstack((sample_times.reshape((-1,1)), height_samples.reshape((-1,1))))
-            
+        #return np.hstack((sample_times.reshape((-1,1)), height_samples.reshape((-1,1))))  # Works, but changing over to using namedtuples
+        
+        return [self.data(t, height_samples[i]) for i, t in enumerate(sample_times)]
+
     def _adjust_samples_for_gaps(self, samples, indices):
         """ Adjust the samples at the given indices as if they were over a gap """
         # Example: find the contiguous groups of samples so that we can apply a function to multiple 
@@ -87,6 +107,6 @@ class LaserOptoTestListener(object):
     def step_callback(self, sensor, samples):
         for sample in samples:
             # Note: sample[0] is the sample time, sample[1] is the height value
-            if sample[1] > 48:  # we're adding 12.7 mm or so for right now to test this
+            if sample.height > .028:  # we're adding 12.7 mm or so for right now to test this
                 self.n_gaps += 1
                 #print "GAP FOUND! {},{} -- {} found so far".format(t, sensor.sim.pod.position, self.n_gaps)

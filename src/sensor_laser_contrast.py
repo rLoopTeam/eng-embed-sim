@@ -2,6 +2,8 @@
 
 import numpy as np
 import logging 
+from collections import namedtuple
+from operator import attrgetter  # For sorting named tuples
 
 from sensors import InterruptingSensor    
     
@@ -10,6 +12,8 @@ class LaserContrastSensor(InterruptingSensor):
     def __init__(self, sim, config):
         InterruptingSensor.__init__(self, sim, config)
         self.logger = logging.getLogger("LaserContrastSensor")
+        
+        self.data = namedtuple('LaserContrastSensorData', ['t', 'pos', 'pin_state'])
         
     def create_step_samples(self, dt_usec):
         
@@ -23,32 +27,35 @@ class LaserContrastSensor(InterruptingSensor):
         
         # Get the start and end indices that are in our step range
         strip_start_indices_in_step_range = np.nonzero(np.logical_and(strip_starts >= pod_start_pos, strip_starts < pod_end_pos))[0]  # [0] because np.nonzero deals with n dimensions, but we only have one
-        #strip_end_indices_in_step_range = np.nonzero(np.logical_and(strip_ends >= pod_start_pos, strip_ends < pod_end_pos))[0]  # [0] because np.nonzero deals with n dimensions, but we only have one
+        strip_end_indices_in_step_range = np.nonzero(np.logical_and(strip_ends >= pod_start_pos, strip_ends < pod_end_pos))[0]  # [0] because np.nonzero deals with n dimensions, but we only have one
 
         # Get the start and end positions that are in our step range
         strip_start_positions_in_step_range = np.array(strip_starts)[strip_start_indices_in_step_range]
-        #strip_end_positions_in_step_range = np.array(strip_ends)[strip_end_indices_in_step_range]
+        strip_end_positions_in_step_range = np.array(strip_ends)[strip_end_indices_in_step_range]
         
         start_time = self.sim.elapsed_time_usec
         end_time = start_time + dt_usec
         
-        strip_start_times = self._lerp_map_int(strip_start_positions_in_step_range, pod_start_pos, pod_end_pos, start_time, end_time)
         strip_start_times = np.interp(strip_start_positions_in_step_range, [pod_start_pos, pod_end_pos], [start_time, end_time])
-        #strip_end_times = self._lerp_map_int(strip_end_positions_in_step_range, pod_start_pos, pod_end_pos, start_time, end_time)
+        strip_end_times = np.interp(strip_end_positions_in_step_range, [pod_start_pos, pod_end_pos], [start_time, end_time])
         
+        # @todo: If we're not going to add in the x offset on the real sensors, we need to subtract that out here.
+        start_data = [self.data(t, strip_start_positions_in_step_range[i], 1) for i, t in enumerate(strip_start_times)]
+        end_data = [self.data(t, strip_end_positions_in_step_range[i], 0) for i, t in enumerate(strip_end_times)]
+        
+        ret = sorted(start_data + end_data, key=attrgetter('t'))
+        print "LaserContrastSensor data test: {}".format(ret)
+
+        return ret
         #strip_start_samples = np.hstack((strip_start_times.reshape((-1,1)), np.ones((len(strip_start_times), 1), dtype=np.int)))
         #strip_end_samples = np.hstack((strip_end_times.reshape((-1,1)), np.zeros((len(strip_end_times), 1), dtype=np.int)))
         
-        strip_start_flags = np.ones(len(strip_start_times), dtype=np.int)
-        start_rec = np.rec.fromarrays( (strip_start_times, strip_start_flags), names=('time_usec', 'pin_value'))
-
         #strip_end_flags = np.zeros(len(strip_end_times), dtype=np.int)
         #end_rec = np.rec.fromarrays( (strip_end_times, strip_end_flags), names=('time_usec', 'pin_value'))
 
         #samples = np.hstack((start_rec, end_rec))
-        samples = start_rec
-        samples.sort()
-        return samples
+
+        #return samples
         
         # @todo: Probably need to calculate the position based on pod offset for these samples (instead of just time when the sample was taken)
         # ^ that would be another element in the sensor fields -- e.g. time, *pod* position, 1/0 for rising/falling

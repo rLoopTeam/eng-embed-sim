@@ -11,46 +11,34 @@ This should really be a wrapper (or similar) around the DLL that is our actual f
 - 
 """
 
-
-
-from c import *
-
-class FcuMemWrapper:
-    
-    """ Wrapper to make a dict act like a struct (syntax-wise) """
-    
-    def __init__(self, mem):
-        self.mem = mem
-
-    def __getattr__(self, name):
-        attr = self.mem.get(name, None)
-        if isinstance(attr, dict):
-            return FcuMemWrapper(self.mem.get(name))
-        else:
-            return attr
-
-
-class Brake:
-    def __init__(self, pod):
-        self.pod = pod
-
+import logging
+import sys
+import os
+import ctypes
+import pprint
 
 class Fcu:
     
-    def __init__(self, pod):
-        self.pod = pod
-        self.mem_init = {
-            'strBrakes': [
-                Brake(self.pod),
-                Brake(self.pod)
-            ],        
-            'strSomething': {
-                'other': ['a', 'b']
-            }
-        }
-        self.mem = FcuMemWrapper(self.mem_init)
-            
-if __name__ == "__main__":
-    fcu = Fcu(None)
-    print fcu.mem.strBrakes[0]
-    print fcu.mem.strSomething.other[0]
+    def __init__(self, sim, config):
+        self.sim = sim
+        self.config = config
+        
+        self.logger = logging.getLogger("FCU")
+
+        # FCU DLL Loading
+        self.dll_path = self.config.dll_path
+        self.dll_filename = self.config.dll_filename
+        self.lib = self.load_dll(os.path.join(dll_path, dll_filename))
+
+        # Setup callback references. 
+        # *** Important: these must stay alive for the duration of the script or the DLL will not work **
+        # @todo: include reference for ^
+        self.callback_refs = {}
+        
+    def register_callback(name, pyton_function, args=None):
+        self.
+
+        vSTEPDRIVE_WIN32__UpdatePositionCallback = ctypes.CFUNCTYPE(None, ctypes.c_ubyte, ctypes.c_ubyte, ctypes.c_ubyte, ctypes.c_int32)
+        vSTEPDRIVE_WIN32__Set_UpdatePositionCallback = lib.vSTEPDRIVE_WIN32__Set_UpdatePositionCallback
+        vSTEPDRIVE_WIN32__Set_UpdatePositionCallback.argtypes = [vSTEPDRIVE_WIN32__UpdatePositionCallback]
+        vSTEPDRIVE_WIN32__Set_UpdatePositionCallback.restype = None

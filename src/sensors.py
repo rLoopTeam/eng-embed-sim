@@ -14,7 +14,7 @@
 import logging
 import numpy as np
 from units import Units
-from collections import deque
+from collections import deque, namedtuple
 
 # @see https://scimusing.wordpress.com/2013/10/25/ring-buffers-in-pythonnumpy/
 # RDA: modified to work with any dtype
@@ -61,8 +61,43 @@ class Sensor(object):
         """
         self.step_listeners.append(listener)
 
-    def create_step_samples(self):
-        pass  #deferred to subclasses
+    def create_step_samples(self, dt_usec):
+        pass  # deferred to subclasses
+        
+    def get_csv_headers(self):
+        pass  # deferred to subclasses (@todo: maybe...)
+        
+    def get_debug_headers(self):
+        pass  # deferred to subclasses
+        
+        
+class PodSensor(Sensor):
+    def __init__(self, sim, config):
+        """ A sensor for the pod actual values """
+        Sensor.__init__(self, sim, config)
+
+        self.name = "pod_actual"
+
+        pod_fields = ['t', 'p', 'v', 'a', 'he_height']
+        # Get the force fields 
+        for key, force in self.sim.pod.step_forces.iteritems():
+            pod_fields.extend([key+"_x", key+"_y", key+"_z"])
+
+        self.data = namedtuple('pod_actual', pod_fields)
+        
+    def step(self, dt_usec):
+        """ Create a list of samples containing a single sample for this step """
+        pod = self.sim.pod
+        
+        # Note: sensors always return a list of namedtuples. In this case, we always only return 1 'sample' per step. 
+        data = [self.sim.elapsed_time_usec, pod.position, pod.velocity, pod.acceleration, pod.he_height]
+        for force in self.sim.pod.step_forces.values():
+            data.extend([force.x, force.y, force.z])
+
+        samples = [self.data(*data)]  # List containing a single named tuple
+        
+        for step_listener in self.step_listeners:
+            step_listener.step_callback(self, samples)
         
 
 class PollingSensor(Sensor):
@@ -165,33 +200,6 @@ class PollingSensor(Sensor):
         start_time = self.sim.elapsed_time_usec  # Note: this is updated last in Sim.step()
         return self._lerp(start_time, start_time + dt_usec).astype(int)  # as ints because microseconds
 
-    # ---------------------------
-    # Format conversion
-    # ---------------------------
-
-    def to_csv(self, samples):
-        """ 
-        Convert the samples to csv format. It is assumed the samples came from this sensor.
-        Return an object (or headers/data?) that represents csv
-        """
-        pass  # Defer to subclasses
-        """
-        Example
-        # @todo: provide an example
-        """
-    
-    def to_safeudp_list(self, samples):
-        """ Return a list of safeudp formatted packets """
-        pass
-        
-    def to_json(self, samples):
-        """ Return all of the samples in a single JSON string """
-        pass
-        
-    def to_json_list(self, samples):
-        """ Return a list of 1 json object per sample """
-        pass
-
 
 class InterruptingSensor(Sensor):
 
@@ -220,11 +228,24 @@ class SensorConsoleWriter():
     def __init__(self, config=None):
         self.config = config  # @todo: define config for this, if needed (e.g. format, etc.)
         
-    def step_callback(self, sensor, samples):
+    def step_callback(self, sensor, step_samples):
         # Write values to the console
-        for sample in samples:
+        for sample in step_samples:
             print ",".join(sample)
             
+import csv
+class SensorCsvWriter(object):
+    def __init__(self, config):
+        self.config = config
+        
+    def step_callback(self, sensor, step_samples):
+        # This opens the file every time??
+        with open(self.config.filename, 'a') as f:
+            w = csv.writer(f)
+            for sample in step_samples:
+                w.writerow(list(sample))  # Note: each sample is assumed to be a namedtuple of some sort
+                
+        
 
 class CompoundSensorListener(object):
     """ A listener object that just calls other listeners """

@@ -19,3 +19,12 @@ class AeroForce:
         z = 0 # No z force for aero
         return (x, y, z)
     
+    def add_step_listener(self, listener):
+        self.step_listeners.append(listener)
+
+    def step(self, dt_usec):
+        """ Apply the force to the pod """
+        force = self.get_force()
+        self.pod.apply_force(force)
+        for step_listener in self.step_listeners:
+            step_listener.callback(self, [force])    

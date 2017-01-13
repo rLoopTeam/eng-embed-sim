@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import numpy as np
+from distutils.util import strtobool  # For reading configuration
 
 from units import Units
 
