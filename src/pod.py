@@ -270,7 +270,7 @@ class Pod:
         
         # Do other things? Update sensors? 
         for step_listener in self.step_listeners:
-            step_listener.callback(self, samples)
+            step_listener.step_callback(self, None)
     
     # -------------------------
     # Physical methods

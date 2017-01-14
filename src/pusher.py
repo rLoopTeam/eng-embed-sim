@@ -32,6 +32,7 @@ class Pusher:
         
         # Configuration (these are defaults -- you can also set these directly at some later point)
         self.max_velocity = Units.SI(config.max_velocity)        # meters per second
+        self.push_end_position = Units.SI(config.push_end_position)  # meters -- provided by spacex
         self.push_force = Units.SI(config.push_force)            # Newtons -- 350 kg * 2.4G (23.53596) = 8200 N
         self.coast_time_usec = Units.SI(config.coast_time)       # Note: the pusher will not likely disconnect during coast due to drag from the pod
 
@@ -47,9 +48,13 @@ class Pusher:
         if self.state == "HOLD":
             pass
         elif self.state == "PUSH":
-            if self.sim.pod.velocity < self.max_velocity:
+            if self.sim.pod.velocity < self.max_velocity and self.sim.pod.position <= self.push_end_position:
                 self.sim.pod.apply_force( self.data(self.push_force, 0, 0) )
             else:
+                if self.sim.pod.velocity >= self.max_velocity:
+                    self.logger.info("Pusher reached max velocity of {} m/s".format(self.max_velocity))
+                if self.sim.pod.position >= self.push_end_position:
+                    self.logger.info("Pusher reached push end position of {} m (pod velocity was {:.2f} m/s)".format(self.push_end_position, self.sim.pod.velocity))
                 self.set_state("COAST")
         elif self.state == "COAST":
             if self.coast_timer > self.coast_time_usec:

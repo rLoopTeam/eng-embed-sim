@@ -71,6 +71,8 @@ class Sim:
         self.brake_1 = Brake(self, None)
         self.brake_1.gap = 0.025 # Set it to minimum to test forces
         
+        # End listener (to stop the simulation)
+        self.add_end_listener(SimEndListener())
         
     def step(self, dt_usec):        
 
