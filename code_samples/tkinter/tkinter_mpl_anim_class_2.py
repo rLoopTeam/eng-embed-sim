@@ -24,16 +24,25 @@ class MplAnimTest:
     def __init__(self, fig):
         self.fig = fig
         self.ax = self.fig.add_subplot(111)
-        self.x = np.arange(0, 2*np.pi, 0.01)        # x-array
+        self.x = [0]       # x-array
+        self.y = [0]
 
         #self.ani = animation.FuncAnimation(self.fig, self.animate, np.arange(1, 100), interval=25, blit=False, init_func=self.init)
         self.ani = animation.FuncAnimation(self.fig, self.animate, interval=25, blit=False, init_func=self.init)
 
     def init(self):
         self.line, = self.ax.plot(self.x, np.sin(self.x))  # Initial line (before scrolling)
+        self.ax.set_autoscaley_on(True)
 
     def animate(self, i):
-        self.line.set_ydata(np.sin(self.x+i/10.0))  # update the data
+        self.x.append(self.x[-1]+1)
+        self.y.append(np.exp(- self.x[-1]))
+        #self.line, = self.ax.plot(self.x, self.y)
+        self.line.set_xdata(self.x)
+        self.line.set_ydata(self.y)
+        self.ax.set_xlim(0, max(self.x))
+        self.ax.set_ylim(0, max(self.y))
+        #self.line.set_ydata(np.sin(self.x+i/10.0))  # update the data
         return self.line,
 
 

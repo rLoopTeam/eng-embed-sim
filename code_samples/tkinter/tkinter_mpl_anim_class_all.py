@@ -58,7 +58,23 @@ ani = animation.FuncAnimation(fig, animate, np.arange(1, 200), interval=25, blit
 
 """
 
+class MplAnimGui:
+    def __init__(self):
+        self.fig = plt.Figure()
+        self.root = Tk.Tk()
+
+        self.canvas = FigureCanvasTkAgg(self.fig, master=self.root)
+
+        mat = MplAnimTest(self.fig)
+
+        self.canvas.get_tk_widget().grid(column=0,row=1)
+    
+    def run(self):
+        self.root.mainloop()
+
+
 # NOTE: Ordering is important here! Passing fig to FigureCanvasTkAgg fills it out somehow -- 'new_timer' becomes available on the figure...
+"""
 fig = plt.Figure()
 root = Tk.Tk()
 
@@ -70,3 +86,6 @@ mat = MplAnimTest(fig)
 canvas.get_tk_widget().grid(column=0,row=1)
 
 Tk.mainloop()
+"""
+
+MplAnimGui().run()

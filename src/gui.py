@@ -11,9 +11,20 @@ import logging
 from units import *
 from config import Config
 
-import Queue
-
 import Tkinter as tk
+import numpy as np
+
+# Note: imports need to be in the right order or it will crash
+import matplotlib
+matplotlib.use("TkAgg")
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from matplotlib.figure import Figure
+
+import matplotlib.pyplot as plt
+import matplotlib.animation as animation
+
+
+import Queue
 
 import random
 
@@ -94,6 +105,58 @@ class SimGui(tk.Frame):
         self.canvas.configure(scrollregion=self.canvas.bbox("all"))        
 
 
+class TkAnimGui:
+    def __init__(self, sim):
+        self.sim = sim
+        self.fig = plt.Figure()
+        self.root = tk.Tk()
+
+
+        self.canvas = FigureCanvasTkAgg(self.fig, master=self.root)
+
+        self.mat = TkGraph(self.fig, self.sim)
+
+        self.canvas.get_tk_widget().grid(column=0,row=1)
+    
+    def run(self):
+        self.root.mainloop()
+
+
+class TkGraph:
+    def __init__(self, fig, sim):
+        self.fig = fig
+        self.sim = sim
+        self.ax = self.fig.add_subplot(5, 1, 1)
+        
+        # Make it prettier
+        self.ax.get_xaxis().tick_bottom()
+        self.ax.get_yaxis().tick_left()
+        self.ax.set_frame_on(True)
+        self.ax.tick_params(labelsize=8)
+        
+        print dir(self.ax.get_xaxis())
+        
+        self.x = [] # x-array
+        self.y = [] # y-array
+
+        #self.ani = animation.FuncAnimation(self.fig, self.animate, np.arange(1, 100), interval=25, blit=False, init_func=self.init)
+        self.ani = animation.FuncAnimation(self.fig, self.update, interval=25, blit=False, init_func=self.init)
+
+    def init(self):
+        self.line, = self.ax.plot(self.x, self.y)  # Initial line (before scrolling)
+
+    def update(self, i):
+        self.x.append(self.sim.pod.position)
+        self.y.append(self.sim.pod.velocity)
+        self.line.set_xdata(self.x)
+        self.line.set_ydata(self.y)  # update the data
+
+        self.ax.set_xlim(0, 1270)  # Position
+        self.ax.set_ylim(0, 160)   # Velocity
+
+        return self.line,
+        
+
 if __name__ == "__main__":
     import argparse
     import threading
@@ -102,9 +165,9 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.DEBUG)
 
     
-    root = tk.Tk()
-    simgui = SimGui(root)
-    simgui.pack(side="top", fill="both", expand=True)
+    #root = tk.Tk()
+    #simgui = SimGui(root)
+    #simgui.pack(side="top", fill="both", expand=True)
 
     # Handle arguments and simulator setup
     parser = argparse.ArgumentParser(description="rPod Simulation")
@@ -121,16 +184,15 @@ if __name__ == "__main__":
 
     sim.pusher.start_push()
     
-    simgui.sim = sim
+    #simgui.sim = sim
 
     # Set up the gui to listen to the pod
-    sim.pod_sensor.add_step_listener(simgui)
+    #sim.pod_sensor.add_step_listener(simgui)
 
-    simgui.update_plot()
+    #simgui.update_plot()
     
     sim_thread = threading.Thread(target=sim.run, args=())
     sim_thread.daemon = True
-    sim_thread.start()
 
     #while (True):
     #    time.sleep(0.01)
@@ -138,7 +200,12 @@ if __name__ == "__main__":
 
     #sim.run()
 
-    root.mainloop()
+    sim_thread.start()
+
+    gui = TkAnimGui(sim)
+    gui.run()
+
+    #root.mainloop()
 
     """
     gui_thread = threading.Thread(target=root.mainloop, args=())
