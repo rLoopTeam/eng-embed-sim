@@ -142,7 +142,7 @@ class Brake:
         #self.logger.debug("Brakes: v={}, Gap={}, F_lift={}, F_drag={}, F_screw={}, dr_tq={}, bd_tq={}".format(v, self.gap, F_lift, F_drag, F_screw, drive_torque, backdrive_torque))
         p = self.sim.pod.position
         a = self.sim.pod.acceleration
-        self.logger.debug("\t".join([str(x) for x in (p, v, a, self.gap, F_lift, F_drag, F_screw, drive_torque, backdrive_torque, tl_drive_torque, tl_backdrive_torque)]))
+        #self.logger.debug("\t".join([str(x) for x in (p, v, a, self.gap, F_lift, F_drag, F_screw, drive_torque, backdrive_torque, tl_drive_torque, tl_backdrive_torque)]))
 
         # Calculate new gap based on motor / slipping movement
         

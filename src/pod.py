@@ -71,6 +71,7 @@ class Pod:
         self.z_acceleration = 0.0
         self.z_velocity = 0.0
         self.he_height = Units.SI(self.config.landing_gear.initial_height)  # This should be gotten from the starting height of the lift mechanism
+        self._initial_he_height = self.he_height  # @todo: Remove this -- it's only used as a temporary block from going through the floor until the landing gear is implemented
         
         self.elapsed_time_usec = 0
 
@@ -244,8 +245,8 @@ class Pod:
         # @todo: make this work
         #if self.he_height < self.landing_gear.he_height:
         #    self.he_height = self.landing_gear.he_height
-        if self.he_height < Units.SI(self.config.landing_gear.initial_height):  # @todo: remove this in favor of getting the actual height of the landing gear
-            self.he_height = Units.SI(self.config.landing_gear.initial_height)
+        if self.he_height < self._initial_he_height:  # @todo: remove this in favor of getting the actual height of the landing gear
+            self.he_height = self._initial_he_height
 
         #print "Net z force: {}, accel {}, velocity {}, he_height {}".format(self.net_force[2], self.z_acceleration, self.z_velocity, self.he_height)
         #print self.he_height

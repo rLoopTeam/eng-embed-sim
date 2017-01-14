@@ -27,7 +27,7 @@ class Sim:
         #self.fcu = Fcu(self, self.config.fcu)  
 
         # Initial setup
-        self.pusher.start_push()
+        #self.pusher.start_push()
 
         # Volatile
         self.elapsed_time_usec = 0
@@ -63,6 +63,8 @@ class Sim:
         self.pod_sensor = PodSensor(self, None)
         self.pod_sensor_writer = SensorCsvWriter(Config({'filename': 'pod.csv'}))
         self.pod_sensor.add_step_listener(self.pod_sensor_writer)
+
+        self.pod_sensor_writer.pause()
 
         # Testing brakes
         from brakes import Brake
@@ -111,7 +113,7 @@ class Sim:
 
         sim_end_t = time.time()
         sim_time = sim_end_t - sim_start_t
-        print "LaserOptoTestListener: gap sensor took {} samples that were within a gap.".format(self.lotl.n_gaps)
+        #print "LaserOptoTestListener: gap sensor took {} samples that were within a gap.".format(self.lotl.n_gaps)
         print "Simulated {} steps/{} seconds in {} actual seconds.".format(self.n_steps_taken, self.elapsed_time_usec/1000000, sim_time)
         
         
@@ -171,6 +173,10 @@ if __name__ == "__main__":
 
     sim.add_end_listener(SimEndListener())
     
-    sim.run()
+    import threading
+    t = threading.Thread(target=sim.run, args=())
+    t.start()
+    t.join()
+    #sim.run()
 
         

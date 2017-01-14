@@ -44,7 +44,7 @@ class LaserContrastSensor(InterruptingSensor):
         end_data = [self.data(t, strip_end_positions_in_step_range[i], 0) for i, t in enumerate(strip_end_times)]
         
         ret = sorted(start_data + end_data, key=attrgetter('t'))
-        print "LaserContrastSensor data test: {}".format(ret)
+        #print "LaserContrastSensor data test: {}".format(ret)
 
         return ret
         #strip_start_samples = np.hstack((strip_start_times.reshape((-1,1)), np.ones((len(strip_start_times), 1), dtype=np.int)))

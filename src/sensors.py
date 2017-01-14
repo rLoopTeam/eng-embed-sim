@@ -227,7 +227,7 @@ class SensorConsoleWriter():
     """ A sensor step listener that writes to the console """
     def __init__(self, config=None):
         self.config = config  # @todo: define config for this, if needed (e.g. format, etc.)
-        
+                
     def step_callback(self, sensor, step_samples):
         # Write values to the console
         for sample in step_samples:
@@ -237,13 +237,21 @@ import csv
 class SensorCsvWriter(object):
     def __init__(self, config):
         self.config = config
+        self.enabled = False
         
+    def play(self):
+        self.enabled = True
+        
+    def pause(self):
+        self.enabled = False
+
     def step_callback(self, sensor, step_samples):
         # This opens the file every time??
-        with open(self.config.filename, 'a') as f:
-            w = csv.writer(f)
-            for sample in step_samples:
-                w.writerow(list(sample))  # Note: each sample is assumed to be a namedtuple of some sort
+        if self.enabled:
+            with open(self.config.filename, 'a') as f:
+                w = csv.writer(f)
+                for sample in step_samples:
+                    w.writerow(list(sample))  # Note: each sample is assumed to be a namedtuple of some sort
                 
         
 

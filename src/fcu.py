@@ -35,7 +35,7 @@ class Fcu:
         # @todo: include reference for ^
         self.callback_refs = {}
         
-    def register_callback(name, pyton_function, args=None):
+    def register_callback(name, args, pyton_function):
         self.
 
         vSTEPDRIVE_WIN32__UpdatePositionCallback = ctypes.CFUNCTYPE(None, ctypes.c_ubyte, ctypes.c_ubyte, ctypes.c_ubyte, ctypes.c_int32)
