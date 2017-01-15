@@ -21,14 +21,7 @@ from brakes import *
 
 # Forces
 from forces import *
-"""
-from force_aero import AeroForce
-from force_brakes import BrakeForce
-from force_gimbals import GimbalForce
-from force_hover_engines import HoverEngineForce
-from force_landing_gear import LandingGearForce
-from force_lateral_stability import LateralStabilityForce
-"""
+
 
 class PodComponent:
     def __init__(self, name, type, location, sim_obj):
@@ -139,8 +132,11 @@ class Pod:
         """
         
         # Brakes
-        # ?
-
+        
+        #self.brakes = []
+        #for brake_config in self.config.brakes:
+        #    self.brakes.append(Brake(self.sim, brake_config))
+        self.brakes = Brakes(self.sim, self.config.brakes)
         
         """ Sketch:
         # Pod components
@@ -268,6 +264,9 @@ class Pod:
         
         # Update physics
         self.update_physics(dt_usec)
+                
+        # Update our components (@todo: move this up?)
+        self.brakes.step(dt_usec)
         
         # Do other things? Update sensors? 
         for step_listener in self.step_listeners:

@@ -114,11 +114,11 @@ sim:
             material_density: 
             # With this and velocity, we can get F_lift and F_drag? 
         brakes:
-            BRAKE_L:
-                sensors: pass
-                actuators: pass
-            BRAKE_R:
-                sensors: pass
-                actuators: pass
+            - initial_gap: 25.4mm
+              maximum_gap: 25.4mm
+              minimum_gap: 2.5mm
+            - initial_gap: 25.4mm
+              maximum_gap: 25.4mm
+              minimum_gap: 2.5mm
 
         

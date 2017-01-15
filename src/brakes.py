@@ -36,13 +36,56 @@ F_drag(gap, v) = (5632 * e^(-202*gap)) * (-e^(-.3*v) + 1) * (1.5 * e^(-.02*v) + 
 import numpy as np
 import logging
 
-class Brakes:
-    """ Model of brake system (both brakes) """
+from units import Units
+from config import Config
+
+class Brakes(object):
     def __init__(self, sim, config):
         self.sim = sim
-        self.config = config
+        self.config = config  # Note: this is a list of configurations
         
-    
+        self._list = []
+                
+        for brake_config in self.config:
+            self._list.append( Brake(self.sim, Config(brake_config)) )
+
+        # Testing movement
+
+    def __getitem__(self, idx):
+        return self._list[idx]
+
+    def __repr__(self):
+        return 'Brakes(' + str(self._list) + ')'
+
+    def __str__(self):
+        return str(self._list)
+
+    def get_gaps(self):
+        # Note: we always only have 2 brakes
+        return (self._list[0].gap, self._list[1].gap)
+
+    def step(self, dt_usec):
+        for brake in self._list:
+            brake.step(dt_usec)
+
+    def close_now(self):
+        # Close the brakes NOW (no waiting -- just for simulation testing)
+        for brake in self._list:
+            brake.gap = brake.minimum_gap
+            brake._gap_target = brake.minimum_gap  # TESTING -- the brakes will move back apart if this isn't set. 
+
+    def _move_to_gap_target(self, gap_target):
+        for brake in self._list:
+            brake._move_to_gap_target(gap_target)
+
+    def get_drag(self, brake_index=None):
+        tl_force = 0.0
+        
+        for brake in self._list:
+            tl_force += brake.get_drag()
+        
+        return tl_force
+
 
 class Brake:
     """
@@ -53,11 +96,17 @@ class Brake:
         self.sim = sim
         self.config = config
 
+
         self.logger = logging.getLogger("Brake")
 
         # Volatile
         #self.gap = Units.SI(self.config.initial_gap)  # @todo: make this work 
-        self.gap = .025  # m -- @todo: move this to configuration and get the correct fully retracted gap
+        self.gap = Units.SI(self.config.initial_gap) # m -- @todo: move this to configuration and get the correct fully retracted gap
+
+        # TESTING ONLY
+        self._gap_target = self.gap
+        self._gap_close_speed = 0.01  # meters/second
+        
         self.deployed_pct = 0.0  # @todo: need to calculate this based on the initial position. Or let this set the initial gap? Probably calculate it from max_gap and 
 
         self.lift_force = 0.0  # N -- lift against the rail; +lift is away from the rail
@@ -71,6 +120,8 @@ class Brake:
         
         # Configuration
         self.negator_torque = 0.7  # Nm -- @todo: move this to config
+        self.minimum_gap = Units.SI(self.config.minimum_gap)
+        self.maximum_gap = Units.SI(self.config.maximum_gap)
         #self.min_gap = 2.5mm  # ?
         #self.max_gap = 25mm   # ?
         
@@ -91,7 +142,10 @@ class Brake:
         # Step size: .05  # Half steps
         # => 400 steps per revolution at half steps
         
-        
+    def _move_to_gap_target(self, gap_target):
+        # TESTING ONLY
+        self._gap_target = gap_target
+    
     def step(self, dt_usec):
         """ Calculate our movement this step, and the forces that are acting on us. Notify if, for instance, brake force overcomes motor torque """
         # Note: doing all these calculations in a single function because function calls are expensive
@@ -100,6 +154,19 @@ class Brake:
         self.last_drag_force = self.drag_force
         
         v = self.sim.pod.velocity
+        
+        # TESTING ONLY -- move the gap to the target
+        if self.gap > self._gap_target:
+            dist = self._gap_close_speed * (dt_usec / 1000000.0)
+            self.gap -= dist
+        elif self.gap < self._gap_target:
+            dist = self._gap_close_speed * (dt_usec / 1000000.0)
+            self.gap += dist
+        else:
+            # Don't really need this, but hey
+            self.gap = self._gap_target
+        # /TESTING
+        
         gap = self.gap
         
         # Calculate lift and drag
@@ -108,7 +175,8 @@ class Brake:
         F_lift = (3265.1 * np.exp(-209.4*gap)) * np.log(v + 1) - (2636.7 * np.exp(-207*gap)) * (v + .6) * np.exp(-.16*v)  # Newtons, For one brake
         
         # F_drag(gap, v) = (5632 * np.exp(-202*gap)) * (-np.exp(-.3*v) + 1) * (1.5 * np.exp(-.02*v) + 1)  # For both brakes
-        F_drag = - (2816 * np.exp(-202*gap)) * (-np.exp(-.3*v) + 1) * (1.5 * np.exp(-.02*v) + 1)  # Newtons, For one brake
+        #F_drag = - (2816 * np.exp(-202*gap)) * (-np.exp(-.3*v) + 1) * (1.5 * np.exp(-.02*v) + 1)  # Newtons, For one brake
+        F_drag = - (5632 * np.exp(-202*gap)) * (-np.exp(-.3*v) + 1) * (1.5 * np.exp(-.02*v) + 1)  # Newtons, For two brakes? @TODO @todo: Confirm brake strength from A34 data!!
 
         # Save the drag force (to be used by force_brakes.py)
         self.drag_force = F_drag
@@ -146,7 +214,9 @@ class Brake:
 
         # Calculate new gap based on motor / slipping movement
         
-        
+    def get_drag(self):
+        return self.drag_force  # Negative? 
+    
     def get_motor_load_torque(self):
         """ Get the torque on the motor from the brakes """
         # Start with the brake lift

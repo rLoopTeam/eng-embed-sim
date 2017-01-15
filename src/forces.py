@@ -204,7 +204,9 @@ class BrakeForce(ForceExerter):
         #print "Brake drag at air gap {}: {}".format(air_gap, -f_drag)
         """
 
-        f_drag = self.sim.brake_1.drag_force * 2  # *2 for both brakes. Just testing right now
-                
+        #f_drag = self.sim.brake_1.drag_force * 2  # *2 for both brakes. Just testing right now
+        
+        f_drag = self.sim.pod.brakes.get_drag() 
+               
         return self.data(f_drag, 0, 0)
 

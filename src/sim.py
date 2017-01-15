@@ -64,12 +64,12 @@ class Sim:
         self.pod_sensor_writer = SensorCsvWriter(Config({'filename': 'pod.csv'}))
         self.pod_sensor.add_step_listener(self.pod_sensor_writer)
 
-        self.pod_sensor_writer.pause()
+        self.pod_sensor_writer.pause()  # Paused for use in the gui
 
-        # Testing brakes
-        from brakes import Brake
-        self.brake_1 = Brake(self, None)
-        self.brake_1.gap = 0.025 # Set it to minimum to test forces
+        # Testing brakes  (pod now has brakes)
+        #from brakes import Brake
+        #self.brake_1 = Brake(self, None)
+        #self.brake_1.gap = 0.025 # Set it to test forces
         
         # End listener (to stop the simulation)
         self.add_end_listener(SimEndListener())
@@ -89,7 +89,7 @@ class Sim:
         #self.laser_opto_1.step(dt_usec)
         #self.logger.debug(list(self.laser_opto_1.pop_all()))
         self.laser_contrast_1.step(dt_usec)
-        self.brake_1.step(dt_usec)
+        #self.brake_1.step(dt_usec)
         
         # Done testing
         

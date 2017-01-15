@@ -150,22 +150,34 @@ class GuiLayout:
         TkGraphForces(graph1_fig, self.sim)  # hate this
         graph2_canvas.show()  # Don't forget this!
         graph1_canvas.get_tk_widget().grid(column=0, row=0)
+
+        graph_brakes = ttk.Frame(content, width=200, height=60)
+        graph_brakes_fig = plt.Figure(figsize=(8,2), dpi=100)
+        graph_brakes_canvas = FigureCanvasTkAgg(graph_brakes_fig, master=graph_brakes)
+        TkGraphBrakes(graph_brakes_fig, self.sim)
+        graph_brakes_canvas.show()  # Don't forget this!
+        graph_brakes_canvas.get_tk_widget().grid(column=0, row=0)
+
         
         #print "graph1_fig: {}; graph2_fig: {}".format(repr(graph1_fig), repr(graph2_fig))
         
         buttons = ttk.Frame(content, width=300, height=100)
         btnStart = ttk.Button(buttons, text="Start", command=self.sim.pusher.start_push)
         btnCancel = ttk.Button(buttons, text="Exit", command=self.root.destroy)
-
+        btnBrakeNow = ttk.Button(buttons, text="Brake NOW", command=self.sim.pod.brakes.close_now)
+        btnBrake = ttk.Button(buttons, text="Brake Regular", command= lambda: self.sim.pod.brakes._move_to_gap_target(0.0025))
         
         # Place components in the grid
         content.grid(column=0, row=0)
         graph1.grid(column=0, row=0)
         graph2.grid(column=0, row=1)
+        graph_brakes.grid(column=0, row=2)
     
         buttons.grid(row=3)
         btnStart.grid()
         btnCancel.grid()
+        btnBrakeNow.grid()
+        btnBrake.grid()
     
     def run(self):
         self.root.mainloop()
@@ -193,7 +205,7 @@ class TkGraphBase:
 
     def init(self):
         self.line, = self.ax.plot(self.x, self.y, color="#5992F9")  # Initial line (before scrolling)
-        self.ax.set_xlim(0, 1270)  # Position
+        self.ax.set_xlim(-50, 1270)  # Position
         self.ax.set_ylim(0, 160)   # Velocity
 
     def update(self, i):
@@ -223,7 +235,7 @@ class TkGraphForces(TkGraphBase):
             self.force_ys[name] = [force.x]  # Initialize lists
             self.dlines[name], = self.ax.plot(self.xs, self.force_ys[name], label=name)  # Initial line (before scrolling)
             
-        self.ax.set_xlim(0, 1270)  # Position
+        self.ax.set_xlim(-50, 1270)  # Position
         self.ax.set_ylim(150, -1400)
         #self.ax.invert_yaxis()
         
@@ -245,6 +257,62 @@ class TkGraphForces(TkGraphBase):
         
         #return self.lines
         return [line for line in self.dlines.values()]  
+
+
+class TkGraphBrakes(TkGraphBase):
+    def __init__(self, fig, sim):
+        TkGraphBase.__init__(self, fig, sim)
+
+        self.xs = []
+        self.gap_ys = [] # This will be a list of lists (one for each brake)
+        
+        self.lines = []
+        
+        self.ani = animation.FuncAnimation(self.fig, self.update, interval=10, blit=False, init_func=self.init)
+
+        
+    def init(self):
+        self.xs.append(0)
+        brakes = self.sim.pod.brakes
+        self.gap_ys.append( [brakes[0].gap] )
+        self.gap_ys.append( [-brakes[1].gap] )  # Negative so that it shows on the bottom of the graph
+        
+        b0line, = self.ax.plot(self.xs, self.gap_ys[0], label="Brake L", color="#FFFF66")
+        self.lines.append( b0line )
+
+        b1line, = self.ax.plot(self.xs, self.gap_ys[1], label="Brake R", color="#FFFF66")
+        self.lines.append( b1line )
+            
+        self.ax.set_xlim(-50, 1270)  # Position
+        self.ax.set_ylim(-.035, .035)
+        #self.ax.invert_yaxis()
+        
+        fontP = FontProperties()
+        fontP.set_size('small')
+
+        #self.ax.legend(loc='bottom center', ncol=len(self.dlines), prop=fontP)
+        
+    def update(self, i):
+        self.xs.append(self.sim.pod.position)
+
+        brakes = self.sim.pod.brakes
+
+        # Brake 0
+        line = self.lines[0]
+        self.gap_ys[0].append(brakes[0].gap)
+        line.set_xdata(self.xs)
+        line.set_ydata(self.gap_ys[0])
+
+        # Brake 1 -- use negative brake gap to show it on the bottom of the graph
+        line = self.lines[1]
+        self.gap_ys[1].append(-brakes[1].gap)
+        line.set_xdata(self.xs)
+        line.set_ydata(self.gap_ys[1])
+         
+        #self.ax.relim()
+        #self.ax.autoscale()
+        
+        return self.lines
 
 class TkGraphVelocity(TkGraphBase):
     # @todo: Move the code from the base to here
