@@ -105,7 +105,7 @@ class Brake:
 
         # TESTING ONLY
         self._gap_target = self.gap
-        self._gap_close_speed = 0.01  # meters/second
+        self._gap_close_speed = 0.007  # meters/second -- this is just a guess -- .007 m/s = closing 21mm in 3s
         
         self.deployed_pct = 0.0  # @todo: need to calculate this based on the initial position. Or let this set the initial gap? Probably calculate it from max_gap and 
 
