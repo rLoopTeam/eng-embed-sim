@@ -137,7 +137,7 @@ class HoverEngineForce(ForceExerter):
         #print "Calculated he drag (1 engine) at height {} and velocity {}: {}".format(height, velocity, x)
 
         # @todo: is the drag for a single hover engine or all 8? 
-        return self.data(8*x, 0, z * 8) # *8 because 8 hover engines
+        return self.data(8*x, 0, 8*z) # *8 because 8 hover engines
 
         """
         Another possible way:

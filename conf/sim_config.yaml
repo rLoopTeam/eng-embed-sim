@@ -117,8 +117,16 @@ sim:
             - initial_gap: 25.4mm
               maximum_gap: 25.4mm
               minimum_gap: 2.5mm
+              # Set the min and max values for the MLP. In theory this is 0-4096, but it's more like 300-3000 in practice.
+              # Note that the raw min and raw max will be different per brake due to differences in MLP mounting
+              mlp_raw_min: 300  
+              mlp_raw_max: 3000
             - initial_gap: 25.4mm
               maximum_gap: 25.4mm
               minimum_gap: 2.5mm
+              # Set the min and max values for the MLP. In theory this is 0-4096, but it's more like 300-3000 in practice.
+              # Note that the raw min and raw max will be different per brake due to differences in MLP mounting
+              mlp_raw_min: 300
+              mlp_raw_max: 3000
 
         
