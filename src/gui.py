@@ -132,48 +132,40 @@ class GuiLayout:
 
         self.layout()
 
-    def layout1(self):
-        # Set up components
-        content = ttk.Frame(self.root)
-        
-        mup = MultiPlot()
-        
-        graph1 = ttk.Frame(content)
-        graph1_fig = mup.fig1
-        graph1_canvas = FigureCanvasTkAgg(graph1_fig, master=graph1)
-        ani = animation.FuncAnimation(mup.fig1, mup.au.update, blit=False, interval=10, repeat=False)
-        graph1_canvas.get_tk_widget().grid(column=0, row=0)
-
-
-        content.grid(column=0, row=0)
-        graph1.grid(column=0, row=0)
-        #graph2.grid(column=0, row=1)
-
     def layout(self):
         
         # Set up components
-        content = ttk.Frame(self.root)
+        content = ttk.Frame(self.root, width=300, height=500)
         
-        graph2 = ttk.Frame(content)
-        graph2_fig = plt.Figure()
+        graph2 = ttk.Frame(content, width=200, height=60)
+        graph2_fig = plt.Figure(figsize=(8,2), dpi=100)
         graph2_canvas = FigureCanvasTkAgg(graph2_fig, master=graph2)
         TkGraphBase(graph2_fig, self.sim)
         graph2_canvas.show()
         graph2_canvas.get_tk_widget().grid(column=0, row=0)
 
-        graph1 = ttk.Frame(content)
-        graph1_fig = plt.Figure()
+        graph1 = ttk.Frame(content, width=200, height=60)
+        graph1_fig = plt.Figure(figsize=(8,2), dpi=100)
         graph1_canvas = FigureCanvasTkAgg(graph1_fig, master=graph1)
         TkGraphForces(graph1_fig, self.sim)  # hate this
         graph2_canvas.show()  # Don't forget this!
         graph1_canvas.get_tk_widget().grid(column=0, row=0)
         
-        print "graph1_fig: {}; graph2_fig: {}".format(repr(graph1_fig), repr(graph2_fig))
+        #print "graph1_fig: {}; graph2_fig: {}".format(repr(graph1_fig), repr(graph2_fig))
+        
+        buttons = ttk.Frame(content, width=300, height=100)
+        btnStart = ttk.Button(buttons, text="Start", command=self.sim.pusher.start_push)
+        btnCancel = ttk.Button(buttons, text="Exit", command=self.root.destroy)
+
         
         # Place components in the grid
         content.grid(column=0, row=0)
         graph1.grid(column=0, row=0)
         graph2.grid(column=0, row=1)
+    
+        buttons.grid(row=3)
+        btnStart.grid()
+        btnCancel.grid()
     
     def run(self):
         self.root.mainloop()
@@ -183,7 +175,7 @@ class TkGraphBase:
     def __init__(self, fig, sim):
         self.fig = fig
         self.sim = sim
-        self.ax = self.fig.add_subplot(5, 1, 1)
+        self.ax = self.fig.add_subplot(1, 1, 1)
         
         # Make it prettier
         #self.fig.set_facecolor("#2E333A")
@@ -222,7 +214,7 @@ class TkGraphForces(TkGraphBase):
         self.dlines = OrderedDict()
         self.lines = []
         
-        self.ani = animation.FuncAnimation(self.fig, self.update, interval=25, blit=False, init_func=self.init)
+        self.ani = animation.FuncAnimation(self.fig, self.update, interval=10, blit=False, init_func=self.init)
 
         
     def init(self):
@@ -260,62 +252,6 @@ class TkGraphVelocity(TkGraphBase):
         TkGraphBase.__init__(self, fig, sim)
     
 
-class ArtistUpdater:
-    def __init__(self):
-        self.artists = []
-        
-    def add_artist(self, artist):
-        self.artists.append(artist)
-        
-    def update(self, i):
-        print "Update!"
-        lines = []
-        for artist in self.artists:
-            ret = artist.update(i)
-            if isinstance(ret, list):
-                lines.extend(ret)
-            else:
-                lines.append(ret)
-        return lines
-        
-class LineManager:
-    def __init__(self, ax):
-        self.ax = ax
-        self.xs = []
-        self.ys = []
-        self.line = self.ax.plot(self.xs, self.ys)
-    
-    def update(self, i):
-        self.xs.append(i)
-        self.ys.append(random.randint(0,100))
-        self.line.set_xdata(self.xs)
-        self.line.set_ydata(self.ys)
-
-        self.ax.relim()
-        self.ax.autoscale()
-
-        return [self.line]
-
-
-class MultiPlot:
-    def __init__(self):
-        self.fig1 = plt.figure()
-        self.fig2 = plt.figure()
-
-        self.fig1ax1 = self.fig1.add_subplot(2,1,1)
-        self.fig1ax2 = self.fig1.add_subplot(2,1,2)
-        
-        self.fig2ax1 = self.fig2.add_subplot(1,1,1)
-        
-        self.fig1lm1 = LineManager(self.fig1ax1)
-        self.fig1lm2 = LineManager(self.fig1ax2)    
-        self.fig2lm1 = LineManager(self.fig2ax1)
-        
-        self.au = ArtistUpdater()
-        self.au.add_artist(self.fig1lm1)
-        self.au.add_artist(self.fig1lm2)
-        self.au.add_artist(self.fig2lm1)
-        
         
 
 if __name__ == "__main__":
@@ -342,7 +278,7 @@ if __name__ == "__main__":
         
     sim = Sim(sim_config.sim)
 
-    sim.pusher.start_push()
+    #sim.pusher.start_push()
     
     #simgui.sim = sim
 
