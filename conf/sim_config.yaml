@@ -9,7 +9,7 @@
 
 
 sim:
-    fixed_timestep: 300 usec
+    fixed_timestep: 1000 usec
     pusher:
         max_velocity: 150.0 m/s
         push_end_position: 475m  # NOTE: This is where the push will stop regardless of speed -- @todo: work this into the pusher

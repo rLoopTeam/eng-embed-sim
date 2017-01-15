@@ -100,6 +100,7 @@ class Pod:
         self.force_exerters['landing_gear'] = LandingGearForce(self.sim, self.config.forces.landing_gear)
         
         # Forces applied during the step (for recording purposes)
+        # @todo: Maybe initialize these to ForceExerter.data(0,0,0)?
         self.step_forces = OrderedDict()
         self.step_forces['aero'] = None
         self.step_forces['brakes'] = None

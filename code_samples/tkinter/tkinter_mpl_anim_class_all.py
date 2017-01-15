@@ -17,24 +17,36 @@ from matplotlib.figure import Figure
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 
+from matplotlib import style
+style.use('fivethirtyeight')
 
 #---------End of imports
 
 class MplAnimTest:
     def __init__(self, fig):
         self.fig = fig
-        self.ax = self.fig.add_subplot(111)
+        self.ax = self.fig.add_subplot(2, 1, 1)
+        self.bx = self.fig.add_subplot(2, 1, 2)
+
         self.x = np.arange(0, 2*np.pi, 0.01)        # x-array
 
+        print "AnimTest __init__"
+        
         #self.ani = animation.FuncAnimation(self.fig, self.animate, np.arange(1, 100), interval=25, blit=False, init_func=self.init)
         self.ani = animation.FuncAnimation(self.fig, self.animate, interval=25, blit=False, init_func=self.init)
 
     def init(self):
-        self.line, = self.ax.plot(self.x, np.sin(self.x))  # Initial line (before scrolling)
+        print "Init!"
+        linea, = self.ax.plot(self.x, np.sin(self.x))  # Initial line (before scrolling)
+        #lineb, = self.bx.plot(self.x, np.cos(self.x))
+        #self.line = [linea, lineb]
+        self.line = [linea]
 
     def animate(self, i):
-        self.line.set_ydata(np.sin(self.x+i/10.0))  # update the data
-        return self.line,
+        print "Animate!"
+        self.line[0].set_ydata(np.sin(self.x+i/10.0))  # update the data
+        #self.line[1].set_ydata(np.cos(self.x+i/10.0))  # update the data
+        return self.line
 
 
 """
