@@ -28,7 +28,7 @@ class Fcu:
         
         self.logger = logging.getLogger("FCU")
 
-        # FCU DLL Loading
+        # Load the DLL
         self.dll_path = self.config.dll_path
         self.dll_filename = self.config.dll_filename
         self.dll_filepath = (os.path.join(self.dll_path, self.dll_filename))
@@ -43,39 +43,46 @@ class Fcu:
         # @todo: include reference for ^
         self.callback_refs = {}
     
-    
-        # The delegate sub for win32 debug (text) c
-        #Public Delegate Sub DEBUG_PRINTF__CallbackDelegate(ByVal pu8String As IntPtr)
-        # The debugger callback
-        #Private Shared Sub vDEBUG_PRINTF_WIN32__Set_Callback(ByVal callback As MulticastDelegate)
-
-        """
-        # Set the function in the dll
-        debug_printf_callback = ctypes.CFUNCTYPE(None, ctypes.c_char_p)  # Returns nothing, takes a char*
-
-        vDEBUG_PRINTF_WIN32__Set_Callback = lib.vDEBUG_PRINTF_WIN32__Set_Callback
-        vDEBUG_PRINTF_WIN32__Set_Callback.argtypes = [debug_printf_callback]
-        vDEBUG_PRINTF_WIN32__Set_Callback.restype = None
-        vDEBUG_PRINTF_WIN32__Set_Callback.errcheck = errcheck_callback
-
-        # Define the python function that we'll use for the callback
-        def debug_printf(val):
-            print "Python Debug printf callback called with value '{}'".format(val)
-    
-        # reference the callback to keep it alive
-        _debug_printf_callback = debug_printf_callback(debug_printf)
-
-        # Pass in our referenced python function to the dll function
-        vDEBUG_PRINTF_WIN32__Set_Callback(_debug_printf_callback)
-
-        """
+        # ------------------------
+        #  Register Callbacks
+        # ------------------------
         
-        self.register_callback(self.debug_printf, "vDEBUG_PRINTF_WIN32__Set_Callback", None, [ctypes.c_char_p])
+        # debug_printf
+        # The debugger callback
+        #Public Delegate Sub DEBUG_PRINTF__CallbackDelegate(ByVal pu8String As IntPtr)
+        #Private Shared Sub vDEBUG_PRINTF_WIN32__Set_Callback(ByVal callback As MulticastDelegate)
+        self.register_callback(self.debug_printf_callback, "vDEBUG_PRINTF_WIN32__Set_Callback", None, [ctypes.c_char_p])
+        
+        # Stepdrive Update Position Callback
+        # Public Shared Sub vSTEPDRIVE_WIN32__Set_UpdatePositionCallback(ByVal callback As MulticastDelegate)
+        # Public Delegate Sub STEPDRIVE_WIN32__Set_UpdatePositionCallbackDelegate(u8MotorIndex As Byte, u8Step As Byte, u8Dir As Byte, s32Position As Int32)
+        self.register_callback(self.stepdrive_update_position_callback, 'vSTEPDRIVE_WIN32__Set_UpdatePositionCallback', None, [ctypes.c_ubyte, ctypes.c_ubyte, ctypes.c_ubyte, ctypes.c_int32])
 
+        # Public Shared Sub vETH_WIN32__Set_Ethernet_TxCallback(ByVal callback As MulticastDelegate)
+        # Public Delegate Sub ETH_WIN32__TxCallbackDelegate(ByVal pu8Buffer As IntPtr, ByVal u16BufferLength As UInt16)
+        self.register_callback(self.eth_tx_callback, 'vETH_WIN32__Set_Ethernet_TxCallback', None, [ctypes.c_byte_p, ctypes.c_uint16])
 
-    def debug_printf(self, message):
-        print "FCU.debug_printf() received {}".format(message)
+        
+        # ------------------------
+        #  Callable Functions
+        # ------------------------
+
+        # Public Shared Sub vETH_WIN32__Ethernet_Input(pu8Buffer() As Byte, u16BufferLength As UInt16)
+        
+        
+    def debug_printf_callback(self, message):
+        # Public Delegate Sub DEBUG_PRINTF__CallbackDelegate(ByVal pu8String As IntPtr)
+        self.logger.debug("FCU.debug_printf('{}')".format(message))
     
+    def stepdrive_update_position_callback(self, u8MotorIndex, u8Step, u8Dir, s32Position):
+        # Public Delegate Sub STEPDRIVE_WIN32__Set_UpdatePositionCallbackDelegate(u8MotorIndex As Byte, u8Step As Byte, u8Dir As Byte, s32Position As Int32)
+        self.logger.debug("FCU.stepdrive_update_position_callback({}, {}, {}, {})".format(u8MotorIndex, u8Step, u8Dir, s32Position))
+        
+    def eth_tx_callback(self, pu8Buffer, u16BufferLength):
+        # Public Delegate Sub ETH_WIN32__TxCallbackDelegate(ByVal pu8Buffer As IntPtr, ByVal u16BufferLength As UInt16)
+        # @todo: Format the buffer so it's readable (bytes)
+        self.logger.debug("FCU.eth_tx_callback('{}', {})".format(pu8Buffer, u16BufferLength)))
+         
     def register_callback(self, python_function, dll_function_name, restype, args):
         # Create the callback functype
         callback_functype = ctypes.CFUNCTYPE(restype, *args)
@@ -91,8 +98,8 @@ class Fcu:
         # Call the method on the dll and pass in our reference
         dll_method(self.callback_refs[dll_function_name])
 
-
         """
+        Example (manual version):
         vSTEPDRIVE_WIN32__UpdatePositionCallback = ctypes.CFUNCTYPE(None, ctypes.c_ubyte, ctypes.c_ubyte, ctypes.c_ubyte, ctypes.c_int32)
         vSTEPDRIVE_WIN32__Set_UpdatePositionCallback = lib.vSTEPDRIVE_WIN32__Set_UpdatePositionCallback
         vSTEPDRIVE_WIN32__Set_UpdatePositionCallback.argtypes = [vSTEPDRIVE_WIN32__UpdatePositionCallback]
@@ -103,6 +110,7 @@ class Fcu:
         vETH_WIN32__Set_Ethernet_TxCallback.argtypes = [Ethernet_TxCallback]
         vETH_WIN32__Set_Ethernet_TxCallback.restype = None
         """
+        
         
 if __name__ == "__main__":
     logging.basicConfig(level=logging.DEBUG)
