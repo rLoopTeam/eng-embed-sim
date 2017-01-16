@@ -3,11 +3,15 @@
 import yaml
 
 
-class Config:
+class Config(object):
     
     def __init__(self, config_dict=None):
+        # Note: need to set __dict__ directly because we're overriding __setattr__
         if config_dict is not None:
-            self.__internal = config_dict
+            if isinstance(config_dict, Config):
+                self.__internal = config_dict.__internal
+            else:
+                self.__internal = config_dict
         else:
             self.__internal = {}
         
@@ -21,12 +25,20 @@ class Config:
         return self  # fluent
     
     def __getattr__(self, name):
+        if name in ['_Config__internal']:
+            return self.__dict__['__internal']
         val = self.__internal.get(name, None)
         if isinstance(val, dict):
             return Config(val)
         else:
             return val
-            
+    
+    def __setattr__(self, name, value):
+        if self.__dict__.has_key(name) or name == "_Config__internal":       # any normal attributes are handled normally
+            object.__setattr__(self, name, value)
+        else:
+            self.__internal[name] = value
+    
     def __str__(self):
         return yaml.dump(self.__internal, default_flow_style=False)
         

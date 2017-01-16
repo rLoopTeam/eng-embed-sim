@@ -59,6 +59,10 @@ class Pusher:
         elif self.state == "COAST":
             if self.coast_timer > self.coast_time_usec:
                 self.set_state("BRAKE")
+
+                # TESTING ONLY
+                self.sim.pod.brakes._move_to_gap_target(.0025)  # Stop just after push
+                
                 self.coast_timer = 0
             else:
                 self.coast_timer += dt_usec

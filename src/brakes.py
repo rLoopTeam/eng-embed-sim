@@ -102,10 +102,15 @@ class Brake:
         # Volatile
         #self.gap = Units.SI(self.config.initial_gap)  # @todo: make this work 
         self.gap = Units.SI(self.config.initial_gap) # m -- @todo: move this to configuration and get the correct fully retracted gap
+        self.minimum_gap = Units.SI(self.config.minimum_gap)
+        self.maximum_gap = Units.SI(self.config.maximum_gap)
 
         # TESTING ONLY
         self._gap_target = self.gap
-        self._gap_close_speed = 0.007  # meters/second -- this is just a guess -- .007 m/s = closing 21mm in 3s
+        self._gap_close_time = Units.SI(self.config.gap_close_min_time)
+        self._gap_close_dist = self.maximum_gap - self.minimum_gap
+        self._gap_close_speed = self._gap_close_dist / self._gap_close_time  # meters/second -- this is just a guess -- .007 m/s = closing 21mm in 3s
+        self.logger.debug("Brake gap close speed: {} m/s".format(self._gap_close_speed))
         # /TESTING
         
         self.deployed_pct = 0.0  # @todo: need to calculate this based on the initial position. Or let this set the initial gap? Probably calculate it from max_gap and 
@@ -121,8 +126,6 @@ class Brake:
         
         # Configuration
         self.negator_torque = 0.7  # Nm -- @todo: move this to config
-        self.minimum_gap = Units.SI(self.config.minimum_gap)
-        self.maximum_gap = Units.SI(self.config.maximum_gap)
         #self.min_gap = 2.5mm  # ?
         #self.max_gap = 25mm   # ?
         
@@ -176,8 +179,8 @@ class Brake:
         F_lift = (3265.1 * np.exp(-209.4*gap)) * np.log(v + 1) - (2636.7 * np.exp(-207*gap)) * (v + .6) * np.exp(-.16*v)  # Newtons, For one brake
         
         # F_drag(gap, v) = (5632 * np.exp(-202*gap)) * (-np.exp(-.3*v) + 1) * (1.5 * np.exp(-.02*v) + 1)  # For both brakes
-        #F_drag = - (2816 * np.exp(-202*gap)) * (-np.exp(-.3*v) + 1) * (1.5 * np.exp(-.02*v) + 1)  # Newtons, For one brake
-        F_drag = - (5632 * np.exp(-202*gap)) * (-np.exp(-.3*v) + 1) * (1.5 * np.exp(-.02*v) + 1)  # Newtons, For two brakes? @TODO @todo: Confirm brake strength from A34 data!!
+        F_drag = - (2816 * np.exp(-202*gap)) * (-np.exp(-.3*v) + 1) * (1.5 * np.exp(-.02*v) + 1)  # Newtons, For one brake
+        #F_drag = - (5632 * np.exp(-202*gap)) * (-np.exp(-.3*v) + 1) * (1.5 * np.exp(-.02*v) + 1)  # Newtons, For two brakes? @TODO @todo: Confirm brake strength from A34 data!!
 
         # Save the drag force (to be used by force_brakes.py)
         self.drag_force = F_drag

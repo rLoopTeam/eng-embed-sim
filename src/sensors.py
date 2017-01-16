@@ -11,10 +11,13 @@
 # NOTE: Please add your name to 'Author:' if you work on this file. Thanks!
 
 # Note: all units are SI: meters/s^2, meters/s, and meters. Time is in microseconds (?)
+import os
 import logging
 import numpy as np
 from units import Units
 from collections import deque, namedtuple
+import csv
+
 
 # @see https://scimusing.wordpress.com/2013/10/25/ring-buffers-in-pythonnumpy/
 # RDA: modified to work with any dtype
@@ -74,14 +77,15 @@ class Sensor(object):
 class PodSensor(Sensor):
     def __init__(self, sim, config):
         """ A sensor for the pod actual values """
+        # @todo: Is this actually a sensor? Kinda works like a sensor, but kinda doesn't (e.g. needs to be stepped?)
         Sensor.__init__(self, sim, config)
 
         self.name = "pod_actual"
 
-        pod_fields = ['t', 'p', 'v', 'a', 'he_height']
+        pod_fields = ['t_usec', 'pod_position', 'pod_velocity', 'pod_acceleration', 'he_height']
         # Get the force fields 
         for key, force in self.sim.pod.step_forces.iteritems():
-            pod_fields.extend([key+"_x", key+"_y", key+"_z"])
+            pod_fields.extend(['F_'+key+"_x", 'F_'+key+"_y", 'F_'+key+"_z"])
 
         self.data = namedtuple('pod_actual', pod_fields)
         
@@ -99,6 +103,9 @@ class PodSensor(Sensor):
         for step_listener in self.step_listeners:
             step_listener.step_callback(self, samples)
         
+    def get_csv_headers(self):
+        return self.data._fields
+
 
 class PollingSensor(Sensor):
     """ Sensor that provides a data stream  """
@@ -223,21 +230,38 @@ class InterruptingSensor(Sensor):
             step_listener.step_callback(self, samples)
 
 
-class SensorConsoleWriter():
+class SensorListener(object):
+    """ Base class for sensor listeners """
+    def __init__(self, sim, config):
+        self.sim = sim
+        self.config = config
+        
+    def step_callback(self, sensor, step_samples):
+        pass
+    
+
+class SensorConsoleWriter(SensorListener):
     """ A sensor step listener that writes to the console """
-    def __init__(self, config=None):
+    def __init__(self, sim, config=None):
+        SensorListener.__init__(self, sim, config)
         self.config = config  # @todo: define config for this, if needed (e.g. format, etc.)
                 
     def step_callback(self, sensor, step_samples):
         # Write values to the console
         for sample in step_samples:
             print ",".join(sample)
-            
-import csv
-class SensorCsvWriter(object):
-    def __init__(self, config):
-        self.config = config
-        self.enabled = False
+
+
+class SensorCsvWriter(SensorListener):
+    def __init__(self, sim, config):
+        SensorListener.__init__(self, sim, config)
+
+        self.enabled = self.config.enabled or True
+        
+        self.output_filename = os.path.join(self.sim.config.working_dir, self.config.filename)
+        
+        # Internal
+        self._headers_written = False
         
     def play(self):
         self.enabled = True
@@ -246,9 +270,16 @@ class SensorCsvWriter(object):
         self.enabled = False
 
     def step_callback(self, sensor, step_samples):
-        # This opens the file every time??
+        # This opens the file every time?? Hmm seems that it doesn't screw with sim time too badly. Maybe it's kept open in the background?
+        # @todo: dig into this and get it into better shape
         if self.enabled:
-            with open(self.config.filename, 'a') as f:
+            if not self._headers_written: 
+                with open(self.output_filename, 'w') as f:
+                    w = csv.writer(f)
+                    w.writerow(sensor.get_csv_headers())
+                self._headers_written = True
+                
+            with open(self.output_filename, 'a') as f:
                 w = csv.writer(f)
                 for sample in step_samples:
                     w.writerow(list(sample))  # Note: each sample is assumed to be a namedtuple of some sort

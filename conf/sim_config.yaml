@@ -9,7 +9,9 @@
 
 
 sim:
-    fixed_timestep: 300 usec
+    fixed_timestep: 1000 usec
+    # Working directory for output files, relative to the cwd from which the simulator was run. Can be overridden by SimRunner.
+    working_dir: data
     pusher:
         max_velocity: 150.0 m/s
         push_end_position: 475m  # NOTE: This is where the push will stop regardless of speed -- @todo: work this into the pusher
@@ -33,6 +35,9 @@ sim:
         track_gap_interval: 2m
         
     sensors:
+        # A special sensor for pod data (see sensor.py, PodSensor)
+        pod:
+            filename: pod.csv
         laser_opto:
             - he_height_offset: 12.3mm
               sampling_rate: 250 Hz
@@ -117,6 +122,7 @@ sim:
             - initial_gap: 25.4mm
               maximum_gap: 25.4mm
               minimum_gap: 2.5mm
+              gap_close_min_time: 2.5s
               # Set the min and max values for the MLP. In theory this is 0-4096, but it's more like 300-3000 in practice.
               # Note that the raw min and raw max will be different per brake due to differences in MLP mounting
               mlp_raw_min: 300  
@@ -124,6 +130,7 @@ sim:
             - initial_gap: 25.4mm
               maximum_gap: 25.4mm
               minimum_gap: 2.5mm
+              gap_close_min_time: 2.5s
               # Set the min and max values for the MLP. In theory this is 0-4096, but it's more like 300-3000 in practice.
               # Note that the raw min and raw max will be different per brake due to differences in MLP mounting
               mlp_raw_min: 300
