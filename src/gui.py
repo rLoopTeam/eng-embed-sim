@@ -3,8 +3,7 @@
 from pod import Pod
 from tube import Tube
 from pusher import Pusher
-from sim import Sim, SimEndListener
-#from fcu import fcu
+from sim import Sim
 
 import time
 import logging
@@ -130,8 +129,9 @@ class TkAnimGui:
         self.root.mainloop()
 
 class GuiLayout:
-    def __init__(self, sim):
-        self.sim = sim
+    def __init__(self, simrunner):
+        self.simrunner = simrunner
+        self.sim = simrunner.sim
         self.root = tk.Tk()
 
         self.layout()
@@ -181,7 +181,7 @@ class GuiLayout:
         #print "graph1_fig: {}; graph2_fig: {}".format(repr(graph1_fig), repr(graph2_fig))
         
         buttons = ttk.Frame(content, width=300, height=100)
-        btnStart = ttk.Button(buttons, text="Start", command=self.sim.pusher.start_push)
+        btnStart = ttk.Button(buttons, text="Start", command=self.simrunner.run_threaded)
         btnCancel = ttk.Button(buttons, text="Exit", command=self.root.destroy)
         btnBrakeNow = ttk.Button(buttons, text="Brake NOW", command=self.sim.pod.brakes.close_now)
         btnBrake = ttk.Button(buttons, text="Brake Regular", command= lambda: self.sim.pod.brakes._move_to_gap_target(0.0025))
@@ -454,46 +454,25 @@ if __name__ == "__main__":
         help='Simulation configuration file(s) -- later files overlay on previous files')
     args = parser.parse_args()
 
-    sim_config = Config()
-    for configfile in args.configfile:
-        sim_config.loadfile(configfile)
-        
-    sim = Sim(sim_config.sim)
-
-    #sim.pusher.start_push()
-    
-    #simgui.sim = sim
-
-    # Set up the gui to listen to the pod
-    #sim.pod_sensor.add_step_listener(simgui)
-
-    #simgui.update_plot()
-    
-    sim_thread = threading.Thread(target=sim.run, args=())
-    sim_thread.daemon = True
-
+    # Create the timer test
     from timers import TimerTest
     tt = TimerTest(100000)
     timer_thread = threading.Thread(target=tt.run, args=())
     timer_thread.daemon = True
-    #tt.run()
 
-    #print tt.results()
+    # Create the sim runner
+    sim = Sim( Sim.load_config_files(args.configfile) )
+    sim.set_working_dir('data/test')
 
-    #while (True):
-    #    time.sleep(0.01)
-    #sim_thread.join()
-
-    #sim.run()
-
-    sim_thread.start()
+    # Run the threads
+    # simrunner.run_threaded()  # This will be handled by the 'Start' button of the simulator
     timer_thread.start()
 
     #gui = TkAnimGui(sim)
-    gui = GuiLayout(sim)
+    # Run the gui
+    gui = GuiLayout(simrunner)
     gui.run()
 
-    #root.mainloop()
 
     """
     gui_thread = threading.Thread(target=root.mainloop, args=())

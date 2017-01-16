@@ -132,7 +132,8 @@ class HoverEngineForce(ForceExerter):
         o1 = 235
         o2 = -14166.667
         coeff = height * o2 + o1
-        x = - coeff * (-np.exp(-.16*velocity)+1) * (1.6*np.exp(-0.2*velocity) + 1)
+        # x = - coeff * (-np.exp(-.16*velocity)+1) * (1.6*np.exp(-0.2*velocity) + 1)  # NOTE: This doesn't work -- for some reason all the parens below are necessary
+        x = - (height*(o2) + o1) * (-(np.exp(-0.16*velocity))+1)*((1.6*(np.exp(-0.02*velocity))+1))
 
         #print "Calculated he drag (1 engine) at height {} and velocity {}: {}".format(height, velocity, x)
 

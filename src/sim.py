@@ -19,85 +19,19 @@ from sensor_laser_opto import *
 from sensors import *   # @todo: move this to the top once we're done testing
 
 
-class SimRunner:
-    """ Manages run of a single simulation """
-
-    def __init__(self, sim_config_files, working_dir=None):
-        self.logger = logging.getLogger("SimRunner")
-
-        # Pre and post processors (for setting things up, making plots, etc.)
-        # Note: these will get passed to the simulator to be handled
-        self.preprocessors = []
-        self.postprocessors = []
-
-        # Load the config files. Successive files overlay on the previous config files
-        self.sim_config = Config()
-        for configfile in sim_config_files:
-            # Note: each file loaded by the config will overlay on the previously loaded files
-            self.sim_config.loadfile(configfile)
-
-        # Decorate the config with our working directory (if we're overriding)
-        if working_dir is not None:
-            self.sim_config.sim.working_dir = working_dir
-        self.working_dir = working_dir
-        self.logger.info("Working directory is {} ({})".format(working_dir, os.path.join(os.getcwd(), working_dir)))
-        
-        # Turn threading on/off. NOTE: The only time to turn this off is for debugging purposes. Threading is required for timers and the FCU. 
-        self._threaded = True
-        
-        
-    def run(self):
-        """ Run the simulation """
-        
-        # Make sure our working directory exists
-        self.ensure_data_dir(self.sim_config.sim.working_dir)
-
-        # Create the simulator
-        self.sim = Sim(self.sim_config.sim)
-
-        # Pass in our pre and post processors
-        self.sim.preprocessors = self.preprocessors
-        self.sim.postprocessors = self.postprocessors
-
-        if self._threaded:
-            t = threading.Thread(target=self.sim.run, args=())
-            t.daemon = True
-            t.start()
-            t.join()
-        else:
-            sim.run()
-
-    def _to_abspath(self, path):
-        if os.path.isabs(path):
-            # Absolute path
-            return os.path.realpath(path)
-        else:
-            # Get the path relative to the directory above this one (the base path of the repo)
-            return os.path.realpath(os.path.join(os.getcwd(), path))
-    
-    def ensure_data_dir(self, path):
-        """ Ensure existence of base directory for data storage """
-        # @todo: Log the error/exception if there is one
-        # Try to make the directory(s)        
-        print "Trying out path {}".format(path)
-        print self.sim_config
-        try:
-            os.makedirs(path)
-        except OSError as exc:  # Python >2.5
-            if exc.errno == errno.EEXIST and os.path.isdir(path):
-                pass
-            else:
-                raise
-
-
 class Sim:
     
-    def __init__(self, config):
+    def __init__(self, config, working_dir=None):
         self.logger = logging.getLogger("Sim")
 
         self.logger.info("Initializing simulation")
         
+        # Config
         self.config = config
+        
+        # Working directory (for csv files and whatnot)
+        if working_dir is not None: 
+            self.set_working_dir(working_dir)
 
         self.fixed_timestep_usec = Units.usec(config.fixed_timestep)  # Convert to usec
 
@@ -159,6 +93,19 @@ class Sim:
         # Handle data writing
         # @ todo: handle data writing. Note: Each sim instance should be handed a directory to use for writing data
     
+    @classmethod
+    def load_config_files(cls, config_files):
+        """ Load one or more config files (later files overlay earlier ones) """
+        
+        config = Config()
+        for configfile in config_files:
+            # Note: each file loaded by the config will overlay on the previously loaded files
+            config.loadfile(configfile)
+        return config.sim
+
+    def set_working_dir(self, working_dir):
+        """ Set our working directory (for file writing and whatnot) """
+        self.config.working_dir = working_dir
     
     def step(self, dt_usec):        
 
@@ -182,9 +129,21 @@ class Sim:
         self.elapsed_time_usec += dt_usec
         self.n_steps_taken += 1
 
+    def run_threaded(self):
+        """ Run the simulator in a thread and return the thread (don't join it here) """
+        
+        t = threading.Thread(target=self.run, args=())
+        t.daemon = True
+        t.start()
+        return t  # Return the thread, but don't join it (the caller can join if they want to)
+
     def run(self):
         self.logger.info("Starting simulation")
         
+        self.ensure_working_dir()
+
+        self.logger.info("Working directory is {} ({})".format(self.config.working_dir, os.path.join(os.getcwd(), self.config.working_dir)))
+
         finished = False
         sim_start_t = time.time()
         
@@ -223,7 +182,22 @@ class Sim:
         
     def add_postprocessor(self, processor):
         self.postprocessors.append(processor)
+    
+    def ensure_working_dir(self):
+        """ Ensure existence of base directory for data storage """
+        # @todo: Log the error/exception if there is one
+        # Try to make the directory(s)        
         
+        path = self.config.working_dir
+        
+        try:
+            os.makedirs(path)
+        except OSError as exc:  # Python >2.5
+            if exc.errno == errno.EEXIST and os.path.isdir(path):
+                pass
+            else:
+                raise
+
 
 class SimEndCondition(object):
 
@@ -264,8 +238,9 @@ if __name__ == "__main__":
         help='Simulation configuration file(s) -- later files overlay on previous files')
     args = parser.parse_args()
 
-    runner = SimRunner(args.configfile, 'data/test')
-    t = runner.run_threaded()
+    # Note: 'configfile' is a list of one or more config files. Later files overlay previous ones. 
+    sim = Sim( Sim.load_config_files(args.configfile), 'data/test')
+    t = sim.run_threaded()
     t.join()
     
     """
