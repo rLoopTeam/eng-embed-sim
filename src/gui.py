@@ -129,9 +129,8 @@ class TkAnimGui:
         self.root.mainloop()
 
 class GuiLayout:
-    def __init__(self, simrunner):
-        self.simrunner = simrunner
-        self.sim = simrunner.sim
+    def __init__(self, sim):
+        self.sim = sim
         self.root = tk.Tk()
 
         self.layout()
@@ -181,7 +180,7 @@ class GuiLayout:
         #print "graph1_fig: {}; graph2_fig: {}".format(repr(graph1_fig), repr(graph2_fig))
         
         buttons = ttk.Frame(content, width=300, height=100)
-        btnStart = ttk.Button(buttons, text="Start", command=self.simrunner.run_threaded)
+        btnStart = ttk.Button(buttons, text="Start", command=self.sim.run_threaded)
         btnCancel = ttk.Button(buttons, text="Exit", command=self.root.destroy)
         btnBrakeNow = ttk.Button(buttons, text="Brake NOW", command=self.sim.pod.brakes.close_now)
         btnBrake = ttk.Button(buttons, text="Brake Regular", command= lambda: self.sim.pod.brakes._move_to_gap_target(0.0025))
@@ -462,7 +461,7 @@ if __name__ == "__main__":
 
     # Create the sim runner
     sim = Sim( Sim.load_config_files(args.configfile) )
-    sim.set_working_dir('data/test')
+    sim.set_working_dir('data/testgui')
 
     # Run the threads
     # simrunner.run_threaded()  # This will be handled by the 'Start' button of the simulator
@@ -470,7 +469,7 @@ if __name__ == "__main__":
 
     #gui = TkAnimGui(sim)
     # Run the gui
-    gui = GuiLayout(simrunner)
+    gui = GuiLayout(sim)
     gui.run()
 
 

@@ -95,12 +95,12 @@ class Pod:
         # Forces applied during the step (for recording purposes)
         # @todo: Maybe initialize these to ForceExerter.data(0,0,0)?
         self.step_forces = OrderedDict()
-        self.step_forces['aero'] = None
-        self.step_forces['brakes'] = None
-        self.step_forces['gimbals'] = None
-        self.step_forces['hover_engines'] = None
-        self.step_forces['lateral_stability'] = None
-        self.step_forces['landing_gear'] = None
+        self.step_forces['aero'] = ForceExerter.data(0,0,0)
+        self.step_forces['brakes'] = ForceExerter.data(0,0,0)
+        self.step_forces['gimbals'] = ForceExerter.data(0,0,0)
+        self.step_forces['hover_engines'] = ForceExerter.data(0,0,0)
+        self.step_forces['lateral_stability'] = ForceExerter.data(0,0,0)
+        self.step_forces['landing_gear'] = ForceExerter.data(0,0,0)
 
         # Pre-calculated values
         

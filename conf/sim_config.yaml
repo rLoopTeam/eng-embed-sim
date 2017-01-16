@@ -7,7 +7,6 @@
 # - sensor_laser_opto: normal readings at 6mm height (?) were at about 18.3, +25mm built-in offset, so 43.3mm - 6mm = 37.3mm distance above bottom of HE (approx)
 #     ref to bottom of he (147.44) - 37.3 = 110.14 (reference to bottom of laser opto sensor ** Remember to add in the built-in 25mm offset for calculations **)
 
-
 sim:
     fixed_timestep: 1000 usec
     # Working directory for output files, relative to the cwd from which the simulator was run. Can be overridden by SimRunner.
