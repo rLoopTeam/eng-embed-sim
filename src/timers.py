@@ -23,7 +23,7 @@ class TimerTest:
             if i == 3:
                 start = datetime.now()
             t1 = time.clock()
-            if t1 - t0 >= self.adjusted_delay:  # 10 microseconds, -.2usec for processing time
+            if t1 - t0 >= self.adjusted_delay:  # 10 microseconds, minus some amount for processing time
                 self.q.append(t1 - t0)
                 t0 = t1
         
