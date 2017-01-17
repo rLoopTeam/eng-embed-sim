@@ -11,7 +11,7 @@ import threading
 
 import numpy as np
 
-class TimerMillisecond:
+class TimerMs:
     def __init__(self, interval_ms, callback):
         self.interval_ms = interval_ms
         self.callback = callback
@@ -22,7 +22,7 @@ class TimerMillisecond:
         
         self.stop_flag = False
 
-    self.run_threaded(self):
+    def start_threaded(self):
         t = threading.Thread(target=self.run, args=())
         t.daemon = True
         t.start()
@@ -55,8 +55,8 @@ class TimerUsec:
         
         self.stop_flag = False
         
-    def run_threaded(self):
-        t = threading.Thread(target=self.run, args=())
+    def start_threaded(self):
+        t = threading.Thread(target=self.start, args=())
         t.daemon = True
         t.start()
         return t
@@ -96,7 +96,7 @@ class TimerUsec:
         
 
 
-    def run(self):
+    def start(self):
         t0 = time.clock()
         while True:
             if self.stop_flag:  # Break out if we need to

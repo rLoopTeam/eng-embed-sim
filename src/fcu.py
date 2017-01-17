@@ -21,9 +21,14 @@ import ctypes
 import pprint
 from config import Config
 
+from timers import TimerUsec, TimerMs
+import time
+import threading
+
 # IMPORTANT: This must be run as administrator (PowerShell on Windows) or it will encounter a write error.
 
 class Fcu:
+    
     
     def __init__(self, sim, config):
         self.sim = sim
@@ -39,7 +44,12 @@ class Fcu:
         try:
             self.lib = ctypes.CDLL(self.dll_filepath)
         except Exception as e:
-            self.logger.err(e)
+            self.logger.error(e)
+
+
+        # constants
+        self.C_NUM__SC16IS = 8
+        self.C_NUM__ASI = 8
 
         # Setup callback references. 
         # *** Important: these must stay alive for the duration of the script or the DLL will not work **
@@ -61,6 +71,8 @@ class Fcu:
         # 'Ethernet
         # Public Shared Sub vETH_WIN32__Set_Ethernet_TxCallback(ByVal callback As MulticastDelegate)
         # Public Delegate Sub ETH_WIN32__TxCallbackDelegate(ByVal pu8Buffer As IntPtr, ByVal u16BufferLength As UInt16)
+        # @see FIRMWARE/COMMON_CODE/MULTICORE/LCCM325__MULTICORE__802_3/eth.h
+        # typedef void (__cdecl * pETH_WIN32__TxCallback_FuncType)(Luint8 * pu8Buffer, Luint16 u16BufferLength);
         self.register_callback(self.eth_tx_callback, 
             'vETH_WIN32__Set_Ethernet_TxCallback', None, 
             [ctypes.POINTER(ctypes.c_ubyte), ctypes.c_uint16])
@@ -68,31 +80,44 @@ class Fcu:
         # 'mma8451
         # Public Shared Sub vMMA8451_WIN32__Set_ReadDataCallback(ByVal callback As MulticastDelegate)
         # Public Delegate Sub MMA8451_WIN32__ReadDataCallbackDelegate(u8DeviceIndex As Byte, pu8X As IntPtr, pu8Y As IntPtr, pu8Z As IntPtr)
+        # @see FIRMWARE/COMMON_CODE/MULTICORE/LCCM418__MULTICORE__MMA8451/mma8451.h
+        # void vMMA8451_WIN32__ReadData(Luint8 u8DeviceIndex, Lint16 *ps16X, Lint16 *ps16Y, Lint16 *ps16Z);
         self.register_callback(self.MMA8451_readdata_callback, 
             'vMMA8451_WIN32__Set_ReadDataCallback', None, 
-            [ctypes.c_ubyte, ctypes.POINTER(ctypes.c_uint8), ctypes.POINTER(ctypes.c_uint8), ctypes.POINTER(ctypes.c_uint8)])
-        
+            [ctypes.c_uint8, ctypes.POINTER(ctypes.c_int16), ctypes.POINTER(ctypes.c_int16), ctypes.POINTER(ctypes.c_int16)])
+
         # 'stepper system
         # Public Shared Sub vSTEPDRIVE_WIN32__Set_UpdatePositionCallback(ByVal callback As MulticastDelegate)
         # Public Delegate Sub STEPDRIVE_WIN32__Set_UpdatePositionCallbackDelegate(u8MotorIndex As Byte, u8Step As Byte, u8Dir As Byte, s32Position As Int32)
+        # @see FIRMWARE/COMMON_CODE/MULTICORE/LCCM231__MULTICORE__STEPPER_DRIVE/stepper_drive.h
+        # typedef void (__cdecl * pSTEPDRIVE_WIN32__UpdatePosCallback_FuncType)(Luint8 u8MotorIndex, Luint8 u8Step, Luint8 u8Dir, Lint32 s32Position);
         self.register_callback(self.stepdrive_update_position_callback, 
             'vSTEPDRIVE_WIN32__Set_UpdatePositionCallback', None, 
-            [ctypes.c_ubyte, ctypes.c_ubyte, ctypes.c_ubyte, ctypes.c_int32])
+            [ctypes.c_uint8, ctypes.c_uint8, ctypes.c_uint8, ctypes.c_int32])
 
         # 'SC16 UARTS
         # Public Shared Sub vSC16IS_WIN32__Set_TxData_Callback(u8DeviceIndex As Byte, ByVal callback As MulticastDelegate)
         # Public Delegate Sub SC16IS_WIN32__Set_TxData_CallbackDelegate(u8DeviceIndex As Byte, pu8Data As IntPtr, u8Length As Byte)
-        self.register_callback(self.SC16IS_txdata_callback, 
-            'vSC16IS_WIN32__Set_TxData_Callback', None,
-            [ctypes.c_uint8, ctypes.POINTER(c_uint8), ctypes.c_uint8])
+        # @see FIRMWARE/COMMON_CODE/MULTICORE/LCCM487__MULTICORE__SC16IS741/sc16.h
+        # void vSC16IS_WIN32__TxData(Luint8 u8DeviceIndex, Luint8 *pu8Data, Luint8 u8Length);
+        # NOTE: @todo: This set callback method takes a device index -- not sure yet but I think this needs to be handled differently than the rest of the callbacks
+        #    DLL_DECLARATION void vSC16IS_WIN32__Set_TxData_Callback(Luint8 u8DeviceIndex, pSC16IS_WIN32_TxData_Callback_FuncType pFunc);
+        for device_index in xrange(self.C_NUM__SC16IS):
+            self.register_SC16IS_callback(device_index, self.SC16IS_txdata_callback, 
+                'vSC16IS_WIN32__Set_TxData_Callback', None,
+                [ctypes.c_ubyte, ctypes.POINTER(ctypes.c_int), ctypes.c_ubyte])
+
         
         # 'AMC7812 for HE Thrott
-        # Public Delegate Sub AMC7812_WIN32__Set_DACVoltsCallbackDelegate(u8Channel As Byte, f32Volts As Single)
         # Public Shared Sub vAMC7812_WIN32__Set_DACVoltsCallback(ByVal callback As MulticastDelegate)
+        # Public Delegate Sub AMC7812_WIN32__Set_DACVoltsCallbackDelegate(u8Channel As Byte, f32Volts As Single)
+        # @see FIRMWARE/COMMON_CODE/MULTICORE/LCCM658__MULTICORE__AMC7812/amc7812.h
+        # typedef void (__cdecl * pAMC7812_WIN32__DACVoltsCallback_FuncType)(Luint8 u8Channel, Lfloat32 f32Volts);
+        # DLL_DECLARATION void vAMC7812_WIN32__Set_DACVoltsCallback(pAMC7812_WIN32__DACVoltsCallback_FuncType pFunc);
         self.register_callback(self.AMC7812_DAC_volts_callback, 
-            'AMC7812_WIN32__Set_DACVoltsCallbackDelegate', None,
-            [ctypes.c_uint8, ctypes.c_float32])
-        
+            'vAMC7812_WIN32__Set_DACVoltsCallback', None,
+            [ctypes.c_uint8, ctypes.c_float])
+
         # ------------------------
         #  Callable DLL Functions
         # ------------------------
@@ -157,6 +182,9 @@ class Fcu:
         # Me.m_pSafeUDP = New SIL3.SafeUDP.StdUDPLayer("127.0.0.1", 9100, "FCU_ETH_EMU", True, True)
         # AddHandler Me.m_pSafeUDP.UserEvent__UDPSafe__RxPacket, AddressOf Me.InernalEvent__UDPSafe__RxPacket
         # AddHandler Me.m_pSafeUDP.UserEvent__NewPacket, AddressOf Me.InternalEvent__NewPacket
+
+    def errcheck_callback(self, result, func, arguments):
+        self.logger.debug("Fcu.errcheck_callback({}, {}, {})".format(result, func, arguments))
         
     def debug_printf_callback(self, message):
         # Public Delegate Sub DEBUG_PRINTF__CallbackDelegate(ByVal pu8String As IntPtr)
@@ -165,7 +193,8 @@ class Fcu:
     def eth_tx_callback(self, pu8Buffer, u16BufferLength):
         # Public Delegate Sub ETH_WIN32__TxCallbackDelegate(ByVal pu8Buffer As IntPtr, ByVal u16BufferLength As UInt16)
         # @todo: Format the buffer so it's readable (bytes)
-        self.logger.debug("Fcu.eth_tx_callback('{}', {})".format(pu8Buffer, u16BufferLength))
+        #self.logger.debug("Fcu.eth_tx_callback('{}', {})".format(pu8Buffer, u16BufferLength))
+        pass  # Silence!
 
     def MMA8451_readdata_callback(self, u8DeviceIndex, pu8X, pu8Y, pu8Z):
         """ When the MMA8451 wants data from us """
@@ -197,6 +226,7 @@ class Fcu:
         dll_method = getattr(self.lib, dll_function_name)
         dll_method.argtypes = [callback_functype]
         dll_method.restype = restype
+        dll_method.errcheck = self.errcheck_callback   # Maybe don't need/want this? 
         
         # reference the callback to keep it alive
         self.callback_refs[dll_function_name] = callback_functype(python_function)
@@ -216,8 +246,27 @@ class Fcu:
         vETH_WIN32__Set_Ethernet_TxCallback.argtypes = [Ethernet_TxCallback]
         vETH_WIN32__Set_Ethernet_TxCallback.restype = None
         """
+
+    def register_SC16IS_callback(self, device_index, python_function, dll_function_name, restype, argss):
+
+        # Create the callback functype
+        callback_functype = ctypes.CFUNCTYPE(restype, *argss)
+
+        # Set the attributes on the method
+        dll_method = getattr(self.lib, dll_function_name)
+        dll_method.argtypes = [ctypes.c_uint8, callback_functype]
+        dll_method.restype = restype
+        dll_method.errcheck = self.errcheck_callback   # Maybe don't need/want this? 
         
-    def run(self):
+        # reference the callback to keep it alive
+        self.callback_refs[dll_function_name] = callback_functype(python_function)
+        
+        # Call the method on the dll and pass in our reference
+        dll_method(device_index, self.callback_refs[dll_function_name])
+     
+    def run_threaded(self):
+        self.logger.debug("Got to run_threaded()!")
+
         """ Run the FCU """
         # Basic procedure: setup timers, Init, Process loop
 
@@ -243,6 +292,20 @@ class Fcu:
         Timers__Setup()
         """
         
+        # Private Shared Sub vFCU__RTI_10MS_ISR()
+        # Private Shared Sub vFCU__RTI_100MS_ISR()
+        # Private Shared Sub vSTEPDRIVE_TIMEBASE__ISR()   # Note: 50usec
+
+        t50usec = TimerUsec(50, self.lib.vSTEPDRIVE_TIMEBASE__ISR)
+        t10ms = TimerMs(10, self.lib.vFCU__RTI_10MS_ISR)
+        t100ms = TimerMs(100, self.lib.vFCU__RTI_100MS_ISR)
+        
+        t50usec.start_threaded()
+        t10ms.start_threaded()
+        t100ms.start_threaded()
+        
+        self.logger.debug("Started the timers...")
+
         """
         # Calls to start / stop button (starting and stopping the emu)
         If pB.Text = "Start" Then
@@ -274,8 +337,16 @@ class Fcu:
 
         End If
         """
+
+        self.logger.debug("Running the main thread...")
+    
+        thread_main = threading.Thread(target=self.main)
+        thread_main.daemon = True
+        thread_main.start()
+        return thread_main
     
     def main(self):
+        self.logger.debug("Got to main()!")
         """
         ''' This is the same as Main() in C
         ''' </summary>
@@ -319,7 +390,43 @@ class Fcu:
             End While
         End Sub
         """
-        pass
+        self.lib.vFCU__Init()
+        
+        #'needs to be done due to WIN32_ETH_Init
+        #vETH_WIN32__Set_Ethernet_TxCallback(Me.m_pETH_TX__Delegate)
+        self.lib.vETH_WIN32__Set_Ethernet_TxCallback(self.callback_refs['vETH_WIN32__Set_Ethernet_TxCallback'])
+
+        # 'force the two motor positions to random so as we can simulate the cal process
+        self.lib.vSTEPDRIVE_WIN32__ForcePosition(0, -34)
+        self.lib.vSTEPDRIVE_WIN32__ForcePosition(1, 175)
+
+        self.lib.vFCU_BRAKES_MLP_WIN32__ForceADC(0, 0)
+        self.lib.vFCU_BRAKES_MLP_WIN32__ForceADC(1, 0)
+
+        # 'config the brake switches into some state
+        for iBrake in [0, 1]:
+            for iSwitch in [0, 1]:
+                self.lib.vFCU_BRAKES_SW_WIN32__Inject_SwitchState(iBrake, iSwitch, 0)
+        
+        self.logger.debug("Made it this far; entering process loop. Here goes...")
+
+        
+        # 'stay here until thread abort
+        while True:
+
+            # 'add here any things that need updating like pod sensor data
+
+            # 'call process
+            try:
+                self.lib.vFCU__Process()
+
+            except Exception as e:
+                self.logger.error(e)
+
+            #'just wait a little bit
+            #time.sleep(0.01)
+            time.sleep(0.01)  # @todo Question -- isn't this what the 10ms or 100ms timer is for (calling vFCU__Process())?
+
         
 if __name__ == "__main__":
     logging.basicConfig(level=logging.DEBUG)
@@ -330,7 +437,8 @@ if __name__ == "__main__":
 
     fcu = Fcu(None, config)
     
-    fcu.lib.vFCU__Init()  # Should get a debug message back
+    t = fcu.run_threaded()
+    t.join()
     
     """
     lib = ctypes.CDLL(dll_filepath)
