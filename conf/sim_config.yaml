@@ -8,38 +8,56 @@
 #     ref to bottom of he (147.44) - 37.3 = 110.14 (reference to bottom of laser opto sensor ** Remember to add in the built-in 25mm offset for calculations **)
 
 sim:
+    fcu:
+        # @todo: make this work
+        enable_fcu: True
     networking:
+        # Use force_loopback to send and receive everything on 127.0.0.1
+        force_loopback: True
         nodes:
             flight_control: 
                 name: Flight Control
+                handler: SafeUdpPacket
                 ip: 192.168.0.100
                 tx_port: 9100
                 rx_port: 9100
                 MAC: 00:26:80:01:00:00
             power_fwd: 
                 name: Power FWD
+                handler: SafeUdpPacket
                 ip: 192.168.0.110
                 tx_port: 9110
                 rx_port: 9110
                 MAC: 00:26:80:01:00:01
             power_aft:  
                 name: Power AFT
+                handler: SafeUdpPacket
                 ip: 192.168.0.111
                 tx_port: 9111
                 rx_port: 9111
                 MAC: 00:26:80:01:00:02
             landing_gear:  
                 name: Landing Gear
+                handler: SafeUdpPacket
                 ip: 192.168.0.120
                 tx_port: 9120
                 rx_port: 9120
                 MAC: 00:26:80:01:00:03
             gimbal_control:  
                 name: Gimbal Control
+                handler: SafeUdpPacket
                 ip: 192.168.0.130
                 tx_port: 9130
                 rx_port: 9130
-                MAC: 00:26:80:01:00:04                
+                MAC: 00:26:80:01:00:04    
+            spacex:
+                # @todo: get the correct values for where we need to send the spacex packet (ground station?)
+                name: SpaceX Comms
+                ip: 192.168.0.100            
+                tx_port: 3000
+                rx_port: 3000
+                MAC: 00:26:80:01:00:00
+                handler: SpacexPacket
     fixed_timestep: 1000 usec
     # Working directory for output files, relative to the cwd from which the simulator was run. Can be overridden by SimRunner.
     working_dir: data

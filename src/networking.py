@@ -7,15 +7,17 @@
 
 # @see http://confluence.rloop.org/display/SD/UDP+Protocol
 
-from config import Config
+import sys
 import struct
 from collections import namedtuple
+
+from config import Config
 
 SpaceXPacket = namedtuple('SpaceXPacket', 
     ['team_id', 'status', 'acceleration', 'position', 'velocity', 'battery_voltage', 'battery_current', 'battery_temperature', 'pod_temperature', 'stripe_count'])
 
 PodCommNode = namedtuple('PodCommNode', 
-    ['name', 'ip', 'tx_port', 'rx_port', 'MAC'])
+    ['name', 'handler', 'ip', 'tx_port', 'rx_port', 'MAC'])
 
 class PodComms:
     
@@ -24,20 +26,43 @@ class PodComms:
         self.config = config
 
         # print self.config.nodes
+        thismodule = sys.modules[__name__]
 
         self.nodes = {}
         self.packet_type_map = {}
         for k, node in self.config.nodes.iteritems():
             self.nodes[k] = PodCommNode(**node)
-            self.packet_type_map[node.tx_port] = k  # @todo: make this useful. Should tell us how to interpret the packet/which class/function to use (maybe a fn ptr?)
+            # @todo: add error checking for handler class creation
+            self.packet_type_map[node['tx_port']] = {'node': k, 'handler': getattr(thismodule, node['handler'])()}
+
+    def send(self, raw_tx_packet, length):
+        bytes = b"".join(map(chr, raw_tx_packet[36:length]))
+        dest_port = struct.unpack('!H', bytes[0:2])[0]
+        # @todo: get the connection to use based on the destination port
+        conn = None
+        return self.packet_type_map[dest_port]['handler'].send(conn, bytes[6:])
         
-    def _create_packet_type_map(self):
+
+class SpacexPacket:
+    def __init__(self):
+        pass
+        
+    @classmethod
+    def send(cls, conn, payload_bytes):
+        #return "Sending SpacexPacket: {}".format([ hex(x)[2:].zfill(2) for x in payload_bytes ])
+        return "Sending SpacexPacket: {}".format( payload_bytes )
+
+
+class SafeUdpPacket:
+    def __init__(self):
         pass
 
+    @classmethod
+    def send(cls, conn, payload_bytes):
+        return "Sending SafeUdpPacket: {}".format([ hex(x)[2:].zfill(2) for x in payload_bytes])
+        
 
-class SafeUDP:
-    
-    
+class SafeUDP:    
     
     @classmethod
     def spacex_payload_from_eth2(cls, byte_sequence, length):
@@ -93,10 +118,15 @@ class SafeUDP:
         
         
 if __name__ == "__main__":
+
+    from sim import Sim
+
     config = Config()
     config.loadfile("conf/sim_config.yaml")
+
+    sim = Sim(config.sim)
     
-    print config.sim.networking
+    #print config.sim.networking
         
-    PodComms(None, config.sim.networking)
+    PodComms(sim, config.sim.networking)
     

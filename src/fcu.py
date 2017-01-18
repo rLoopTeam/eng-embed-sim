@@ -25,7 +25,7 @@ from timers import TimerUsec, TimerMs
 import time
 import threading
 
-from networking import SafeUDP
+from networking import PodComms
 
 # IMPORTANT: This must be run as administrator (PowerShell on Windows) or it will encounter a write error.
 
@@ -38,6 +38,9 @@ class Fcu:
         
         self.logger = logging.getLogger("FCU")
 
+        # TESTING ONLY @todo: this should probably come from self.sim.networking
+        self.comms = PodComms(self, self.sim.config.networking)
+
         # Load the DLL
         self.dll_path = self.config.dll_path
         self.dll_filename = self.config.dll_filename
@@ -47,7 +50,6 @@ class Fcu:
             self.lib = ctypes.CDLL(self.dll_filepath)
         except Exception as e:
             self.logger.error(e)
-
 
         # constants
         self.C_NUM__SC16IS = 8
@@ -196,9 +198,10 @@ class Fcu:
         # Public Delegate Sub ETH_WIN32__TxCallbackDelegate(ByVal pu8Buffer As IntPtr, ByVal u16BufferLength As UInt16)
         # @todo: Format the buffer so it's readable (bytes)
         #self.logger.debug("Fcu.eth_tx_callback('{}', {})".format(pu8Buffer, u16BufferLength))
-        test = SafeUDP.spacex_payload_from_eth2(pu8Buffer, u16BufferLength)
+        #test = SafeUDP.spacex_payload_from_eth2(pu8Buffer, u16BufferLength)
+        test = self.comms.send(pu8Buffer, u16BufferLength)
         try:
-            self.logger.debug("Fcu.eth_tx_callback('{}', {})".format(test, u16BufferLength))
+            self.logger.debug("Fcu.eth_tx_callback: {}".format(test))
         except Exception as e:
             self.logger.error(e)
         
@@ -437,13 +440,21 @@ class Fcu:
 
         
 if __name__ == "__main__":
+    from sim import Sim
     logging.basicConfig(level=logging.DEBUG)
     
     config = Config()
-    config.dll_path = "../eng-software-pod/APPLICATIONS/PROJECT_CODE/DLLS/LDLL174__RLOOP__LCCM655/bin/Debug/"  # Relative to top level of this repo (../)
-    config.dll_filename = "LDLL174__RLOOP__LCCM655.dll"
+    config.loadfile("conf/sim_config.yaml")
 
-    fcu = Fcu(None, config)
+    sim_config = config.sim
+    fcu_config = sim_config.fcu
+
+    fcu_config.dll_path = "../eng-software-pod/APPLICATIONS/PROJECT_CODE/DLLS/LDLL174__RLOOP__LCCM655/bin/Debug/"  # Relative to top level of this repo (../)
+    fcu_config.dll_filename = "LDLL174__RLOOP__LCCM655.dll"
+
+    sim = Sim(sim_config)
+
+    fcu = Fcu(sim, fcu_config)
     
     t = fcu.run_threaded()
     t.join()
