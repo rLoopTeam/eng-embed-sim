@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 
 import yaml
+from collections import MutableMapping
 
-
-class Config(object):
+class Config(MutableMapping):
     
     def __init__(self, config_dict=None):
         # Note: need to set __dict__ directly because we're overriding __setattr__
@@ -39,6 +39,24 @@ class Config(object):
         else:
             self.__internal[name] = value
     
+    def __iter__(self):
+        return iter(self.__internal)
+
+    def __contains__(self, value):
+        return value in self.__internal
+
+    def __len__(self):
+        return len(self.__internal)
+    
+    def __getitem__(self, key):
+        return self.__internal[key]
+
+    def __setitem__(self, key, value):
+        self.__internal[key] = value
+
+    def __delitem__(self, key):
+        del self.__internal[key]
+        
     def __str__(self):
         return yaml.dump(self.__internal, default_flow_style=False)
         

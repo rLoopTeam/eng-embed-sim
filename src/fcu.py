@@ -25,6 +25,8 @@ from timers import TimerUsec, TimerMs
 import time
 import threading
 
+from networking import SafeUDP
+
 # IMPORTANT: This must be run as administrator (PowerShell on Windows) or it will encounter a write error.
 
 class Fcu:
@@ -194,8 +196,12 @@ class Fcu:
         # Public Delegate Sub ETH_WIN32__TxCallbackDelegate(ByVal pu8Buffer As IntPtr, ByVal u16BufferLength As UInt16)
         # @todo: Format the buffer so it's readable (bytes)
         #self.logger.debug("Fcu.eth_tx_callback('{}', {})".format(pu8Buffer, u16BufferLength))
-        pass  # Silence!
-
+        test = SafeUDP.spacex_payload_from_eth2(pu8Buffer, u16BufferLength)
+        try:
+            self.logger.debug("Fcu.eth_tx_callback('{}', {})".format(test, u16BufferLength))
+        except Exception as e:
+            self.logger.error(e)
+        
     def MMA8451_readdata_callback(self, u8DeviceIndex, pu8X, pu8Y, pu8Z):
         """ When the MMA8451 wants data from us """
         # Public Delegate Sub MMA8451_WIN32__ReadDataCallbackDelegate(u8DeviceIndex As Byte, pu8X As IntPtr, pu8Y As IntPtr, pu8Z As IntPtr)
@@ -412,7 +418,8 @@ class Fcu:
 
         
         # 'stay here until thread abort
-        while True:
+        counter = 0
+        while True and counter < 100:
 
             # 'add here any things that need updating like pod sensor data
 
@@ -426,6 +433,7 @@ class Fcu:
             #'just wait a little bit
             #time.sleep(0.01)
             time.sleep(0.01)  # @todo Question -- isn't this what the 10ms or 100ms timer is for (calling vFCU__Process())?
+            counter += 1
 
         
 if __name__ == "__main__":
