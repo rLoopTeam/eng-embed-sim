@@ -224,11 +224,15 @@ class Fcu:
         
         # Get the listener that's queueing data for our accelerometer (and convert it to the proper raw values/types)
         # Note: we only pop one here. The timers and time dialation should make sure that the # samples and the callbacks equalize
+        pre_accel = self.lib.s32FCU_ACCELL__Get_CurrentAccel_mmss()
         try:
             real_data = self.accel_listeners[u8DeviceIndex].pop()
         except IndexError as e:
             self.logger.debug(e)
             return
+        post_accel = self.lib.s32FCU_ACCELL__Get_CurrentAccel_mmss()
+        self.logger.debug("Pre and post accel from the FCU: {}, {} (mm/s^2)".format(pre_accel, post_accel))
+
             
         # @TODO: gotta put something in there...
         data = self.sim.sensors['accel'][u8DeviceIndex].to_raw(real_data)
