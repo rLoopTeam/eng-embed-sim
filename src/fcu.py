@@ -28,6 +28,7 @@ import threading
 from config import Config
 from units import Units
 from networking import PodComms
+from sensors import QueueingListener
 
 # IMPORTANT: This must be run as administrator (PowerShell on Windows) or it will encounter a write error.
 
@@ -217,9 +218,26 @@ class Fcu:
         
         # @todo: need to get this sending data from the accel sensors. Maybe have a queue to read from? 
         # Note: probably only trigger the interrupts to call this callback when we have data in the queue? 
-        pu8X.contents = ctypes.c_int(4095)
-        pu8Y.contents = ctypes.c_int(0)
-        pu8Z.contents = ctypes.c_int(-4095)
+        #pu8X.contents = ctypes.c_int(4095)
+        #pu8Y.contents = ctypes.c_int(0)
+        #pu8Z.contents = ctypes.c_int(-4095)
+        
+        # Get the listener that's queueing data for our accelerometer (and convert it to the proper raw values/types)
+        # Note: we only pop one here. The timers and time dialation should make sure that the # samples and the callbacks equalize
+        try:
+            real_data = self.accel_listeners[u8DeviceIndex].pop()
+        except IndexError as e:
+            self.logger.debug(e)
+            return
+            
+        # @TODO: gotta put something in there...
+        data = self.sim.sensors['accel'][u8DeviceIndex].to_raw(real_data)
+        # @ TODO: we need to get the proper data for the FCU (e.g. -2048 -- 2048). Should we do that here? Or call back to the sensor? Can we call back to the sensor? 
+        pu8X.contents = ctypes.c_int(data.x)
+        pu8Y.contents = ctypes.c_int(data.y)
+        pu8Z.contents = ctypes.c_int(data.z)
+        
+        self.logger.debug("Setting pu8 data in MMA8451_readdata_callback: ({}, {}, {}) - q len is now {}".format(pu8X.contents, pu8Y.contents, pu8Z.contents, len(self.accel_listeners[u8DeviceIndex].q)))
         
         # Note: the device index indicates which device the MMA8451 is asking for. Just grab the data from the sim and write it to the pointers. 
 
@@ -321,13 +339,19 @@ class Fcu:
         self.timers.append(Timer(Units.seconds("10 ms"), self.lib.vFCU__RTI_10MS_ISR))
         self.timers.append(Timer(Units.seconds("100 ms"), self.lib.vFCU__RTI_100MS_ISR))
         
-        # Accel timers
-        print self.sim.config.sensors.accel
+        # Accelerometers
+        self.accel_listeners = []
         for i, accel_config in enumerate(self.sim.config.sensors.accel):
+            # Timers
             sampling_rate = Units.SI(accel_config['sampling_rate'])
             timer_delay = 1.0 / sampling_rate  # Hz
             # Note: in the following lambda function, we bind x=i now so that it will use that value rather than binding at call time
             self.timers.append( Timer(timer_delay, lambda x=i: self.lib.vMMA8451_WIN32__TriggerInterrupt(x) ) )
+
+            # Tie it to the appropriate sensor
+            self.accel_listeners.append( QueueingListener(self.sim, None) )  # Note: we tie it to the sensor in the next line
+            self.sim.sensors['accel'][i].add_step_listener(self.accel_listeners[i])
+            # Now we have a handle to a listener for each accel. We'll use those in MMA8451_readdata_callback
     
         print self.timers
         

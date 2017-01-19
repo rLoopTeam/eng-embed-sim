@@ -261,6 +261,29 @@ class IsrSensorListener(SensorListener):
     def isr_callback(self):
         pass
         
+class QueueingListener(SensorListener):
+    """ A listener that queues samples for later retrieval. Used by the FCU for its callbacks """
+
+    def __init__(self, sim, config):
+        SensorListener.__init__(self, sim, config)
+        
+        self.q = deque()
+        self.last_data = None
+
+    def step_callback(self, sensor, step_samples):
+        # Push the samples onto the queue
+        self.q.extendleft(step_samples)
+        self.last_data = self.q[-1]
+        
+    def pop(self):
+        # Pop one off the queue
+        # Note: we'll just return our last sample in case there are no items in the queue. @todo: probly should think through this behavior
+        if len(self.q):
+            return self.q.pop()
+        else:
+            return self.last_data
+        
+        
 class SensorConsoleWriter(SensorListener):
     """ A sensor step listener that writes to the console """
     def __init__(self, sim, config=None):

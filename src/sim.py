@@ -54,17 +54,17 @@ class Sim:
         self.sensors['pod'].add_step_listener(SensorCsvWriter(self, self.config.sensors.pod))
 
         # - Accelerometers
+        self.sensors['accel'] = []
         for i, sensor_config in enumerate(self.config.sensors.accel):
-            sensor_name = "accel_" + str(i)
             # Note: we need to create a Config object here because Config does not currently handle lists very well...
-            self.sensors[sensor_name] = Accelerometer(self, Config(sensor_config))
-            self.sensors[sensor_name].add_step_listener(AccelerometerTestListener(self, self.sensors[sensor_name].config))
+            self.sensors['accel'].append(Accelerometer(self, Config(sensor_config)))
+            self.sensors['accel'][i].add_step_listener(AccelerometerTestListener(self, self.sensors['accel'][i].config))
         
         # - Laser Contrast Sensors
+        self.sensors['laser_contrast'] = []
         for i, sensor_config in enumerate(self.config.sensors.laser_contrast):
-            sensor_name = "laser_contrast_" + str(i)
-            self.sensors[sensor_name] = LaserContrastSensor(self, Config(sensor_config))
-            self.sensors[sensor_name].add_step_listener(LaserContrastTestListener(self, self.sensors[sensor_name].config))
+            self.sensors['laser_contrast'].append(LaserContrastSensor(self, Config(sensor_config)))
+            self.sensors['laser_contrast'][i].add_step_listener(LaserContrastTestListener(self, self.sensors['laser_contrast'][i].config))
 
         # - Laser Opto Sensors (height and yaw)
         pass
@@ -126,8 +126,13 @@ class Sim:
         self.pod.step(dt_usec)
         
         # Step the sensors
-        for sensor_name, sensor in self.sensors.iteritems():
-            sensor.step(dt_usec)
+        for sensor in self.sensors.values():
+            # Some of our sensors are lists of sensors
+            if isinstance(sensor, list):
+                for s in sensor:
+                    s.step(dt_usec)        
+            else:
+                sensor.step(dt_usec)
 
         # Step the time dialator to keep our timers in sync
         self.time_dialator.step(dt_usec)
