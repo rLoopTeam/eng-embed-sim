@@ -334,6 +334,7 @@ class Fcu:
         # Add our timers to the sim's time dialator so that we can stay in sync
         self.sim.time_dialator.add_timers(self.timers)
         
+        # Start the timers
         for timer in self.timers:
             timer.start_threaded()
         
@@ -480,9 +481,11 @@ if __name__ == "__main__":
 
     fcu = Fcu(sim, fcu_config)
     
-    st = sim.run_threaded()
-    t = fcu.run_threaded()
-    t.join()
+    sim_thread = sim.run_threaded()
+    fcu_thread = fcu.run_threaded()
+
+    #sim_thread.join()
+    fcu_thread.join()   # For testing -- right now it cuts off after a certain number of steps
     
     """
     lib = ctypes.CDLL(dll_filepath)

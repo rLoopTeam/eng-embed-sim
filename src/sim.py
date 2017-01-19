@@ -1,17 +1,21 @@
 #!/usr/bin/env python
 
-from pod import Pod
-from tube import Tube
-from pusher import Pusher
-#from fcu import fcu
 
 import os
 import errno    
 import time
 import logging
+
 from units import *
 from config import Config
 from timers import TimeDialator
+
+from pod import Pod
+from tube import Tube
+from pusher import Pusher
+#from fcu import fcu
+from sensor_laser_contrast import *
+from sensor_accel import *
 
 import threading
 
@@ -38,10 +42,35 @@ class Sim:
         self.fixed_timestep_usec = Units.usec(config.fixed_timestep)  # Convert to usec
         self.time_dialator = TimeDialator(self)  # We're going to step this
 
+        # Components
         self.pusher = Pusher(self, self.config.pusher)
         self.tube = Tube(self, self.config.tube)
         self.pod = Pod(self, self.config.pod)      
         #self.fcu = Fcu(self, self.config.fcu)  
+
+        # Sensors
+        self.sensors = {}
+        self.sensors['pod'] = PodSensor(self, self.config.sensors.pod)
+        self.sensors['pod'].add_step_listener(SensorCsvWriter(self, self.config.sensors.pod))
+
+        # - Accelerometers
+        for i, sensor_config in enumerate(self.config.sensors.accel):
+            sensor_name = "accel_" + str(i)
+            # Note: we need to create a Config object here because Config does not currently handle lists very well...
+            self.sensors[sensor_name] = Accelerometer(self, Config(sensor_config))
+            self.sensors[sensor_name].add_step_listener(AccelerometerTestListener(self, self.sensors[sensor_name].config))
+        
+        # - Laser Contrast Sensors
+        for i, sensor_config in enumerate(self.config.sensors.laser_contrast):
+            sensor_name = "laser_contrast_" + str(i)
+            self.sensors[sensor_name] = LaserContrastSensor(self, Config(sensor_config))
+            self.sensors[sensor_name].add_step_listener(LaserContrastTestListener(self, self.sensors[sensor_name].config))
+
+        # - Laser Opto Sensors (height and yaw)
+        pass
+        
+        # - Other
+        pass  # @todo: add in other sensors
 
         # Initial setup
         self.pusher.start_push()
@@ -58,30 +87,8 @@ class Sim:
         self.postprocessors = []
         
         # Testing laser opto sensor class
-        self.laser_opto_sensors = LaserOptoSensors(self, self.config.sensors.laser_opto)
+        # self.laser_opto_sensors = LaserOptoSensors(self, self.config.sensors.laser_opto)
         
-        
-        # Testing only
-        """
-        from sensor_laser_opto import LaserOptoSensor, LaserOptoTestListener
-        self.laser_opto_1 = LaserOptoSensor(self, self.config.sensors.laser_opto_1)
-        #self.laser_opto_1.register_step_listener(SensorConsoleWriter())  # Write data directly to the console
-        self.lotl = LaserOptoTestListener()
-        self.laser_opto_1.add_step_listener(self.lotl) 
-        self.lofl = SensorCsvWriter(Config({'filename': "sensorcsvwriter_test1.csv"}))
-        self.laser_opto_1.add_step_listener(self.lofl)
-        """
-        
-        # Testing laser contrast sensor
-        from sensor_laser_contrast import LaserContrastSensor, LaserContrastTestListener
-        self.laser_contrast_1 = LaserContrastSensor(self, self.config.sensors.laser_contrast_1)
-        self.lctl = LaserContrastTestListener()
-        self.laser_contrast_1.add_step_listener(self.lctl)
-
-        # Testing pod sensor
-        self.pod_sensor = PodSensor(self, None)
-        self.pod_sensor_writer = SensorCsvWriter(self, self.config.sensors.pod)
-        self.pod_sensor.add_step_listener(self.pod_sensor_writer)
 
         #self.pod_sensor_writer.pause()  # Paused for use in the gui
 
@@ -118,17 +125,11 @@ class Sim:
         # Step the pod (will handle all other forces and pod physics)
         self.pod.step(dt_usec)
         
-        # Testing only
-        
-        self.pod_sensor.step(dt_usec)
-        #self.fcu.step(dt_usec)
-        #self.laser_opto_1.step(dt_usec)
-        #self.logger.debug(list(self.laser_opto_1.pop_all()))
-        self.laser_contrast_1.step(dt_usec)
-        #self.brake_1.step(dt_usec)
-        
-        # Done testing
-        
+        # Step the sensors
+        for sensor_name, sensor in self.sensors.iteritems():
+            sensor.step(dt_usec)
+
+        # Step the time dialator to keep our timers in sync
         self.time_dialator.step(dt_usec)
         
         self.elapsed_time_usec += dt_usec

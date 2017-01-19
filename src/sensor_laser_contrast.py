@@ -82,7 +82,8 @@ class LaserContrastSensor(InterruptingSensor):
         
 
 class LaserContrastTestListener(object):
-    def __init__(self, config=None):
+    def __init__(self, sim, config=None):
+        self.sim = sim
         self.config = config
         self.n_gaps = 0
         

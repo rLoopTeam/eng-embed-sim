@@ -398,7 +398,7 @@ class LaserDistanceSensor():
         return 18.3 + random.random() * 0.01
                 
         
-class Accelerometer:
+class AccelerometerOld:
     
     def __init__(self, pod):
         self.pod = pod
