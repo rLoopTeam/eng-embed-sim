@@ -240,6 +240,27 @@ class SensorListener(object):
         pass
     
 
+class IsrSensorListener(SensorListener):
+    """ A sensor listener that holds data and can has a callback that can be called by a timer to see if it has any data. 
+    If it has data, the timer will likely call the interrupts and the callback that's called after the interrupt will
+    pop from the queue held here. @todo: Need to think about what happens if the timer/interrupts don't clear the queue
+    or if there is no data in the queue when the interrupt asks for it. 
+    - Maybe just return the latest data when it's requested and clear the queue? Or not clear the queue, but just always keep the latest data from the queue...
+    - Really the way to do it is to have time dialation on the timers, and have the timer just while loop to clear the queue every time. That will probably
+      give us the best setup for that. Probably need a timer controller for that (measure the actual time vs sim time and calculate dialation, then apply to 
+      target time for the timers; update as the simulation progresses.
+      )
+    """
+
+    def __init__(self, sim, config):
+        SensorListener.__init__(self, sim, config)
+        
+    def step_callback(self, sensor, step_samples):
+        pass
+    
+    def isr_callback(self):
+        pass
+        
 class SensorConsoleWriter(SensorListener):
     """ A sensor step listener that writes to the console """
     def __init__(self, sim, config=None):

@@ -3,6 +3,8 @@
 import yaml
 from collections import MutableMapping
 
+# @todo: Add the ability to have a list in the config that contains dicts (should return a list of Configs)
+
 class Config(MutableMapping):
     
     def __init__(self, config_dict=None):

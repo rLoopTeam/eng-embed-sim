@@ -49,8 +49,8 @@ class SpacexPacket:
         
     @classmethod
     def send(cls, conn, payload_bytes):
-        #return "Sending SpacexPacket: {}".format([ hex(x)[2:].zfill(2) for x in payload_bytes ])
-        return "Sending SpacexPacket: {}".format( payload_bytes )
+        return "Sending SpacexPacket: {}".format([ str(x) for x in payload_bytes ])
+        #return "Sending SpacexPacket: {}".format( payload_bytes )
 
 
 class SafeUdpPacket:

@@ -11,6 +11,7 @@ import time
 import logging
 from units import *
 from config import Config
+from timers import TimeDialator
 
 import threading
 
@@ -33,7 +34,9 @@ class Sim:
         if working_dir is not None: 
             self.set_working_dir(working_dir)
 
+        # Time
         self.fixed_timestep_usec = Units.usec(config.fixed_timestep)  # Convert to usec
+        self.time_dialator = TimeDialator(self)  # We're going to step this
 
         self.pusher = Pusher(self, self.config.pusher)
         self.tube = Tube(self, self.config.tube)
@@ -125,6 +128,8 @@ class Sim:
         #self.brake_1.step(dt_usec)
         
         # Done testing
+        
+        self.time_dialator.step(dt_usec)
         
         self.elapsed_time_usec += dt_usec
         self.n_steps_taken += 1

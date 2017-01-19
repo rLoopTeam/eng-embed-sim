@@ -19,12 +19,14 @@ import sys
 import os
 import ctypes
 import pprint
-from config import Config
 
-from timers import TimerUsec, TimerMs
+from timers import Timer
 import time
 import threading
 
+# Our stuff
+from config import Config
+from units import Units
 from networking import PodComms
 
 # IMPORTANT: This must be run as administrator (PowerShell on Windows) or it will encounter a write error.
@@ -37,6 +39,9 @@ class Fcu:
         self.config = config
         
         self.logger = logging.getLogger("FCU")
+
+        # Timers for various callbacks 
+        self.timers = []
 
         # TESTING ONLY @todo: this should probably come from self.sim.networking
         self.comms = PodComms(self, self.sim.config.networking)
@@ -208,7 +213,13 @@ class Fcu:
     def MMA8451_readdata_callback(self, u8DeviceIndex, pu8X, pu8Y, pu8Z):
         """ When the MMA8451 wants data from us """
         # Public Delegate Sub MMA8451_WIN32__ReadDataCallbackDelegate(u8DeviceIndex As Byte, pu8X As IntPtr, pu8Y As IntPtr, pu8Z As IntPtr)
-        self.logger.debug("Fcu.MMA8451_readdata_callback({}, {}, {}, {})".format(u8DeviceIndex, pu8X, pu8Y, pu8Z))
+        self.logger.debug("Fcu.MMA8451_readdata_callback({}, {}, {}, {})".format(u8DeviceIndex, pu8X.contents, pu8Y.contents, pu8Z.contents))
+        
+        # @todo: need to get this sending data from the accel sensors. Maybe have a queue to read from? 
+        # Note: probably only trigger the interrupts to call this callback when we have data in the queue? 
+        pu8X.contents = ctypes.c_int(4095)
+        pu8Y.contents = ctypes.c_int(0)
+        pu8Z.contents = ctypes.c_int(-4095)
         
         # Note: the device index indicates which device the MMA8451 is asking for. Just grab the data from the sim and write it to the pointers. 
 
@@ -272,7 +283,8 @@ class Fcu:
         
         # Call the method on the dll and pass in our reference
         dll_method(device_index, self.callback_refs[dll_function_name])
-     
+    
+    
     def run_threaded(self):
         self.logger.debug("Got to run_threaded()!")
 
@@ -305,13 +317,25 @@ class Fcu:
         # Private Shared Sub vFCU__RTI_100MS_ISR()
         # Private Shared Sub vSTEPDRIVE_TIMEBASE__ISR()   # Note: 50usec
 
-        t50usec = TimerUsec(50, self.lib.vSTEPDRIVE_TIMEBASE__ISR)
-        t10ms = TimerMs(10, self.lib.vFCU__RTI_10MS_ISR)
-        t100ms = TimerMs(100, self.lib.vFCU__RTI_100MS_ISR)
+        self.timers.append(Timer(Units.seconds("50 usec"), self.lib.vSTEPDRIVE_TIMEBASE__ISR))
+        self.timers.append(Timer(Units.seconds("10 ms"), self.lib.vFCU__RTI_10MS_ISR))
+        self.timers.append(Timer(Units.seconds("100 ms"), self.lib.vFCU__RTI_100MS_ISR))
         
-        t50usec.start_threaded()
-        t10ms.start_threaded()
-        t100ms.start_threaded()
+        # Accel timers
+        print self.sim.config.sensors.accel
+        for i, accel_config in enumerate(self.sim.config.sensors.accel):
+            sampling_rate = Units.SI(accel_config['sampling_rate'])
+            timer_delay = 1.0 / sampling_rate  # Hz
+            # Note: in the following lambda function, we bind x=i now so that it will use that value rather than binding at call time
+            self.timers.append( Timer(timer_delay, lambda x=i: self.lib.vMMA8451_WIN32__TriggerInterrupt(x) ) )
+    
+        print self.timers
+        
+        # Add our timers to the sim's time dialator so that we can stay in sync
+        self.sim.time_dialator.add_timers(self.timers)
+        
+        for timer in self.timers:
+            timer.start_threaded()
         
         self.logger.debug("Started the timers...")
 
@@ -435,7 +459,7 @@ class Fcu:
 
             #'just wait a little bit
             #time.sleep(0.01)
-            time.sleep(0.01)  # @todo Question -- isn't this what the 10ms or 100ms timer is for (calling vFCU__Process())?
+            time.sleep(0.01)  # @todo Question -- isn't this what the 10ms or 100ms timer is for (calling vFCU__Process())? or should we use a timer for that? 
             counter += 1
 
         
@@ -456,6 +480,7 @@ if __name__ == "__main__":
 
     fcu = Fcu(sim, fcu_config)
     
+    st = sim.run_threaded()
     t = fcu.run_threaded()
     t.join()
     

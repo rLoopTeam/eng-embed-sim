@@ -7,10 +7,12 @@
 
 import time
 from datetime import datetime
+import logging
 import threading
 import numpy as np
 
 from units import Units
+
 
 class Timer:
     """ Basic timer with callback and time dialation """
@@ -19,15 +21,13 @@ class Timer:
         self.interval = interval_sec
         self.callback = callback
 
-
         # Time dialation factor (for adjusting real time to sim time for timers)
         self.dialation = 1.0
-        self.delay = self.interval  # Will be adjusted by the set_dialation method
-        self.set_dialation(self.dialation)
+        self.delay = self.interval  # Note: this will be adjusted by the set_dialation method
 
         self.stop_flag = False
 
-    def set_dialation(self, dialation):
+    def update_dialation(self, dialation):
         """ set the time-dialated delay """
         self.dialation = dialation
         self.delay = self.interval * self.dialation
@@ -53,20 +53,25 @@ class Timer:
         self.stop_flag = True
         
 
-class TimeDialator(Timer):
+class TimeDialator(object):
     """ A timer that controls the dialation of time (sim time vs real time) for other timers.
         Note that this can either be run as a timer or stepped directly by the simulation (use either, but not both probably.)
         @todo: Probably split this into two classes: one that can be run as a timer and one that is stepped by the simulator. Stepping will be more accurate. 
     """
     
-    def __init__(self, sim, interval_sec=None, timers=None):
-        Timer.__init__(self, interval_sec, self.dialate_time)
+    def __init__(self, sim, config=None):
         self.sim = sim
+        self.logger = logging.getLogger("TimeDialator")
         
-        self.timers = timers or []
+        self.timers = []
 
         self.last_real_time = None
         self.last_sim_time = None
+
+        # Exponential moving average filter to de-jumpify the time dialation
+        self.ema_alpha = 0.08  # Lower alpha gives previous values more influence in the current value
+        self.ema_previous = 1.0
+        self.ema_current = 1.0
 
     def add_timer(self, timer):
         self.timers.append(timer)
@@ -89,10 +94,17 @@ class TimeDialator(Timer):
         else:
             sim_time_diff = dt_usec / 1000000.0
             
+        # Dialate time
         # Dialation is the ratio of real time to sim time: 10s real time to 1s sim time = dialation factor of 10. Or 1s real time to 2s sim time = dialation factor of .5
         self.dialation = real_time_diff / sim_time_diff
+
+        # Apply a quick exponential moving average filter so dialation is not so jumpy
+        self.ema_previous = self.ema_current   # Move us along
+        self.ema_current = self.ema_alpha * self.dialation + (1 - self.ema_alpha) * self.ema_previous
+        self.dialation = self.ema_current  # We could just set it in the line above, but doing this allows us to separate the code for the filter
+        
         for timer in self.timers:
-            timer.set_dialation(self.dialation)
+            timer.update_dialation(self.dialation)
         self.logger.debug("Set time dialation to {}".format(self.dialation))
         
         # Update our times

@@ -8,6 +8,9 @@
 #     ref to bottom of he (147.44) - 37.3 = 110.14 (reference to bottom of laser opto sensor ** Remember to add in the built-in 25mm offset for calculations **)
 
 sim:
+    fixed_timestep: 1000 usec
+    # Interval to recalculate time dialation (real time vs sim time) for the FCU timers
+    time_dialation_interval: 100msec
     fcu:
         # @todo: make this work
         enable_fcu: True
@@ -58,7 +61,6 @@ sim:
                 rx_port: 3000
                 MAC: 00:26:80:01:00:00
                 handler: SpacexPacket
-    fixed_timestep: 1000 usec
     # Working directory for output files, relative to the cwd from which the simulator was run. Can be overridden by SimRunner.
     working_dir: data
     pusher:
@@ -98,7 +100,9 @@ sim:
               noise:
                   scale: .0001
                   center: 0.0        
-
+        accel:
+            - sampling_rate: 100 Hz
+            - sampling_rate: 100 Hz
         laser_contrast:
         - something: 1
 
