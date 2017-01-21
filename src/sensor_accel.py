@@ -14,6 +14,14 @@ class Accelerometer(PollingSensor):
         self.logger = logging.getLogger("LaserContrastSensor")
         
         self.data = namedtuple('AccelerometerData', ['t', 'x', 'y', 'z'])
+
+        # Quantities for converting to raw values
+        self.sensor_input_range = (- 4 * 9.81, 4 * 9.81)  # Gravity * g force (to convert 4 G to m/s^2)
+        self.sensor_output_range = (-2048, 2048)  # @todo: get this from config
+
+        # Conversion
+        self._ms2_to_g = 1.0/9.81  # Conversion multiplier for m/s^2 to G force
+
         
     def create_step_samples(self, dt_usec):
         
@@ -26,7 +34,8 @@ class Accelerometer(PollingSensor):
         sample_times = sample_times = self._get_sample_times(dt_usec)
 
         # @todo: apply a rotation matrix to simulate the actual 
-        return [self.data(t, sample_data[i], 0, 0) for i, t in enumerate(sample_times)]
+        z_accel = 9.81  # Gravity
+        return [self.data(t, sample_data[i], 0, z_accel) for i, t in enumerate(sample_times)]
         
     def to_raw(self, sample):
         """ Convert a sample to its raw form for the FCU """
@@ -35,14 +44,16 @@ class Accelerometer(PollingSensor):
         # @todo: ^ Is the resolution changeable? Will we get that from the FCU at runtime? How to get that into the config? Inject per sensor from the FCU? 
         # @todo: what happens if the G force goes above the highest value? 
         # Note: 1G = 9.81m/s^2
-        sensor_range = (-2048, 2048)
 
-        ms2_to_g = 1/9.81  # Conversion multiplier for m/s^2 to G force
         xyz = np.array((sample.x, sample.y, sample.z))
-        xyz *= ms2_to_g  # Convert to G force
-        xyz *= 512  # Map to the sensor range (4g = 2048, so G force * (2048/4) = sensor raw)
-        xyz = np.clip(xyz, sensor_range[0], sensor_range[1])        # Limit to proper range
+        # xyz = np.clip(xyz, *self.sensor_input_range)   # Clip to the input range (4g) to avoid  (Note: np.interp clips)
+        xyz = np.interp(xyz, self.sensor_input_range, self.sensor_output_range)  
         return self.data(sample.t, *xyz.astype(int))
+        
+    def from_raw(self, sample):
+        """ Convert the raw data format to SI units """
+        xyz = np.array((sample.x, sample.y, sample.z))
+        return self.data(sample.t, *np.interp(xyz, self.sensor_output_range, self.sensor_input_range))
         
         
 class AccelerometerTestListener(object):
@@ -52,4 +63,5 @@ class AccelerometerTestListener(object):
         
     def step_callback(self, sensor, samples):
         for sample in samples:
-            print "AccelerometerSensor sample: {}".format(sample)
+            pass
+            #print "AccelerometerSensor sample: {}; raw: {}; from_raw: {}".format(sample, sensor.to_raw(sample), sensor.from_raw(sensor.to_raw(sample)))

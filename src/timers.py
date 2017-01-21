@@ -105,7 +105,7 @@ class TimeDialator(object):
         
         for timer in self.timers:
             timer.update_dialation(self.dialation)
-        self.logger.debug("Set time dialation to {}".format(self.dialation))
+        #self.logger.debug("Set time dialation to {}".format(self.dialation))
         
         # Update our times
         self.last_real_time = time.clock()

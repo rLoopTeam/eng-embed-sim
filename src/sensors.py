@@ -235,10 +235,10 @@ class SensorListener(object):
     def __init__(self, sim, config):
         self.sim = sim
         self.config = config
-        
+            
     def step_callback(self, sensor, step_samples):
-        pass
-    
+        pass  # Deferred to subclasses
+        
 
 class IsrSensorListener(SensorListener):
     """ A sensor listener that holds data and can has a callback that can be called by a timer to see if it has any data. 

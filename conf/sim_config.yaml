@@ -16,7 +16,7 @@ sim:
         enable_fcu: True
     networking:
         # Use force_loopback to send and receive everything on 127.0.0.1
-        force_loopback: True
+        force_loopback: False
         nodes:
             flight_control: 
                 name: Flight Control

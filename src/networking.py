@@ -8,6 +8,8 @@
 # @see http://confluence.rloop.org/display/SD/UDP+Protocol
 
 import sys
+import socket
+import threading
 import struct
 from collections import namedtuple
 
@@ -62,6 +64,69 @@ class SafeUdpPacket:
         return "Sending SafeUdpPacket: {}".format([ hex(x)[2:].zfill(2) for x in payload_bytes])
         
 
+class FcuUdpListener(object):
+    """ Listens for UDP traffic and takes action based on contents """
+
+    def __init__(self, sim, config, callback):
+        self.sim = sim
+        self.config = config
+
+        # Callback for passing the received packet
+        self.callback = callback
+        
+        if self.sim.config.networking.force_loopback:
+            self.address = "127.0.0.1"
+        else:
+            self.address = str(self.config.ip)
+        print "FcuUdpListener.address: {}".format(self.address)
+        self.port = self.config.rx_port
+        self.buffer = 4096  # @todo: get this from config? Or just use 4096?
+
+
+    def run_threaded(self):
+        t = threading.Thread(target=self.run)
+        t.daemon = True
+        t.start()
+        return t
+
+    def run(self):
+        # @todo: pipe this to the networking 
+        
+        # Create a TCP/IP socket
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  # UDP
+
+        sock = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_IP)
+
+        # Bind the socket to the port
+        server_address = (self.address, self.port)
+        print >>sys.stderr, 'starting up on %s port %s' % server_address
+        sock.bind(server_address)
+
+        # RAW only
+        #sock.setsockopt(socket.IPPROTO_IP, socket.IP_HDRINCL, 1)  # Include IP headers
+        #sock.ioctl(socket.SIO_RCVALL, socket.RCVALL_ON)   # Receive all
+
+        while True:
+            print >>sys.stderr, '\nwaiting to receive message'
+            data, address = sock.recvfrom(4096)
+    
+            print >>sys.stderr, 'received %s bytes from %s' % (len(data), address)
+            print >>sys.stderr, data
+    
+            if data:
+                #self.callback(data)
+                
+                # Testing
+                byte_array = bytearray(data)
+                print "Data received: {}".format([chr(x) for x in byte_array])
+                exit()
+                #print 'We had data!' + str(b"".join(map(chr, data)))
+                
+                #sent = sock.sendto(data, address)
+                #print >>sys.stderr, 'sent %s bytes back to %s' % (sent, address)
+
+
+# @todo: deprecate this
 class SafeUDP:    
     
     @classmethod

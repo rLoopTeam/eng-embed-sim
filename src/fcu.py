@@ -14,6 +14,8 @@ This should really be a wrapper (or similar) around the DLL that is our actual f
 - 
 """
 
+
+
 import logging
 import sys
 import os
@@ -23,14 +25,17 @@ import pprint
 from timers import Timer
 import time
 import threading
+import struct
 
 # Our stuff
 from config import Config
 from units import Units
-from networking import PodComms
+from networking import PodComms, FcuUdpListener
 from sensors import QueueingListener
 
 # IMPORTANT: This must be run as administrator (PowerShell on Windows) or it will encounter a write error.
+
+
 
 class Fcu:
     
@@ -357,7 +362,9 @@ class Fcu:
             self.sim.sensors['accel'][i].add_step_listener(self.accel_listeners[i])
             # Now we have a handle to a listener for each accel. We'll use those in MMA8451_readdata_callback
     
-        print self.timers
+        # DAQ
+        # self.timers.append(Timer(Units.seconds("1 s"), self.lib.vDAQ_WIN32_MAIN__1HZ_ISR))
+
         
         # Add our timers to the sim's time dialator so that we can stay in sync
         self.sim.time_dialator.add_timers(self.timers)
@@ -400,13 +407,102 @@ class Fcu:
         End If
         """
 
+
+
         self.logger.debug("Running the main thread...")
     
         thread_main = threading.Thread(target=self.main)
         thread_main.daemon = True
         thread_main.start()
+
+        # UDP Injector
+        udp = FcuUdpListener(self.sim, self.sim.config.networking.nodes.flight_control, self.handle_fcu_packet)
+        udp.run_threaded()
+
         return thread_main
     
+    def handle_fcu_packet(self, data):
+        # Add in the IPv4 stuff
+        """
+            'update the hardware
+            'now let the fun begin, on loopback we have no eth2 layer
+
+            'dest mac, source mac, 
+            u8Buff(0) = 0
+            u8Buff(1) = 0
+            u8Buff(2) = 0
+            u8Buff(3) = 0
+            u8Buff(4) = 0
+            u8Buff(5) = 0
+
+            u8Buff(6) = 0
+            u8Buff(7) = 0
+            u8Buff(8) = 0
+            u8Buff(9) = 0
+            u8Buff(10) = 0
+            u8Buff(11) = 0
+
+            'ipv4 eth type
+            u8Buff(12) = &H8
+            u8Buff(13) = &H0
+        """    
+
+        # udp.tx.transmitPodCommand('Flight Control', 0x0100, 0x00000001, 0x00001001, 0x0, 0x0); from react-groundstation.git
+        pre = struct.pack('!12B', *[0]*12)
+        eth_type = struct.pack('!BB', 8, 0)
+        packet = pre + eth_type + data
+
+        eth2_pre = [0x00, 0x00, 0x00, 0x00, 0x00, 0x00,   # Destination MAC
+                    0x00, 0x00, 0x00, 0x00, 0x00, 0x00,   # Source MAC
+                    0x01, 0x00]  # Payload length
+
+        ipv4_pre = [0x80, 
+                    0x00,
+                    0x00, 0x00,  # Total Length
+                    0x00, 0x00,  # ID
+                    0x00, 0x00,  # Fragment Offset
+                    0x00,        # TTL
+                    0x00,        # Protocol
+                    0x00, 0x00,  # Header CRC
+                    0x00, 0x00, 0x00, 0x00,  # Source IP
+                    0x00, 0x00, 0x00, 0x00,  # Dest IP
+                    ]
+
+        udp_pre =  [0x00, 0x00,  # Source Port
+                    0x00, 0x00,  # Dest Port
+                    0x00, 0x00,  # Length
+                    0x00, 0x00,  # Checksum
+                    ]
+
+        safeudp_pre = [0x00, 0x00, 0x00, 0x00,  # Sequence
+                       0x01, 0x00,  # Packet Type
+                       0x00, 0x00,  # Payload Length
+                       ]
+        content = []
+
+
+        byte_array = bytearray([0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
+                                0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                                0x80, 0x00,
+                                0x01, 0x00,
+                                0x00, 0x00, 0x00, 0x01,
+                                0x00, 0x00, 0x10, 0x01,
+                                0x00, 0x00])
+        packet = struct.pack("!26B", *byte_array)
+                               
+        byte_array = bytearray([0x01, 0x00,
+                                0x00, 0x00, 0x00, 0x01,
+                                0x00, 0x00, 0x10, 0x01,
+                                0x00, 0x00])
+        packet = struct.pack("!12B", *byte_array)   
+                    
+        #print "handle_fcu_packet({})".format([chr(x) for x in bytearray(packet)])
+        print "handle_fcu_packet({})".format(byte_array)
+        # DLL_DECLARATION void vETH_WIN32__Ethernet_Input(Luint8 * pu8Buffer, Luint16 u16BufferLength);
+        #packet = ctypes.POINTER(ctypes.c_ubyte)
+        #packet.contents = struct.pack("!26B", *byte_array)
+        self.lib.vETH_WIN32__Ethernet_Input(packet, len(byte_array))
+        
     def main(self):
         self.logger.debug("Got to main()!")
         """
@@ -486,13 +582,48 @@ class Fcu:
             except Exception as e:
                 self.logger.error(e)
 
+            # Testing start accel data 
+            if counter == 10:
+                print "***  Starting accel data  ***"
+                #packet = b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x08\x00\x02\x00\x00\x00\x45\x00\x00\x36\x1a\x9f\x00\x00\x80\x11\x00\x00\x7f\x00\x00\x01\x7f\x00\x00\x01\xe6\x68\x23\x8c\x00\x22\x6e\xf4\x00\x00\x00\x00\x00\x01\x10\x00\x01\x00\x00\x00\x01\x13\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x76\xaa"
+                #packet = b"\x00\x00\x00\x00 \x00\x01 \x10\x00 \x01\x00\x00\x00\x01\x13\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x76\xaa"
+                b_packet_type = struct.unpack("!H", b"\x01\x00")[0]
+                b_dest_port = struct.unpack("!H", b"\x23\x8c")[0]
+                print "b_dest_port: {}".format(b_dest_port)
+                safeudp_payload = b"\x01\x00\x00\x00\x01\x13\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x76\xaa"
+                safeudp_payload = b"\x01\x00\x00\x00\x01\x13\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+                
+                safeudp_payload = b"\x00\x00\x00\x00\x00\x01\x10\x00\x01\x00\x00\x00\x01\x13\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x76\xaa"  # <= ! This is it!
+                                
+                #self.lib.vETH_WIN32__Ethernet_Input(packet, len(packet))
+                # void vFCU_NET_RX__RxSafeUDP(Luint8 *pu8Payload, Luint16 u16PayloadLength, Luint16 ePacketType, Luint16 u16DestPort, Luint16 u16Fault)
+                #pu8Payload = (ctypes.c_ubyte * len(safeudp_payload))(struct.pack(safeudp_payload))
+                #pu8Payload = ctypes.POINTER(ctypes.c_ubyte)
+                #pu8Payload.contents = struct.pack(safeudp_payload)
+                #pu8Payload = ctypes.create_string_buffer()
+                
+                #pu8Payload.contents = safeudp_payload
+                #self.lib.vSAFE_UDP_RX__UDPPacket(pu8Payload, ctypes.c_uint16(len(safeudp_payload)), ctypes.c_uint16(b_packet_type), ctypes.c_uint16(b_dest_port), ctypes.c_uint16(0))
+                # DLL_DECLARATION void vSAFE_UDP_RX__UDPPacket(Luint8 * pu8PacketBuffer, Luint16 u16PacketLength, Luint16 u16DestPort);
+                
+                u16PacketLength = ctypes.c_uint16(len(safeudp_payload))
+                u16DestPort = ctypes.c_uint16(b_dest_port)
+                pu8Payload = ctypes.create_string_buffer(safeudp_payload)
+                self.lib.vSAFE_UDP_RX__UDPPacket(ctypes.byref(pu8Payload), u16PacketLength, u16DestPort)
+                
             #'just wait a little bit
             #time.sleep(0.01)
-            time.sleep(0.01)  # @todo Question -- isn't this what the 10ms or 100ms timer is for (calling vFCU__Process())? or should we use a timer for that? 
+            time.sleep(0.01)  
+            # @todo Question -- isn't this what the 10ms or 100ms timer is for (calling vFCU__Process())? or should we use a timer for that? 
             counter += 1
 
         
 if __name__ == "__main__":
+    # For windows admin
+    #import admin
+    #if not admin.isUserAdmin():
+    #    sys.exit(admin.runAsAdmin())  # Run as admin, then exit when the script has finished
+
     from sim import Sim
     logging.basicConfig(level=logging.DEBUG)
     
@@ -514,6 +645,9 @@ if __name__ == "__main__":
 
     #sim_thread.join()
     fcu_thread.join()   # For testing -- right now it cuts off after a certain number of steps
+    
+    while True:
+        pass
     
     """
     lib = ctypes.CDLL(dll_filepath)
