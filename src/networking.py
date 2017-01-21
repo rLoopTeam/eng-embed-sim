@@ -11,6 +11,7 @@ import sys
 import socket
 import threading
 import struct
+import logging
 from collections import namedtuple
 
 from config import Config
@@ -18,32 +19,156 @@ from config import Config
 SpaceXPacket = namedtuple('SpaceXPacket', 
     ['team_id', 'status', 'acceleration', 'position', 'velocity', 'battery_voltage', 'battery_current', 'battery_temperature', 'pod_temperature', 'stripe_count'])
 
-PodCommNode = namedtuple('PodCommNode', 
-    ['name', 'handler', 'ip', 'tx_port', 'rx_port', 'MAC'])
-
 class PodComms:
     
     def __init__(self, sim, config):
         self.sim = sim
         self.config = config
+        self.logger = logging.getLogger("PodComms")
 
         # print self.config.nodes
         thismodule = sys.modules[__name__]
 
         self.nodes = {}
-        self.packet_type_map = {}
-        for k, node in self.config.nodes.iteritems():
-            self.nodes[k] = PodCommNode(**node)
+        self.port_node_map = {}   # Since we're using the ports and ignoring the ips, we can just map ports to nodes for handling
+        for node_name, node_config in self.config.nodes.iteritems():
+            handler_class = getattr(thismodule, node_config['handler'])
+            self.nodes[node_name] = handler_class(self.sim, Config(node_config))  # Create node handler, e.g. FlightControlNode(self.sim, node_config)
             # @todo: add error checking for handler class creation
-            self.packet_type_map[node['tx_port']] = {'node': k, 'handler': getattr(thismodule, node['handler'])()}
+            self.port_node_map[node_config['rx_port']] = self.nodes[node_name]  # Map rx ports to network nodes @todo: do we need this? Each one listens on its own port...
 
-    def send(self, raw_tx_packet, length):
-        bytes = b"".join(map(chr, raw_tx_packet[36:length]))
-        dest_port = struct.unpack('!H', bytes[0:2])[0]
+    def eth_tx_callback(self, raw_tx_packet, length):
+        bytes = b"".join(map(chr, raw_tx_packet[34:length]))  # Strip off the IPv4
+        dest_port = struct.unpack('!H', bytes[2:4])[0]
         # @todo: get the connection to use based on the destination port
-        conn = None
-        return self.packet_type_map[dest_port]['handler'].send(conn, bytes[6:])
+        dest_node = self.port_node_map[dest_port]  # Find out where we want to send the packet by destination port (we only use ports for addressing)
+        dest_addr = dest_node.rx_address
+        #self.logger.debug("Bytes are {}".format(bytes))
+        payload = bytes[8:]
+        return self.port_node_map[dest_port].send_udp(payload, dest_addr)
+    
+    
+    """
+
+    def send_eth(self, pu8Buffer, u16BufferLength):
+        # Send the ethernet packet -- extract the dest port and use the port_node_map to send the packet
         
+        dest_port = None  # @todo: get this from the packet
+        payload = None  # @todo: get this from the packet
+        # @todo: there are a couple of different packet types. Should we (probably) pass it off to the appropriate node to do the sending? Yes.
+        # Probably just send the whole buffer for it to handle
+    """
+    
+    def run_threaded(self):
+        # Start all of the nodes so they can listen on their rx_address
+        for node in self.nodes.values():
+            node.run_threaded()        
+    
+
+class NetworkNode:
+    def __init__(self, sim, config):
+        self.sim = sim
+        self.config = config
+        self.logger = logging.getLogger("NetworkNode")
+        
+        # Set up our addresses
+        print self.sim
+        if self.sim.config.networking.force_loopback:
+            self.host = "127.0.0.1"
+        else:
+            self.host = str(self.config.ip)
+
+        self.rx_address = (self.host, self.config.rx_port)
+        self.tx_address = (self.host, self.config.tx_port)
+
+        self.buffer_len = 4096  # @todo: get this from config? Or just use 4096?
+
+        # Enable/disable rx. These can be set in __init__ of subclasses (or elsewhere...)  @todo: maybe add enable/disable tx too? 
+        self.enable_rx = True
+        self.enable_tx = True
+
+    def run_threaded(self):
+        t = threading.Thread(target=self.run)
+        t.daemon = True
+        t.start()
+        return t
+
+    def run(self):
+        """ Listen for udp packets on our rx address. We can also send UDP, but that doesn't require 'running' since we can just send them out """
+        
+        # Create a TCP/IP socket
+        self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  # UDP
+        self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)  # Reuse addresses
+
+        # Bind the socket to the port
+        try:
+            if self.enable_rx:
+                self.logger.debug('Starting up on {} port {}'.format(*self.rx_address))
+                self.sock.bind(self.rx_address)
+            else:
+                self.logger.debug("(not) starting up on {} port {}".format(*self.rx_address))
+        except Exception as e:
+            self.logger.error(e)
+
+        while True and self.enable_rx:
+            self.logger.debug('Waiting to receive message')
+            data, source_address = self.sock.recvfrom(self.buffer_len)
+    
+            dest_address = self.rx_address  # We are the destination, so use our rx_port
+            self.logger.debug('Received {} bytes from {}. Dest is {}'.format(len(data), source_address, dest_address))
+            #print >>sys.stderr, data
+
+            if data:
+                # We've received a packet -- send it along to our overridden method for handling
+                self.handle_udp_packet(data, source_address, dest_address)
+                #self.logger.debug("Data received: {}".format([chr(x) for x in byte_array]))
+    
+    def recv_udp(self, packet, source_address):
+        # @todo: is this used anywhere? We can maybe get rid of it (superseded by handle_udp_packet?)
+        #self.logger.debug("Received packet: {} from {}".format([ str(x) for x in packet ]), source_address)  # verbose...
+        self.logger.debug("Received {} bytes from {} (dropping them for lack of a handler)".format(len(packet), source_address))
+                
+        # By default, pass all UDP traffic to the FCU (@todo: is this right?)
+        # @todo: not good that this knows about the FCU -- maybe pass this in as a callback? 
+        #self.sim.fcu.handle_udp_packet(self, packet, source_address, self.rx_address)  # Note: self.rx_address is supplied by subclasses
+
+    def handle_udp_packet(self, packet, source_address, dest_address):
+        self.logger.debug("Handling UDP packet ({} bytes from {} to {} -- dropping for lack of a handler)".format(len(packet), source_address, dest_address))
+        
+    def send_udp(self, packet, dest_address):
+        #self.logger.debug("Sending packet: {} to {}".format([ str(x) for x in packet ], dest_address))   # verbose...
+        if self.enable_tx:
+            #self.logger.debug("Sending {} bytes to {}".format(len(packet), dest_address))
+            self.sock.sendto(packet, dest_address)
+        else:
+            self.logger.debug("(not) sending {} bytes to {}".format(len(packet), dest_address))
+
+        
+class FlightControlNode(NetworkNode):
+    def __init__(self, sim, config):
+        NetworkNode.__init__(self, sim, config)
+        self.logger = logging.getLogger("FlightControlNode")
+    
+    def handle_udp_packet(self, packet, source_address, dest_address):
+        if self.sim.config.fcu.enabled:
+            self.sim.fcu.handle_udp_packet(packet, source_address, self.rx_address)  # Note: self.rx_address is supplied by subclasses
+        else:
+            self.logger.debug("Handling UDP packet ({} bytes from {} to {} -- dropping since FCU is not enabled)".format(len(packet), source_address, dest_address))
+
+    
+class SpacexNode(NetworkNode):
+    def __init__(self, sim, config):
+        NetworkNode.__init__(self, sim, config)
+        self.logger = logging.getLogger("SpacexNode")
+        
+        # Disable listening (we don't receive SpaceX packets, we only send them)
+        self.enable_rx = False
+
+    def handle_udp_packet(self, packet, source_address, dest_address):
+        # Just send it out
+        self.send_udp(packet, dest_address)
+
+# ----
 
 class SpacexPacket:
     def __init__(self):
@@ -61,16 +186,20 @@ class SafeUdpPacket:
 
     @classmethod
     def send(cls, conn, payload_bytes):
-        return "Sending SafeUdpPacket: {}".format([ hex(x)[2:].zfill(2) for x in payload_bytes])
+        #return "Sending SafeUdpPacket: {}".format([ hex(x)[2:].zfill(2) for x in payload_bytes])
+        #return "Sending SafeUDPPacket: {}".format([ str(x) for x in payload_bytes ])
+        return "(not) sending SafeUDPPacket of {} bytes".format(len(payload_bytes))
         
 
-class FcuUdpListener(object):
+class UdpListener(object):
     """ Listens for UDP traffic and takes action based on contents """
 
     def __init__(self, sim, config, callback):
         self.sim = sim
         self.config = config
 
+        self.logger = logging.getLogger("FcuUdpListener")
+        
         # Callback for passing the received packet
         self.callback = callback
         
@@ -95,11 +224,11 @@ class FcuUdpListener(object):
         # Create a TCP/IP socket
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  # UDP
 
-        sock = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_IP)
+        #sock = socket.socket(socket.AF_INET, socket.SOCK_D, socket.IPPROTO_IP)
 
         # Bind the socket to the port
         server_address = (self.address, self.port)
-        print >>sys.stderr, 'starting up on %s port %s' % server_address
+        self.logger.debug('Starting up on %s port %s' % server_address)
         sock.bind(server_address)
 
         # RAW only
@@ -107,19 +236,21 @@ class FcuUdpListener(object):
         #sock.ioctl(socket.SIO_RCVALL, socket.RCVALL_ON)   # Receive all
 
         while True:
-            print >>sys.stderr, '\nwaiting to receive message'
+            self.logger.debug('Waiting to receive message')
             data, address = sock.recvfrom(4096)
     
-            print >>sys.stderr, 'received %s bytes from %s' % (len(data), address)
-            print >>sys.stderr, data
+            dest_port = self.port  # We are the destination, so use our rx_port
+            self.logger.debug('Received {} bytes from {}. Dest port is {}'.format(len(data), address, dest_port))
+            #print >>sys.stderr, data
+            
     
             if data:
                 #self.callback(data)
                 
                 # Testing
                 byte_array = bytearray(data)
-                print "Data received: {}".format([chr(x) for x in byte_array])
-                exit()
+                self.logger.debug("Data received: {}".format([chr(x) for x in byte_array]))
+                #exit()
                 #print 'We had data!' + str(b"".join(map(chr, data)))
                 
                 #sent = sock.sendto(data, address)

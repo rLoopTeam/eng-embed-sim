@@ -30,7 +30,7 @@ import struct
 # Our stuff
 from config import Config
 from units import Units
-from networking import PodComms, FcuUdpListener
+from networking import PodComms, UdpListener
 from sensors import QueueingListener
 
 # IMPORTANT: This must be run as administrator (PowerShell on Windows) or it will encounter a write error.
@@ -50,7 +50,7 @@ class Fcu:
         self.timers = []
 
         # TESTING ONLY @todo: this should probably come from self.sim.networking
-        self.comms = PodComms(self, self.sim.config.networking)
+        #self.comms = PodComms(self, self.sim.config.networking)
 
         # Load the DLL
         self.dll_path = self.config.dll_path
@@ -210,16 +210,27 @@ class Fcu:
         # @todo: Format the buffer so it's readable (bytes)
         #self.logger.debug("Fcu.eth_tx_callback('{}', {})".format(pu8Buffer, u16BufferLength))
         #test = SafeUDP.spacex_payload_from_eth2(pu8Buffer, u16BufferLength)
-        test = self.comms.send(pu8Buffer, u16BufferLength)
-        try:
-            self.logger.debug("Fcu.eth_tx_callback: {}".format(test))
-        except Exception as e:
-            self.logger.error(e)
-        
+        self.logger.debug("Fcu.eth_tx_callback: passing {} bytes to sim.comms".format(u16BufferLength))
+        #try:
+        self.sim.comms.eth_tx_callback(pu8Buffer, u16BufferLength)
+        #except Exception as e:
+        #    self.logger.error(e)
+
+        # Send the packet to the node specified in the buffer (it's a UDP packet, so it just cares about the port. Send to 127.0.0.1?)
+        # @todo: we might need the comms port map to send things to the right place...
+    
+    def handle_udp_packet(self, packet, source_address, dest_address):
+        """ Receive a UDP packet from our network node (owned by the sim, see networking.py / FlightControlNode)"""
+        u16PacketLength = ctypes.c_uint16(len(packet))
+        u16DestPort = ctypes.c_uint16(dest_address[1])
+        pu8Payload = ctypes.create_string_buffer(packet)
+        self.lib.vSAFE_UDP_RX__UDPPacket(ctypes.byref(pu8Payload), u16PacketLength, u16DestPort)
+                
+                    
     def MMA8451_readdata_callback(self, u8DeviceIndex, pu8X, pu8Y, pu8Z):
         """ When the MMA8451 wants data from us """
         # Public Delegate Sub MMA8451_WIN32__ReadDataCallbackDelegate(u8DeviceIndex As Byte, pu8X As IntPtr, pu8Y As IntPtr, pu8Z As IntPtr)
-        self.logger.debug("Fcu.MMA8451_readdata_callback({}, {}, {}, {})".format(u8DeviceIndex, pu8X.contents, pu8Y.contents, pu8Z.contents))
+        #self.logger.debug("Fcu.MMA8451_readdata_callback({}, {}, {}, {})".format(u8DeviceIndex, pu8X.contents, pu8Y.contents, pu8Z.contents))
         
         # @todo: need to get this sending data from the accel sensors. Maybe have a queue to read from? 
         # Note: probably only trigger the interrupts to call this callback when we have data in the queue? 
@@ -236,7 +247,7 @@ class Fcu:
             self.logger.debug(e)
             return
         post_accel = self.lib.s32FCU_ACCELL__Get_CurrentAccel_mmss()
-        self.logger.debug("Pre and post accel from the FCU: {}, {} (mm/s^2)".format(pre_accel, post_accel))
+        #self.logger.debug("Pre and post accel from the FCU: {}, {} (mm/s^2)".format(pre_accel, post_accel))
 
             
         # @TODO: gotta put something in there...
@@ -246,7 +257,7 @@ class Fcu:
         pu8Y.contents = ctypes.c_int(data.y)
         pu8Z.contents = ctypes.c_int(data.z)
         
-        self.logger.debug("Setting pu8 data in MMA8451_readdata_callback: ({}, {}, {}) - q len is now {}".format(pu8X.contents, pu8Y.contents, pu8Z.contents, len(self.accel_listeners[u8DeviceIndex].q)))
+        #self.logger.debug("Setting pu8 data in MMA8451_readdata_callback: ({}, {}, {}) - q len is now {}".format(pu8X.contents, pu8Y.contents, pu8Z.contents, len(self.accel_listeners[u8DeviceIndex].q)))
         
         # Note: the device index indicates which device the MMA8451 is asking for. Just grab the data from the sim and write it to the pointers. 
 
@@ -415,13 +426,18 @@ class Fcu:
         thread_main.daemon = True
         thread_main.start()
 
-        # UDP Injector
-        udp = FcuUdpListener(self.sim, self.sim.config.networking.nodes.flight_control, self.handle_fcu_packet)
-        udp.run_threaded()
+        # UDP Injector -- testing only! (networking will need to go in the sim)
+        #udp = UdpListener(self.sim, self.sim.config.networking.nodes.flight_control, self.handle_fcu_packet)
+        #udp.run_threaded()
 
         return thread_main
     
     def handle_fcu_packet(self, data):
+
+        return "handle_fcu_packet() called with {} bytes of data".format(len(data))
+        
+
+
         # Add in the IPv4 stuff
         """
             'update the hardware
@@ -446,6 +462,8 @@ class Fcu:
             u8Buff(12) = &H8
             u8Buff(13) = &H0
         """    
+
+        
 
         # udp.tx.transmitPodCommand('Flight Control', 0x0100, 0x00000001, 0x00001001, 0x0, 0x0); from react-groundstation.git
         pre = struct.pack('!12B', *[0]*12)
@@ -571,7 +589,8 @@ class Fcu:
         
         # 'stay here until thread abort
         counter = 0
-        while True and counter < 100:
+        #while True and counter < 300:
+        while True:
 
             # 'add here any things that need updating like pod sensor data
 
@@ -583,7 +602,7 @@ class Fcu:
                 self.logger.error(e)
 
             # Testing start accel data 
-            if counter == 10:
+            if counter == 10 and False:   # Disabled -- let's try and get it from the ground station...
                 print "***  Starting accel data  ***"
                 #packet = b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x08\x00\x02\x00\x00\x00\x45\x00\x00\x36\x1a\x9f\x00\x00\x80\x11\x00\x00\x7f\x00\x00\x01\x7f\x00\x00\x01\xe6\x68\x23\x8c\x00\x22\x6e\xf4\x00\x00\x00\x00\x00\x01\x10\x00\x01\x00\x00\x00\x01\x13\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x76\xaa"
                 #packet = b"\x00\x00\x00\x00 \x00\x01 \x10\x00 \x01\x00\x00\x00\x01\x13\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x76\xaa"
@@ -638,17 +657,15 @@ if __name__ == "__main__":
 
     sim = Sim(sim_config)
 
-    fcu = Fcu(sim, fcu_config)
+    #fcu = Fcu(sim, fcu_config)  # This is incorporated into the simulator
     
     sim_thread = sim.run_threaded()
-    fcu_thread = fcu.run_threaded()
 
-    #sim_thread.join()
-    fcu_thread.join()   # For testing -- right now it cuts off after a certain number of steps
-    
-    while True:
-        pass
-    
+    #fcu_thread = fcu.run_threaded()  # this is now integrated into the simulator
+    #fcu_thread.join()   # For testing -- right now it cuts off after a certain number of steps
+
+    sim_thread.join()
+        
     """
     lib = ctypes.CDLL(dll_filepath)
     

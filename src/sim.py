@@ -13,9 +13,13 @@ from timers import TimeDialator
 from pod import Pod
 from tube import Tube
 from pusher import Pusher
-#from fcu import fcu
+
 from sensor_laser_contrast import *
 from sensor_accel import *
+
+from networking import PodComms
+
+from fcu import Fcu
 
 import threading
 
@@ -71,6 +75,19 @@ class Sim:
         
         # - Other
         pass  # @todo: add in other sensors
+
+        
+        # Networking
+        self.comms = PodComms(self, self.config.networking)
+
+        # FCU (!)
+        if self.config.fcu.enabled:
+            self.logger.info("Initializing FCU")
+            self.fcu = Fcu(self, self.config.fcu)
+        else:
+            # @todo: will this have any side effects (e.g. not having an fcu?)
+            self.logger.info("Not initializing FCU because it is disabled via config.")
+
 
         # Initial setup
         self.pusher.start_push()
@@ -162,6 +179,13 @@ class Sim:
         for processor in self.preprocessors:
             processor.process(self)
         
+        # Networking
+        self.comms.run_threaded()   # Start the network node listeners
+
+        # FCU
+        if self.config.fcu.enabled:
+            self.fcu.run_threaded()
+
         while(True):
 
             # Check our end listener(s) to see if we should end the simulation (e.g. the pod has stopped)
@@ -173,6 +197,7 @@ class Sim:
                 break
             
             self.step(self.fixed_timestep_usec)
+
 
         sim_end_t = time.time()
         sim_time = sim_end_t - sim_start_t
