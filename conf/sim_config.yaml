@@ -35,7 +35,7 @@ sim:
                 handler: FlightControlNode
                 ip: 192.168.0.100
                 tx_port: 9100
-                rx_port: 9100
+                rx_port: 8100
                 MAC: 00:26:80:01:00:00
             
             #power_fwd: 
@@ -77,8 +77,12 @@ sim:
         brake_force: -8000 N   # Doesn't really matter, just needs to be big and negative
     tube:
         length: 1260 m
-        ambient_pressure: 14.7 psi  # need to convert to pascals, or use units (e.g. 14.7 psi)
         pumpdown_pressure: .125 psi
+
+        # Pressures to test: np.linspace(0.125, 12.5, 4)
+        air_pressure: .125 psi
+        air_temperature: 72.0
+        air_specific_gas_constant: 287.05 J/(kg*degK)
 
         # Reflective strips
         reflective_strip_width: 4in
@@ -114,12 +118,12 @@ sim:
 
         laser_contrast:
             # Note: each entry in the following list represents a config for a laser contrast sensor
-            # @todo: get the correct pod_x_offsets for each of these (w/r/t the pod reference point, center of front crossbar)
-            - pod_x_offset: -0.5 m
+            # RDA: x offsets measured 1/19/2016
+            - pod_x_offset: -177 mm
               noise: {scale: 0.0, center: 0.0}
-            - pod_x_offset: -0.9 m
+            - pod_x_offset: -827 mm
               noise: {scale: 0.0, center: 0.0}
-            - pod_x_offset: -1.3 m
+            - pod_x_offset: -1487 mm
               noise: {scale: 0.0, center: 0.0}
 
     pod:

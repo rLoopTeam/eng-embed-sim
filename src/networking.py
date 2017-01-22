@@ -35,17 +35,24 @@ class PodComms:
             handler_class = getattr(thismodule, node_config['handler'])
             self.nodes[node_name] = handler_class(self.sim, Config(node_config))  # Create node handler, e.g. FlightControlNode(self.sim, node_config)
             # @todo: add error checking for handler class creation
-            self.port_node_map[node_config['rx_port']] = self.nodes[node_name]  # Map rx ports to network nodes @todo: do we need this? Each one listens on its own port...
+            #self.port_node_map[node_config['rx_port']] = self.nodes[node_name]  # Map rx ports to network nodes @todo: do we need this? Each one listens on its own port...
+            self.port_node_map[node_config['tx_port']] = self.nodes[node_name]  # Map rx ports to network nodes @todo: do we need this? Each one listens on its own port...
 
     def eth_tx_callback(self, raw_tx_packet, length):
+        """ Callback for the FCU to send data """
         bytes = b"".join(map(chr, raw_tx_packet[34:length]))  # Strip off the IPv4
-        dest_port = struct.unpack('!H', bytes[2:4])[0]
+        dest_port = struct.unpack('!H', bytes[2:4])[0]  # Get dest port from the UDP packet
+        print "Dest port is {} -- should be the node the FCU is trying to transmit to (e.g. 9100)".format(dest_port)
         # @todo: get the connection to use based on the destination port
-        dest_node = self.port_node_map[dest_port]  # Find out where we want to send the packet by destination port (we only use ports for addressing)
-        dest_addr = dest_node.rx_address
-        #self.logger.debug("Bytes are {}".format(bytes))
-        payload = bytes[8:]
-        return self.port_node_map[dest_port].send_udp(payload, dest_addr)
+        dest_node = self.port_node_map.get(dest_port, None)  # Find out where we want to send the packet by destination port (we only use ports for addressing)
+        if dest_node is None:
+            self.logger.debug("Got packet destined for port {} -- that's not a receive port for us, so we should probably send it.".format(dest_port))
+        else:
+            dest_addr = dest_node.tx_address
+            #self.logger.debug("Bytes are {}".format(bytes))
+            payload = bytes[8:]  # Strip off the UDP header (?)
+            self.logger.debug("PodComms.eth_tx_callback: using NetworkNode.send_udp() to get a packet back to the ground station")
+            return self.port_node_map[dest_port].send_udp(payload, dest_addr)  # Send the UDP payload
     
     
     """
@@ -72,7 +79,6 @@ class NetworkNode:
         self.logger = logging.getLogger("NetworkNode")
         
         # Set up our addresses
-        print self.sim
         if self.sim.config.networking.force_loopback:
             self.host = "127.0.0.1"
         else:
@@ -96,17 +102,23 @@ class NetworkNode:
     def run(self):
         """ Listen for udp packets on our rx address. We can also send UDP, but that doesn't require 'running' since we can just send them out """
         
-        # Create a TCP/IP socket
+        # Create a socket
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  # UDP
         self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)  # Reuse addresses
+
+        #self.clientSock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  # UDP
+        #self.clientSock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1) 
 
         # Bind the socket to the port
         try:
             if self.enable_rx:
-                self.logger.debug('Starting up on {} port {}'.format(*self.rx_address))
-                self.sock.bind(self.rx_address)
+                # bind_address = ('0.0.0.0', self.rx_address[1])  # Testing listening to get around issues
+                bind_address = self.rx_address
+                self.logger.debug('Listening to {} port {}'.format(*bind_address))
+                #self.sock.bind(self.rx_address)  # This won't work -- packets don't get sent through to the GS if we bind to 127.0.0.1
+                self.sock.bind(bind_address)
             else:
-                self.logger.debug("(not) starting up on {} port {}".format(*self.rx_address))
+                self.logger.debug("(not) listening to {} port {}".format(*self.rx_address))
         except Exception as e:
             self.logger.error(e)
 
@@ -137,9 +149,21 @@ class NetworkNode:
         
     def send_udp(self, packet, dest_address):
         #self.logger.debug("Sending packet: {} to {}".format([ str(x) for x in packet ], dest_address))   # verbose...
+
+        # TESTING -- works (but can't receive more packets, probably because we're resetting the socket and not binding back to it)
+        #self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  # UDP
+        ##self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)  # Reuse addresses -- not needed here
+        #dest_address = ('127.0.0.1', 9100)
+        # Packet that has been successfully received by the ground station via test_gs_accel_packets (generated by virtual FCU)
+        packet = "\xb1\x00\x00\x00\x03\x10\x3c\x00\x04\x00\x00\x00\x41\x01\xb0\x01\x1f\x02\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x04\x00\x00\x00\x41\x01\xb0\x01\x1f\x02\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xf5\x46"
+
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  # UDP
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)  # Reuse addresses
+
         if self.enable_tx:
-            #self.logger.debug("Sending {} bytes to {}".format(len(packet), dest_address))
-            self.sock.sendto(packet, dest_address)
+            self.logger.debug("(NetworkNode) Sending {} bytes to {}".format(len(packet), dest_address))
+            #self.sock.sendto(packet, dest_address)
+            sock.sendto(packet, dest_address)
         else:
             self.logger.debug("(not) sending {} bytes to {}".format(len(packet), dest_address))
 
@@ -149,11 +173,16 @@ class FlightControlNode(NetworkNode):
         NetworkNode.__init__(self, sim, config)
         self.logger = logging.getLogger("FlightControlNode")
     
+        #self.rx_address = ('0.0.0.0', self.rx_address[1])
+    
     def handle_udp_packet(self, packet, source_address, dest_address):
+        self.logger.debug("handle_udp_packet called")
         if self.sim.config.fcu.enabled:
-            self.sim.fcu.handle_udp_packet(packet, source_address, self.rx_address)  # Note: self.rx_address is supplied by subclasses
+            #self.sim.fcu.handle_udp_packet(packet, source_address, self.rx_address)  # Note: self.rx_address is supplied by subclasses
+            self.sim.fcu.handle_udp_packet(packet, source_address, self.tx_address)  # Note: using tx_address instead of rx address for the node since we're using different ports for the GS
         else:
             self.logger.debug("Handling UDP packet ({} bytes from {} to {} -- dropping since FCU is not enabled)".format(len(packet), source_address, dest_address))
+    
 
     
 class SpacexNode(NetworkNode):
@@ -166,6 +195,7 @@ class SpacexNode(NetworkNode):
 
     def handle_udp_packet(self, packet, source_address, dest_address):
         # Just send it out
+        # @todo: do we need to filter out packets meant for the ground station? 
         self.send_udp(packet, dest_address)
 
 # ----

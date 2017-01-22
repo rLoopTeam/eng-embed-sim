@@ -26,6 +26,10 @@ class Config(MutableMapping):
             self.__internal = Config.merge(self.__internal, config_yaml)
         return self  # fluent
     
+    def loadfiles(self, filenames):
+        for filename in filenames:
+            self.loadfile(filename)
+    
     def __getattr__(self, name):
         if name in ['_Config__internal']:
             return self.__dict__['__internal']

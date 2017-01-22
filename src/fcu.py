@@ -46,6 +46,8 @@ class Fcu:
         
         self.logger = logging.getLogger("FCU")
 
+        self.logger.info("Initializing FCU")
+
         # Timers for various callbacks 
         self.timers = []
 
@@ -56,7 +58,7 @@ class Fcu:
         self.dll_path = self.config.dll_path
         self.dll_filename = self.config.dll_filename
         self.dll_filepath = (os.path.join(self.dll_path, self.dll_filename))
-        self.logger.info("Loading dll '{}'".format(self.dll_filepath))
+        self.logger.info("- Loading dll '{}'".format(self.dll_filepath))
         try:
             self.lib = ctypes.CDLL(self.dll_filepath)
         except Exception as e:
@@ -208,7 +210,6 @@ class Fcu:
     def eth_tx_callback(self, pu8Buffer, u16BufferLength):
         # Public Delegate Sub ETH_WIN32__TxCallbackDelegate(ByVal pu8Buffer As IntPtr, ByVal u16BufferLength As UInt16)
         # @todo: Format the buffer so it's readable (bytes)
-        #self.logger.debug("Fcu.eth_tx_callback('{}', {})".format(pu8Buffer, u16BufferLength))
         #test = SafeUDP.spacex_payload_from_eth2(pu8Buffer, u16BufferLength)
         self.logger.debug("Fcu.eth_tx_callback: passing {} bytes to sim.comms".format(u16BufferLength))
         #try:
@@ -223,8 +224,24 @@ class Fcu:
         """ Receive a UDP packet from our network node (owned by the sim, see networking.py / FlightControlNode)"""
         u16PacketLength = ctypes.c_uint16(len(packet))
         u16DestPort = ctypes.c_uint16(dest_address[1])
-        pu8Payload = ctypes.create_string_buffer(packet)
+        
+        # Testing:
+        sh_no = struct.unpack("!LHH", packet[0:8])  # Network ordering
+        sh_le = struct.unpack("<LHH", packet[0:8])  # Little Endian
+        print "Handing SafeUDP packet to dest {} (sequence, type, length): Network Byte Order: ({:#010x}, {:#06x}, {:#06x}); Little Endian: ({:#08x}, {:#06x}, {:#06x})".format(dest_address, sh_no[0], sh_no[1], sh_no[2], sh_le[0], sh_le[1], sh_le[2])
+
+        # Testing switching byte order on the packet type to get the GS to recognize the packet
+        #self.logger.debug("Switching byte order of packet type -- old: {}, new: {}".format(sh_no[1], struct.unpack("!H", packet[4:6])[0]))
+
+        if sh_le[1] == 4097 and False:
+            pu8Payload = ctypes.create_string_buffer(packet[0:4] + packet[5] + packet[4] + packet[6:])
+        else: 
+            pu8Payload = ctypes.create_string_buffer(packet)
         self.lib.vSAFE_UDP_RX__UDPPacket(ctypes.byref(pu8Payload), u16PacketLength, u16DestPort)
+        
+        # Note: If you have a full ethernet packet, you can use the following to inject it. 
+        #       vSAFE_UDP_RX__UDPPacket() is much easier here since we are only handling those and we don't have to reconstruct a full ethernet packet
+        # self.lib.vETH_WIN32__Ethernet_Input(packet, len(byte_array))  # Just for knowing that this is an option
                 
                     
     def MMA8451_readdata_callback(self, u8DeviceIndex, pu8X, pu8Y, pu8Z):
@@ -240,22 +257,38 @@ class Fcu:
         
         # Get the listener that's queueing data for our accelerometer (and convert it to the proper raw values/types)
         # Note: we only pop one here. The timers and time dialation should make sure that the # samples and the callbacks equalize
-        pre_accel = self.lib.s32FCU_ACCELL__Get_CurrentAccel_mmss()
+        pre_accel = self.lib.s32FCU_ACCELL__Get_CurrentAccel_mmss(u8DeviceIndex)
+        pre_displacement = self.lib.s32FCU_ACCELL__Get_CurrentDisplacement_mm(ctypes.c_ubyte(u8DeviceIndex))
         try:
             real_data = self.accel_listeners[u8DeviceIndex].pop()
         except IndexError as e:
             self.logger.debug(e)
             return
-        post_accel = self.lib.s32FCU_ACCELL__Get_CurrentAccel_mmss()
-        #self.logger.debug("Pre and post accel from the FCU: {}, {} (mm/s^2)".format(pre_accel, post_accel))
-
             
-        # @TODO: gotta put something in there...
+                        
+        # Set the values
         data = self.sim.sensors['accel'][u8DeviceIndex].to_raw(real_data)
-        # @ TODO: we need to get the proper data for the FCU (e.g. -2048 -- 2048). Should we do that here? Or call back to the sensor? Can we call back to the sensor? 
-        pu8X.contents = ctypes.c_int(data.x)
-        pu8Y.contents = ctypes.c_int(data.y)
-        pu8Z.contents = ctypes.c_int(data.z)
+        #pu8X.contents = ctypes.c_int16(data.x)
+        #pu8Y.contents = ctypes.c_int16(data.y)
+        #pu8Z.contents = ctypes.c_int16(data.z)
+
+        # TESTING ONLY -- to see if we can poke a value into the pointers
+        self._x = ctypes.c_int16(data.x)
+        pu8X[0] = ctypes.c_int16(321)
+        pu8Y[0] = ctypes.c_int16(432)
+        pu8Z[0] = ctypes.c_int16(543)
+
+        #print "pu8X.contents: {}".format(pu8X.contents)
+
+        # Lint32 s32FCU_ACCELL__Get_CurrentAccel_mmss(Luint8 u8Channel)  @see FIRMWARE/PROJECT_CODE/LCCM655__RLOOP__FCU_CORE/ACCELEROMETERS/fcu__accel.c
+        # NOTE: This may not work here if the accels haven't been processed (during vFCU__Process?)
+        post_accel = self.lib.s32FCU_ACCELL__Get_CurrentAccel_mmss(ctypes.c_ubyte(u8DeviceIndex))
+        post_displacement = self.lib.s32FCU_ACCELL__Get_CurrentDisplacement_mm(ctypes.c_ubyte(u8DeviceIndex))
+        #velocity = self.lib.s32FCU_ACCELL__Get_CurrentVelocity_mms(ctypes.c_ubyte(u8DeviceIndex))
+
+        #self.logger.debug("s32FCU_ACCELL__Get_CurrentAccel_mmss({}) -- pre: {}; post: {} (mm/s^2); (should be {})".format(u8DeviceIndex, pre_accel, post_accel, data))
+        #self.logger.debug("s32FCU_ACCELL__Get_CurrentDisplacement_mm({}) -- pre: {}; post: {}".format(u8DeviceIndex, pre_displacement, post_displacement))
+
         
         #self.logger.debug("Setting pu8 data in MMA8451_readdata_callback: ({}, {}, {}) - q len is now {}".format(pu8X.contents, pu8Y.contents, pu8Z.contents, len(self.accel_listeners[u8DeviceIndex].q)))
         
@@ -324,7 +357,7 @@ class Fcu:
     
     
     def run_threaded(self):
-        self.logger.debug("Got to run_threaded()!")
+        self.logger.debug("Starting FCU main thread")
 
         """ Run the FCU """
         # Basic procedure: setup timers, Init, Process loop
@@ -355,13 +388,16 @@ class Fcu:
         # Private Shared Sub vFCU__RTI_100MS_ISR()
         # Private Shared Sub vSTEPDRIVE_TIMEBASE__ISR()   # Note: 50usec
 
+        self.logger.info("- Creating timers")
         self.timers.append(Timer(Units.seconds("50 usec"), self.lib.vSTEPDRIVE_TIMEBASE__ISR))
         self.timers.append(Timer(Units.seconds("10 ms"), self.lib.vFCU__RTI_10MS_ISR))
         self.timers.append(Timer(Units.seconds("100 ms"), self.lib.vFCU__RTI_100MS_ISR))
         
         # Accelerometers
+        self.logger.info("- Creating Sensors")
         self.accel_listeners = []
         for i, accel_config in enumerate(self.sim.config.sensors.accel):
+            self.logger.info("  - Creating Accelerometer {} with sampling rate {}".format(i, accel_config['sampling_rate']))
             # Timers
             sampling_rate = Units.SI(accel_config['sampling_rate'])
             timer_delay = 1.0 / sampling_rate  # Hz
@@ -373,18 +409,17 @@ class Fcu:
             self.sim.sensors['accel'][i].add_step_listener(self.accel_listeners[i])
             # Now we have a handle to a listener for each accel. We'll use those in MMA8451_readdata_callback
     
-        # DAQ
-        # self.timers.append(Timer(Units.seconds("1 s"), self.lib.vDAQ_WIN32_MAIN__1HZ_ISR))
-
-        
+            
         # Add our timers to the sim's time dialator so that we can stay in sync
+        self.logger.info("- Initializing time dialator")
         self.sim.time_dialator.add_timers(self.timers)
         
         # Start the timers
+        self.logger.info("- Starting the timers")
         for timer in self.timers:
+            self.logger.info("  - Starting {} timer to call {}".format(timer.interval, repr(timer.callback)))
             timer.start_threaded()
         
-        self.logger.debug("Started the timers...")
 
         """
         # Calls to start / stop button (starting and stopping the emu)
@@ -418,9 +453,7 @@ class Fcu:
         End If
         """
 
-
-
-        self.logger.debug("Running the main thread...")
+        self.logger.debug("FCU starting up")
     
         thread_main = threading.Thread(target=self.main)
         thread_main.daemon = True
@@ -436,8 +469,6 @@ class Fcu:
 
         return "handle_fcu_packet() called with {} bytes of data".format(len(data))
         
-
-
         # Add in the IPv4 stuff
         """
             'update the hardware
@@ -601,8 +632,12 @@ class Fcu:
             except Exception as e:
                 self.logger.error(e)
 
+            # Testing the accelerometers
+            #post_process_accel = self.lib.s32FCU_ACCELL__Get_CurrentAccel_mmss(0)
+            #self.logger.debug("After vFCU__Process() s32FCU_ACCELL__Get_CurrentAccel_mmss(0): {}".format(post_process_accel))
+
             # Testing start accel data 
-            if counter == 10 and False:   # Disabled -- let's try and get it from the ground station...
+            if counter == 10 and False:   # 'and False' = Disabled -- let's try and get it from the ground station...
                 print "***  Starting accel data  ***"
                 #packet = b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x08\x00\x02\x00\x00\x00\x45\x00\x00\x36\x1a\x9f\x00\x00\x80\x11\x00\x00\x7f\x00\x00\x01\x7f\x00\x00\x01\xe6\x68\x23\x8c\x00\x22\x6e\xf4\x00\x00\x00\x00\x00\x01\x10\x00\x01\x00\x00\x00\x01\x13\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x76\xaa"
                 #packet = b"\x00\x00\x00\x00 \x00\x01 \x10\x00 \x01\x00\x00\x00\x01\x13\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x76\xaa"
