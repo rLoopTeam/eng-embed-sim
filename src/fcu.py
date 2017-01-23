@@ -206,9 +206,103 @@ class Fcu:
     def set_return_types(self):
         """ Set the return types for various DLL methods. NOTE: You must do this or risk bad auto-conversions (e.g. int16 -2001 => int32 62259) """
         
+        
+        #DLL_DECLARATION void vSTEPDRIVE_WIN32__ForcePosition(Luint8 u8MotorIndex, Lint32 s32Position);
+        self.lib.vSTEPDRIVE_WIN32__ForcePosition.argtypes = [ctypes.c_uint8, ctypes.c_int32]
+        self.lib.vSTEPDRIVE_WIN32__ForcePosition.restype = None
+        
+        # DLL_DECLARATION Luint16 u16DAQ__Get_FIFO_Level(Luint16 u16Index);
+        self.lib.u16DAQ__Get_FIFO_Level.argtypes = [ctypes.c_uint16]
+        self.lib.u16DAQ__Get_FIFO_Level.restype = ctypes.c_uint16
+        
+        # DLL_DECLARATION Luint16 u16DAQ__Get_FIFO_Max(Luint16 u16Index);
+        self.lib.u16DAQ__Get_FIFO_Max.argtypes = [ctypes.c_uint16]
+        self.lib.u16DAQ__Get_FIFO_Max.restype = ctypes.c_uint16
+        
+        # -- Track Database -----
+        
+        # There is a set of trackdbs in the FCU, keyed by index (?)
+        # @see https://github.com/rLoopTeam/eng-software-pod FIRMWARE/PROJECT_CODE/LCCM655__RLOOP__FCU_CORE/fcu_core.h
+        
+        # DLL_DECLARATION Luint32 u32FCU_FCTL_TRACKDB__Get_CurrentDB(void);
+        # DLL_DECLARATION void vFCU_FCTL_TRACKDB_WIN32__Clear_Array(void);
+        # DLL_DECLARATION void vFCU_FCTL_TRACKDB_WIN32__Get_Array(Luint8 *pu8ByteArray);
+        # DLL_DECLARATION Luint16 u16FCU_FCTL_TRACKDB_WIN32__Get_StructureSize(void);
+        # DLL_DECLARATION void vFCU_FCTL_TRACKDB_WIN32__Set_Array(Luint8 *pu8ByteArray);
+        # DLL_DECLARATION void vFCU_FCTL_TRACKDB_WIN32__Set_Header(Luint32 u32Value);
+        # DLL_DECLARATION void vFCU_FCTL_TRACKDB_WIN32__Set_DataLength(Luint32 u32Value);
+        # DLL_DECLARATION void vFCU_FCTL_TRACKDB_WIN32__Set_TrackID(Luint32 u32Value);
+        # DLL_DECLARATION void vFCU_FCTL_TRACKDB_WIN32__Set_TrackStartXPos(Luint32 u32Value);
+        # DLL_DECLARATION void vFCU_FCTL_TRACKDB_WIN32__Set_TrackEndXPos(Luint32 u32Value);
+        # DLL_DECLARATION void vFCU_FCTL_TRACKDB_WIN32__Set_LRF_StartXPos(Luint32 u32Value);
+        # DLL_DECLARATION void vFCU_FCTL_TRACKDB_WIN32__Set_NumStripes(Luint32 u32Value);
+        # DLL_DECLARATION void vFCU_FCTL_TRACKDB_WIN32__Set_StripeStartX(Luint32 u32Index, Luint32 u32Value);
+        # DLL_DECLARATION void vFCU_FCTL_TRACKDB_WIN32__Set_HeaderSpare(Luint32 u32Index, Luint32 u32Value);
+        # DLL_DECLARATION void vFCU_FCTL_TRACKDB_WIN32__Set_Footer(Luint32 u32Value);
+        # DLL_DECLARATION void vFCU_FCTL_TRACKDB_WIN32__Set_Profile_PusherFrontStartPos(Luint32 u32Value);
+        # DLL_DECLARATION void vFCU_FCTL_TRACKDB_WIN32__Set_Profile_PusherFrontEndPos(Luint32 u32Value);
+        # DLL_DECLARATION void vFCU_FCTL_TRACKDB_WIN32__Set_Profile_PodFrontTargetXPos(Luint32 u32Value);
+        # DLL_DECLARATION void vFCU_FCTL_TRACKDB_WIN32__Set_Profile_NumSetpoints(Luint32 u32Value);
+        # DLL_DECLARATION void vFCU_FCTL_TRACKDB_WIN32__Set_Profile_BrakeSetpointPosX(Luint32 u32Index, Luint32 u32Value);
+        # DLL_DECLARATION void vFCU_FCTL_TRACKDB_WIN32__Set_Profile_BrakeSetpointVelocityX(Luint32 u32Index, Luint32 u32Value);
+        # DLL_DECLARATION void vFCU_FCTL_TRACKDB_WIN32__Set_Profile_Spare(Luint32 u32Index, Luint32 u32Value);
+        # DLL_DECLARATION Luint16 u16FCTL_TRAKDB_WIN32__ComputeCRC(void);
+        # DLL_DECLARATION void vFCU_FCTL_TRACKDB_WIN32__Set_CRC(Luint16 u16Value);
+
+        # Note: only setting return/arg types for the special ones (returns a value, takes a pointer, etc.)
+
+        # DLL_DECLARATION Luint32 u32FCU_FCTL_TRACKDB__Get_CurrentDB(void);
+        self.lib.u32FCU_FCTL_TRACKDB__Get_CurrentDB.restype = ctypes.c_uint32
+        
+        # DLL_DECLARATION void vFCU_FCTL_TRACKDB_WIN32__Get_Array(Luint8 *pu8ByteArray);
+        # Note: call this with a byte array that will be filled with the trackdb (?)
+        self.lib.vFCU_FCTL_TRACKDB_WIN32__Get_Array.argtypes = [ctypes.POINTER(ctypes.c_ubyte)]
+        
+        # DLL_DECLARATION Luint16 u16FCU_FCTL_TRACKDB_WIN32__Get_StructureSize(void);
+        self.lib.u16FCU_FCTL_TRACKDB_WIN32__Get_StructureSize.restype = ctypes.c_uint16
+
+        # DLL_DECLARATION void vFCU_FCTL_TRACKDB_WIN32__Set_Array(Luint8 *pu8ByteArray);
+        self.lib.vFCU_FCTL_TRACKDB_WIN32__Set_Array.argtypes = [ctypes.POINTER(ctypes.c_ubyte)]
+        
+        # DLL_DECLARATION Luint16 u16FCTL_TRAKDB_WIN32__ComputeCRC(void);
+        self.lib.u16FCTL_TRAKDB_WIN32__ComputeCRC.restype = ctypes.c_uint16
+
+        # -- Laser Sensors: Contrast (reflective strips on tube walls), Distance (forward distance), and Opto (height and yaw sensors) -----
+        
+		# DLL_DECLARATION void vFCU_LASERCONT_TL__ISR(E_FCU__LASER_CONT_INDEX_T eLaser, Luint32 u32Register);
+		# DLL_DECLARATION void vFCU_LASERDIST_WIN32__Set_DistanceRaw(Lfloat32 f32Value);
+		# DLL_DECLARATION void vFCU_LASEROPTO_WIN32__Set_DistanceRaw(Luint32 u32Index, Lfloat32 f32Value);
+        
+        # -- Brakes -----
+
+        # DLL_DECLARATION void vFCU_BRAKES_SW__Left_SwitchExtend_ISR(void);
+        # DLL_DECLARATION void vFCU_BRAKES_SW__Left_SwitchRetract_ISR(void);
+        # DLL_DECLARATION void vFCU_BRAKES_SW__Right_SwitchExtend_ISR(void);
+        # DLL_DECLARATION void vFCU_BRAKES_SW__Right_SwitchRetract_ISR(void);
+        # DLL_DECLARATION void vFCU_BRAKES_SW_WIN32__Inject_SwitchState(Luint8 u8Brake, Luint8 u8ExtendRetract, Luint8 u8Value);
+        # DLL_DECLARATION void vFCU_BRAKES_MLP_WIN32__ForceADC(Luint8 u8Brake, Luint16 u16Value);
+        
+        # -- Accelerometers -----
+        
+        # DLL_DECLARATION void vMMA8451_WIN32__TriggerInterrupt(Luint8 u8DeviceIndex);
+        # DLL_DECLARATION void vMMA8451_WIN32__Set_ReadDataCallback(pMMA8451_WIN32__ReadDataCallback_FuncType pFunc);   # Handled in __init__    
+        
         #DLL_DECLARATION Lint16 s16MMA8451_FILTERING__Get_Average(Luint8 u8DeviceIndex, MMA8451__AXIS_E eAxis);
+        self.lib.s16MMA8451_FILTERING__Get_Average.argtypes = [ctypes.c_uint8, ctypes.c_uint8]
         self.lib.s16MMA8451_FILTERING__Get_Average.restype = ctypes.c_int16
 
+        # DLL_DECLARATION Lint32 s32FCU_ACCELL__Get_CurrentAccel_mmss(Luint8 u8Channel);
+        self.lib.s32FCU_ACCELL__Get_CurrentAccel_mmss.argtypes = [ctypes.c_uint8]
+        self.lib.s32FCU_ACCELL__Get_CurrentAccel_mmss.restype = ctypes.c_int32
+        
+        # DLL_DECLARATION Lint32 s32FCU_ACCELL__Get_CurrentVeloc_mms(Luint8 u8Channel);
+        self.lib.s32FCU_ACCELL__Get_CurrentVeloc_mms.argtypes = [ctypes.c_uint8]
+        self.lib.s32FCU_ACCELL__Get_CurrentVeloc_mms.restype = ctypes.c_int32
+        
+        # DLL_DECLARATION Lint32 s32FCU_ACCELL__Get_CurrentDisplacement_mm(Luint8 u8Channel);
+        self.lib.s32FCU_ACCELL__Get_CurrentDisplacement_mm.argtypes = [ctypes.c_uint8]
+        self.lib.s32FCU_ACCELL__Get_CurrentDisplacement_mm.restype = ctypes.c_int32
+        
     def errcheck_callback(self, result, func, arguments):
         self.logger.debug("Fcu.errcheck_callback({}, {}, {})".format(result, func, arguments))
         
@@ -462,93 +556,6 @@ class Fcu:
         #udp.run_threaded()
 
         return thread_main
-    
-    def handle_fcu_packet(self, data):
-
-        return "handle_fcu_packet() called with {} bytes of data".format(len(data))
-        
-        # Add in the IPv4 stuff
-        """
-            'update the hardware
-            'now let the fun begin, on loopback we have no eth2 layer
-
-            'dest mac, source mac, 
-            u8Buff(0) = 0
-            u8Buff(1) = 0
-            u8Buff(2) = 0
-            u8Buff(3) = 0
-            u8Buff(4) = 0
-            u8Buff(5) = 0
-
-            u8Buff(6) = 0
-            u8Buff(7) = 0
-            u8Buff(8) = 0
-            u8Buff(9) = 0
-            u8Buff(10) = 0
-            u8Buff(11) = 0
-
-            'ipv4 eth type
-            u8Buff(12) = &H8
-            u8Buff(13) = &H0
-        """    
-
-        
-
-        # udp.tx.transmitPodCommand('Flight Control', 0x0100, 0x00000001, 0x00001001, 0x0, 0x0); from react-groundstation.git
-        pre = struct.pack('!12B', *[0]*12)
-        eth_type = struct.pack('!BB', 8, 0)
-        packet = pre + eth_type + data
-
-        eth2_pre = [0x00, 0x00, 0x00, 0x00, 0x00, 0x00,   # Destination MAC
-                    0x00, 0x00, 0x00, 0x00, 0x00, 0x00,   # Source MAC
-                    0x01, 0x00]  # Payload length
-
-        ipv4_pre = [0x80, 
-                    0x00,
-                    0x00, 0x00,  # Total Length
-                    0x00, 0x00,  # ID
-                    0x00, 0x00,  # Fragment Offset
-                    0x00,        # TTL
-                    0x00,        # Protocol
-                    0x00, 0x00,  # Header CRC
-                    0x00, 0x00, 0x00, 0x00,  # Source IP
-                    0x00, 0x00, 0x00, 0x00,  # Dest IP
-                    ]
-
-        udp_pre =  [0x00, 0x00,  # Source Port
-                    0x00, 0x00,  # Dest Port
-                    0x00, 0x00,  # Length
-                    0x00, 0x00,  # Checksum
-                    ]
-
-        safeudp_pre = [0x00, 0x00, 0x00, 0x00,  # Sequence
-                       0x01, 0x00,  # Packet Type
-                       0x00, 0x00,  # Payload Length
-                       ]
-        content = []
-
-
-        byte_array = bytearray([0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
-                                0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-                                0x80, 0x00,
-                                0x01, 0x00,
-                                0x00, 0x00, 0x00, 0x01,
-                                0x00, 0x00, 0x10, 0x01,
-                                0x00, 0x00])
-        packet = struct.pack("!26B", *byte_array)
-                               
-        byte_array = bytearray([0x01, 0x00,
-                                0x00, 0x00, 0x00, 0x01,
-                                0x00, 0x00, 0x10, 0x01,
-                                0x00, 0x00])
-        packet = struct.pack("!12B", *byte_array)   
-                    
-        #print "handle_fcu_packet({})".format([chr(x) for x in bytearray(packet)])
-        print "handle_fcu_packet({})".format(byte_array)
-        # DLL_DECLARATION void vETH_WIN32__Ethernet_Input(Luint8 * pu8Buffer, Luint16 u16BufferLength);
-        #packet = ctypes.POINTER(ctypes.c_ubyte)
-        #packet.contents = struct.pack("!26B", *byte_array)
-        self.lib.vETH_WIN32__Ethernet_Input(packet, len(byte_array))
         
     def main(self):
         self.logger.debug("Got to main()!")

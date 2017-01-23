@@ -49,6 +49,7 @@ class PodComms:
             self.logger.debug("Got packet destined for port {} -- that's not a receive port for us, so we should probably send it.".format(dest_port))
         else:
             dest_addr = dest_node.tx_address
+            dest_addr = ('127.255.255.255', dest_addr[1])  # Broadcast? Working on a way to get around the port binding issue (can't transmit out of python if bound on 127.0.0.1 and a port)
             #self.logger.debug("Bytes are {}".format(bytes))
             payload = bytes[8:]  # Strip off the UDP header (?)
             #self.logger.debug("PodComms.eth_tx_callback: using NetworkNode.send_udp() to get a packet back to the ground station")
