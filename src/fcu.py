@@ -206,7 +206,6 @@ class Fcu:
     def set_return_types(self):
         """ Set the return types for various DLL methods. NOTE: You must do this or risk bad auto-conversions (e.g. int16 -2001 => int32 62259) """
         
-        
         #DLL_DECLARATION void vSTEPDRIVE_WIN32__ForcePosition(Luint8 u8MotorIndex, Lint32 s32Position);
         self.lib.vSTEPDRIVE_WIN32__ForcePosition.argtypes = [ctypes.c_uint8, ctypes.c_int32]
         self.lib.vSTEPDRIVE_WIN32__ForcePosition.restype = None
@@ -302,6 +301,7 @@ class Fcu:
         # DLL_DECLARATION Lint32 s32FCU_ACCELL__Get_CurrentDisplacement_mm(Luint8 u8Channel);
         self.lib.s32FCU_ACCELL__Get_CurrentDisplacement_mm.argtypes = [ctypes.c_uint8]
         self.lib.s32FCU_ACCELL__Get_CurrentDisplacement_mm.restype = ctypes.c_int32
+        
         
     def errcheck_callback(self, result, func, arguments):
         self.logger.debug("Fcu.errcheck_callback({}, {}, {})".format(result, func, arguments))
