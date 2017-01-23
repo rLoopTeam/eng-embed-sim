@@ -1,0 +1,17 @@
+sim:
+    track:
+        desc: SpaceX Outdoor Track
+        length: 60 m
+
+        # Environment
+        air_pressure: 14.7 psi
+        air_temperature: 15.5 degC
+        # Dry air: 287.05
+        air_specific_gas_constant: 287.05 J/(kg*degK)
+
+        # Reflective strips
+        enable_reflective_strips: False
+
+        # Track gaps
+        track_gap_width: 5mm
+        track_gap_interval: 2m

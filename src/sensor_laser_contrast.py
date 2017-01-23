@@ -18,8 +18,8 @@ class LaserContrastSensor(InterruptingSensor):
     def create_step_samples(self, dt_usec):
         
         # Stripe positions
-        strip_starts = self.sim.tube.reflective_strips
-        strip_ends = self.sim.tube.reflective_strip_ends
+        strip_starts = self.sim.track.reflective_strips
+        strip_ends = self.sim.track.reflective_strip_ends
 
         # Pod positioning so that we can check for gap traversal
         pod_start_pos = self.sim.pod.last_position

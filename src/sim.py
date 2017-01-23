@@ -11,8 +11,8 @@ from config import Config
 from timers import TimeDialator
 
 from pod import Pod
-from tube import Tube
 from pusher import Pusher
+from track import Track
 
 from sensor_laser_contrast import *
 from sensor_accel import *
@@ -48,7 +48,7 @@ class Sim:
 
         # Components
         self.pusher = Pusher(self, self.config.pusher)
-        self.tube = Tube(self, self.config.tube)
+        self.track = Track(self, self.config.track)
         self.pod = Pod(self, self.config.pod)      
         #self.fcu = Fcu(self, self.config.fcu)  
 
@@ -254,8 +254,8 @@ class SimEndCondition(object):
                 return True
 
         # If we've hit the wall...
-        if sim.pod.position >= sim.tube.length:
-            self.logger.info("Pod has destroyed the tube and everything within a 10 mile radius.")
+        if sim.pod.position >= sim.track.length:
+            self.logger.info("Pod has destroyed the track and everything else within a 10 mile radius.")
             return True
 
         return False
@@ -286,8 +286,6 @@ if __name__ == "__main__":
     
     #pprint.pprint(sim_config)
     
-    # print sim_config.sim.world.tube.length
-
     sim = Sim(sim_config.sim)
 
     import threading

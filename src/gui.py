@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 
 from pod import Pod
-from tube import Tube
 from pusher import Pusher
 from sim import Sim
 

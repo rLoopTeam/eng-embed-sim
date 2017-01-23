@@ -75,7 +75,7 @@ sim:
         push_force: 8000 N
         coast_time_usec: 1000000 usec
         brake_force: -8000 N   # Doesn't really matter, just needs to be big and negative
-    tube:
+    track:
         length: 1260 m
         pumpdown_pressure: .125 psi
 
@@ -85,11 +85,13 @@ sim:
         air_specific_gas_constant: 287.05 J/(kg*degK)
 
         # Reflective strips
+        # Enable/disable the reflective strips (e.g. an outdoor track will likely not have strips; the tube will)
+        enable_reflective_strips: True
+        # Enable/disable the 500' and 1000' strip patterns
+        enable_strip_patterns: True
         reflective_strip_width: 4in
         reflective_pattern_interval: 100ft
         reflective_pattern_spacing: 4in
-        # Enable/disable the 500' and 1000' strip patterns
-        enable_strip_patterns: True
 
         # Track gaps
         track_gap_width: 5mm

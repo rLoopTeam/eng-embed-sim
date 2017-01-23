@@ -49,11 +49,11 @@ class LaserOptoSensor(PollingSensor):
         pod_start_pos = self.sim.pod.last_position
         pod_end_pos = self.sim.pod.position
 
-        gaps = np.array(self.sim.tube.track_gaps)
+        gaps = np.array(self.sim.track.track_gaps)
         
         # Calculate the gap indices that we want to check. Make sure to include gaps that start before the beginning position but straddle the start
         # Note: We might check an extra gap index here or there, but it will be handled properly by the calculations below
-        gap_check_start_pos = pod_start_pos - self.sim.tube.track_gap_width # Check for gap starts a little before the pod start position
+        gap_check_start_pos = pod_start_pos - self.sim.track.track_gap_width # Check for gap starts a little before the pod start position
         gap_indices_in_step_range = np.nonzero(np.logical_and(gaps >= gap_check_start_pos, gaps <= pod_end_pos))[0]  # [0] because np.nonzero deals with n dimensions, but we only have one
 
         #self.logger.debug("Gap indices in step range {} to {}: {}".format(pod_start_pos, pod_end_pos, gap_indices_in_step_range))
@@ -70,7 +70,7 @@ class LaserOptoSensor(PollingSensor):
             # Find the samples that are over a gap (if any)
             over_gap_indices = []  # Note: can't use a np array here since no extending
             for gap_start_pos in gap_positions_in_step_range:
-                gap_end_pos = gap_start_pos + self.sim.tube.track_gap_width
+                gap_end_pos = gap_start_pos + self.sim.track.track_gap_width
                 over_gap_indices.extend(np.nonzero(np.logical_and(sample_positions >= gap_start_pos, sample_positions <= gap_end_pos))[0].tolist())
 
             #self.logger.debug("Over gap indices: {}".format(over_gap_indices))

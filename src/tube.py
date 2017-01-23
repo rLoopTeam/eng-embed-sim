@@ -1,11 +1,12 @@
 #!/usr/bin/env python
 
+import logging
 import numpy as np
 from distutils.util import strtobool  # For reading configuration
 
 from units import Units
 
-class Tube:
+class Track:
 
     def __init__(self, sim, config):
         
@@ -14,7 +15,7 @@ class Tube:
         
         # Physical
         # NOTE: @see diagram in http://confluence.rloop.org/display/SD/2.+Determine+Pod+Kinematics
-        #       For the tube reference frame, x=0 at the start of the track, and x = length at the end.
+        #       For the track/tube reference frame, x=0 at the start of the track, and x = length at the end.
         #       For the pod, x=0 is ahead and below the pod, with x+ being toward the read of the pod.
         self.length = Units.SI(config.length)     # meters -- Length from pod start position to end of track
         
@@ -51,7 +52,7 @@ class Tube:
         pattern_offset = self.reflective_strip_width + self.reflective_pattern_spacing
 
         cursor = self.length
-        counter = 1  # 1 to account for the end of the tube
+        counter = 1  # 1 to account for the end of the track
         
         reflective_strips = []
         while cursor > self.reflective_pattern_interval:  # Note: we'll put one in negative territory if we use 0 here
@@ -104,30 +105,18 @@ class Tube:
         if self.state == "HOLD":
             pass  # Not much to do
         elif self.state == "PUMPDOWN":
-            # Reduce the pressure in the tube over self.pumpdown_time_sec seconds
+            # Reduce the pressure in the track over self.pumpdown_time_sec seconds
 
-            pass # @todo: do the pumpdown calculations
+            pass # @todo: do the pumpdown calculations, or remove the pumpdown phase
 
             state = "HOLD"
             
         elif self.state == "PRESSURIZE":
-            # Return the tube to atmospheric pressure over self.pressurize_time_sec seconds
+            # Return the track to atmospheric pressure over self.pressurize_time_sec seconds (or remove this)
 
             pass
 
             self.state = "HOLD"
-
-    def apply_force_to(self, pod):
-        """ Apply aero drag force to the pod """
-
-        # @todo: Need to calculate this -- apply force based on pressure in the tube and speed (any other quantities we need? )
-        aero_drag = 0.0   
-        speed = pod.velocity
-        pressure = self.pressure
-        
-        # @todo: do force calculations here. We can set other things (like area, etc.) in the config.
-
-        pod.apply_force(aero_drag)
         
     
     # -------------------------
@@ -150,11 +139,11 @@ if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser(description="Reflective strip locations, distance remaining until end of track, mm")
     parser.add_argument('length', metavar='N', type=int, nargs='?', default=1500, 
-        help='length of the tube in meters (from pod start to end of track)')
+        help='length of the track in meters (from pod start to end of track)')
     args = parser.parse_args()
 
-    tube = Tube(args.length)
-    for strip_location in tube.reflective_strips_distance_remaining_mm():
+    track = Track(args.length)
+    for strip_location in track.reflective_strips_distance_remaining_mm():
         print strip_location
     
-    print tube.to_c_array(tube.reflective_strips_distance_remaining_mm())
+    print track.to_c_array(track.reflective_strips_distance_remaining_mm())

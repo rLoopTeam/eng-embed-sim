@@ -47,7 +47,7 @@ class Pod:
         self.step_forces = OrderedDict()   # This will be filled in during each step
 
         # Pod physical properties
-        # *** NOTE: all distances are in the tube reference frame, origin is pod location reference (centerpoint of fwd crossbar).  +x is forward, +y is left, +z is up.
+        # *** NOTE: all distances are in the track/tube reference frame, origin is pod location reference (centerpoint of fwd crossbar).  +x is forward, +y is left, +z is up.
         # @see http://confluence.rloop.org/display/SD/2.+Determine+Pod+Kinematics
 
         self.mass = Units.SI(self.config.mass)
@@ -58,7 +58,7 @@ class Pod:
         # Initialize actual physical values (volatile variables). All refer to action in the x dimension only. 
         self.acceleration = Units.SI(self.config.acceleration) or 0.0  # meters per second ^2
         self.velocity = Units.SI(self.config.velocity) or 0.0          # meters per second
-        self.position = Units.SI(self.config.position) or 0.0          # meters. Position relative to the tube; start position is 0m
+        self.position = Units.SI(self.config.position) or 0.0          # meters. Position relative to the track; start position is 0m
         
         # @todo: this is just a sketch, for use with the hover engine calculations. Maybe switch accel, velocity, and position to coordinates? hmmmm...
         self.z_acceleration = 0.0
