@@ -4,7 +4,7 @@
 
 1. Be on Windows
 ..The simulator should work on Mac and probably linux, but the FCU is a compiled DLL and will only work on Windows (tested on 8.1, 10 should be fine)
-
+..
 2. Make a directory and check out the following repositories as siblings: 
 ..```
 mkdir rloop_or_something
@@ -25,12 +25,12 @@ conda env create -f environment.yml
 (see http://conda.pydata.org/docs/using/envs.html if you need help)
 5. Activate the virtualenv
 ..You will need to do this at the start of any session working with the simulator.
-```
+..```
 activate rloop
 ```
 6. Run the simulator
-```
+..```
 python src/fcu.py conf/sim_config.py
 ..```
-(todo: fill in mor documentation)
 
+(todo: fill in mor documentation)
