@@ -3,7 +3,7 @@
 # Installation
 
 1. Be on Windows
-    ..The simulator should work on Mac and probably linux, but the FCU is a compiled DLL and will only work on Windows (tested on 8.1, 10 should be fine)
+The simulator should work on Mac and probably linux, but the FCU is a compiled DLL and will only work on Windows (tested on 8.1, 10 should be fine)
 
 2. Make a directory and check out the following repositories as siblings: 
     
