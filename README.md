@@ -29,7 +29,7 @@
     ```
 
 5. Activate the virtualenv
-__You will need to do this at the start of any session working with the simulator.__
+__Remember: You will need to do this at the start of any session working with the simulator.__ See the above link or http://docs.python-guide.org/en/latest/dev/virtualenvs/ for more details.
 
     ```
     activate rloop
