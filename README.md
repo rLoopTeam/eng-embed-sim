@@ -4,7 +4,6 @@
 
 1. Be on Windows
 ..The simulator should work on Mac and probably linux, but the FCU is a compiled DLL and will only work on Windows (tested on 8.1, 10 should be fine)
-..
 2. Make a directory and check out the following repositories as siblings: 
 ..```
 mkdir rloop_or_something
@@ -17,7 +16,7 @@ git clone https://github.com/rLoopTeam/react-groundstation.git
 ..*Note: you must use 32-bit or the FCU will not work*
 ..```
 https://repo.continuum.io/archive/Anaconda2-4.2.0-Windows-x86.exe
-```
+..```
 4. From the top of this Create the anaconda virtualenv (this will create env 'rloop')
 ..```
 conda env create -f environment.yml
