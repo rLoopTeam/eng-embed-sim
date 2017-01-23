@@ -22,15 +22,14 @@
     https://repo.continuum.io/archive/Anaconda2-4.2.0-Windows-x86.exe
     ```
 
-4. From the top of this Create the anaconda virtualenv (this will create env 'rloop'). See http://conda.pydata.org/docs/using/envs.html if you need more help. 
+4. Create the anaconda virtualenv (this will create env 'rloop'). See http://conda.pydata.org/docs/using/envs.html if you need more help. 
     If you're not using anaconda, try ```pip install -r requirements.txt```
     ```
     conda env create -f environment.yml
     ```
-    
 
 5. Activate the virtualenv
-..You will need to do this at the start of any session working with the simulator.
+__You will need to do this at the start of any session working with the simulator.__
 
     ```
     activate rloop
