@@ -12,16 +12,14 @@ git clone https://github.com/rLoopTeam/eng-embed-sim.git
 git clone https://github.com/rLoopTeam/eng-software-pod.git
 git clone https://github.com/rLoopTeam/react-groundstation.git
 ```
-3. Install Anaconda 32-bit, Python 2.7. 
-..*Note: you must use 32-bit or the FCU will not work*
+3. Install Anaconda 32-bit, Python 2.7. __You must use 32-bit Python or the FCU will not work.__
 ```
 https://repo.continuum.io/archive/Anaconda2-4.2.0-Windows-x86.exe
 ```
-4. From the top of this Create the anaconda virtualenv (this will create env 'rloop')
+4. From the top of this Create the anaconda virtualenv (this will create env 'rloop'). See http://conda.pydata.org/docs/using/envs.html if you need more help.
 ```
 conda env create -f environment.yml
 ```
-(see http://conda.pydata.org/docs/using/envs.html if you need help)
 5. Activate the virtualenv
 ..You will need to do this at the start of any session working with the simulator.
 ```
