@@ -1,3 +1,7 @@
+# This is an overlay for the main config. It won't work by itself -- just put the main config before this one in the args to sim.py or gui.py
+# How to use:  python src/sim.py conf/sim_config.yaml conf/spacex_outdoor_track.yaml
+# (^ later configs overlay previous ones, so spacex_outdoor_track.yaml overlays on top of conf/sim_config.yaml)
+
 sim:
     track:
         desc: SpaceX Outdoor Track
@@ -15,3 +19,5 @@ sim:
         # Track gaps
         track_gap_width: 5mm
         track_gap_interval: 2m
+    
+    

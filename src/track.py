@@ -1,4 +1,10 @@
 #!/usr/bin/env python
+# coding=UTF-8
+
+# File:     track.py
+# Purpose:  Hyperloop track
+# Author:   Ryan Adams (radams@cyandata.com, @ninetimeout)
+# Date:     2016-Dec-16
 
 import logging
 import numpy as np

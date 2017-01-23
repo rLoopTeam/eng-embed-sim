@@ -1,4 +1,10 @@
 #!/usr/bin/env python
+# coding=UTF-8
+
+# File:     gui.py
+# Purpose:  GUI for the simulator
+# Author:   Ryan Adams (radams@cyandata.com, @ninetimeout)
+# Date:     2017-Jan-13
 
 from pod import Pod
 from pusher import Pusher

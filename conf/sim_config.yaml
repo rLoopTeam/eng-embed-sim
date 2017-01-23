@@ -65,7 +65,7 @@ sim:
             #    ip: 192.168.0.130
             #    tx_port: 9130
             #    rx_port: 9130
-            #    MAC: 00:26:80:01:00:04    
+            #    MAC: 00:26:80:01:00:04
                 
     # Working directory for output files, relative to the cwd from which the simulator was run. Can be overridden by SimRunner.
     working_dir: data
@@ -75,6 +75,7 @@ sim:
         push_force: 8000 N
         coast_time_usec: 1000000 usec
         brake_force: -8000 N   # Doesn't really matter, just needs to be big and negative
+
     track:
         length: 1260 m
         pumpdown_pressure: .125 psi

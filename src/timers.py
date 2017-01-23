@@ -1,7 +1,8 @@
 #!/usr/bin/env python
+# coding=UTF-8
 
 # File:     timers.py
-# Purpose:  Provide timers for the timed FCU callbacks
+# Purpose:  Timers for the timed FCU callbacks, including time dialation
 # Author:   Ryan Adams (radams@cyandata.com, @ninetimeout)
 # Date:     2017-Jan-16
 

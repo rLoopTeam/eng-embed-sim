@@ -1,4 +1,10 @@
 #!/usr/bin/env python
+# coding=UTF-8
+
+# File:     units.py
+# Purpose:  Units convenience methods
+# Author:   Ryan Adams (radams@cyandata.com, @ninetimeout)
+# Date:     2016-Dec-28
 
 from pint import UnitRegistry
 

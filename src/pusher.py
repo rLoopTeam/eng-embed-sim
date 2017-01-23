@@ -3,7 +3,7 @@
 
 # File:     pusher.py
 # Purpose:  Pusher-related classes and time/acceleration/speed/position info
-# Author:   Ryan Adams (@ninetimeout)
+# Author:   Ryan Adams (radams@cyandata.com, @ninetimeout)
 # Date:     2016-Dec-17
 
 # NOTE: Please add your name to 'Author:' if you work on this file. Thanks!

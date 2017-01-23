@@ -3,7 +3,7 @@
 
 # File:     pod.py
 # Purpose:  Pod-related classes
-# Author:   Ryan Adams (@ninetimeout)
+# Author:   Ryan Adams (radams@cyandata.com, @ninetimeout)
 # Date:     2016-Dec-18
 
 # NOTE: Please add your name to 'Author:' if you work on this file. Thanks!

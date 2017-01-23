@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 # coding=UTF-8
 
-# File:     battery.py
-# Purpose:  Battery-related classes
-# Author:   Ryan Adams (@ninetimeout)
+# File:     power.py
+# Purpose:  Power simulation (not currently used in simulator)
+# Author:   Ryan Adams (radams@cyandata.com, @ninetimeout)
 # Date:     2016-Dec-16
 
 # NOTE: Please add your name to 'Author:' if you work on this file. Thanks!

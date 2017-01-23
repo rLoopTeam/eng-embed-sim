@@ -1,4 +1,12 @@
 #!/usr/bin/env python
+# coding=UTF-8
+
+# File:     fcu.py
+# Purpose:  Flight Control Unit -- Interface and controls for the compiled FCU DLL
+#           @see https://github.com/rLoopTeam/eng-software-pod, APPLICATIONS/PROJECT_CODE/DLLS/LDLL174__RLOOP__LCCM655/bin/Debug/LDLL174__RLOOP__LCCM655.dll
+# Author:   Ryan Adams (radams@cyandata.com, @ninetimeout)
+# Date:     2016-Dec-28
+
 
 # @see https://github.com/rLoopTeam/eng-software-pod/blob/development/APPLICATIONS/LAPP185__RLOOP__FCU_EMU/Form1.vb
 # @see https://github.com/rLoopTeam/eng-software-pod/blob/development/APPLICATIONS/PROJECT_CODE/DLLS/LDLL174__RLOOP__LCCM655/bin/Debug/LDLL174__RLOOP__LCCM655.dll

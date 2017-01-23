@@ -1,5 +1,10 @@
 #!/usr/bin/env python
 
+# File:     config.py
+# Purpose:  Configuration classes to allow easy access to yaml config
+# Author:   Ryan Adams (radams@cyandata.com, @ninetimeout)
+# Date:     2016-Dec-28
+
 import yaml
 from collections import MutableMapping
 

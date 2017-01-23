@@ -1,14 +1,10 @@
 #!/usr/bin/env python
-
-#!/usr/bin/env python
 # coding=UTF-8
 
-# File:     battery.py
-# Purpose:  Battery-related classes
-# Author:   Ryan Adams (@ninetimeout), Keith Stormo (@kstorminator)
+# File:     brakes.py
+# Purpose:  Brakes
+# Author:   Ryan Adams (@ninetimeout), Keith Stormo (@kstorminator), Sean (@capsulecorplab)
 # Date:     2016-Dec-16
-
-# NOTE: Please add your name to 'Author:' if you work on this file. Thanks!
 
 # In A34, drag is for one brake, lift is for both (@kstorminator)
 

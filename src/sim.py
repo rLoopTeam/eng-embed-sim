@@ -1,4 +1,10 @@
 #!/usr/bin/env python
+# coding=UTF-8
+
+# File:     sim.py
+# Purpose:  Physics and controls (software-in-the-loop) simulation for the rLoop pod
+# Author:   Ryan Adams (radams@cyandata.com, @ninetimeout)
+# Date:     2016-Dec-28
 
 
 import os

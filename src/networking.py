@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# coding=UTF-8
 
 # File:     networking.py
 # Purpose:  Packet manipulation and networking functions for SafeUDP and communication with the FCU

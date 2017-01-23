@@ -1,4 +1,10 @@
 #!/usr/bin/env python
+# coding=UTF-8
+
+# File:     forces.py
+# Purpose:  Force calculations for the simulation
+# Author:   Ryan Adams (radams@cyandata.com, @ninetimeout)
+# Date:     2016-Dec-15
 
 import numpy as np
 from collections import namedtuple
