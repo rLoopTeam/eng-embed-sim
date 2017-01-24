@@ -61,7 +61,7 @@ class Sim:
         # Sensors
         self.sensors = {}
         self.sensors['pod'] = PodSensor(self, self.config.sensors.pod)
-        self.sensors['pod'].add_step_listener(SensorCsvWriter(self, self.config.sensors.pod))
+        self.sensors['pod'].add_step_listener( SensorCsvWriter(self, self.config.sensors.pod) )
 
         # - Accelerometers
         self.sensors['accel'] = []

@@ -35,7 +35,7 @@ sim:
                 handler: FlightControlNode
                 ip: 192.168.0.100
                 tx_port: 9100
-                rx_port: 8100
+                rx_port: 9100
                 MAC: 00:26:80:01:00:00
             
             #power_fwd: 
@@ -101,6 +101,7 @@ sim:
     sensors:
         # A special sensor for pod data (see sensor.py, PodSensor)
         pod:
+            enabled: True
             filename: pod.csv
         laser_opto:
             - he_height_offset: 12.3mm

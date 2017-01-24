@@ -297,10 +297,12 @@ class SensorConsoleWriter(SensorListener):
 class SensorCsvWriter(SensorListener):
     def __init__(self, sim, config):
         SensorListener.__init__(self, sim, config)
-
+        self.logger = logging.getLogger("SensorCsvWriter")
+        
         self.enabled = self.config.enabled or True
         
         self.output_filename = os.path.join(self.sim.config.working_dir, self.config.filename)
+        self.logger.info("SensorCsvWriter ({}) initialized with filename {}".format(self.enabled, self.output_filename))
         
         # Internal
         self._headers_written = False

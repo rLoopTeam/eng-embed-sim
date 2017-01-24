@@ -686,6 +686,7 @@ class Fcu:
             
             #DLL_DECLARATION Lint16 s16MMA8451_FILTERING__Get_Average(Luint8 u8DeviceIndex, MMA8451__AXIS_E eAxis);
             # Testing to make sure we're setting the accel values (works!)
+            """
             accel_idxs = [0, 1]
             accel_axis_idxs = [0, 1, 2]  # x, y, z
             #self.logger.debug("Accel values after vFCU__Process():")
@@ -700,7 +701,8 @@ class Fcu:
                     dev_xyz.append(val)
                 a.append("accel {}: ({})".format(dev_idx, dev_xyz))
             self.logger.debug("Accel values after vFCU__Process(): {}".format("; ".join(a)))
-        
+            """
+            
 if __name__ == "__main__":
     # For windows admin
     #import admin
@@ -708,7 +710,13 @@ if __name__ == "__main__":
     #    sys.exit(admin.runAsAdmin())  # Run as admin, then exit when the script has finished
 
     from sim import Sim
-    logging.basicConfig(level=logging.DEBUG)
+    import logging.config
+    import yaml
+
+    #logging.basicConfig(level=logging.DEBUG)
+
+    with open('conf/logging.conf') as f:  # @todo: make this work when run from anywhere (this works if run from top directory)
+        logging.config.dictConfig(yaml.load(f))
     
     config = Config()
     config.loadfile("conf/sim_config.yaml")
