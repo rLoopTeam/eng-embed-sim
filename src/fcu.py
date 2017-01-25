@@ -337,17 +337,19 @@ class Fcu:
         u16DestPort = ctypes.c_uint16(dest_address[1])
         
         # Testing:
-        sh_no = struct.unpack("!LHH", packet[0:8])  # Network ordering
-        sh_le = struct.unpack("<LHH", packet[0:8])  # Little Endian
+        #sh_no = struct.unpack("!LHH", packet[0:8])  # Network ordering
+        #sh_le = struct.unpack("<LHH", packet[0:8])  # Little Endian
         #print "Handing SafeUDP packet to dest {} (sequence, type, length): Network Byte Order: ({:#010x}, {:#06x}, {:#06x}); Little Endian: ({:#08x}, {:#06x}, {:#06x})".format(dest_address, sh_no[0], sh_no[1], sh_no[2], sh_le[0], sh_le[1], sh_le[2])
 
         # Testing switching byte order on the packet type to get the GS to recognize the packet
         #self.logger.debug("Switching byte order of packet type -- old: {}, new: {}".format(sh_no[1], struct.unpack("!H", packet[4:6])[0]))
 
-        if sh_le[1] == 4097 and False:
-            pu8Payload = ctypes.create_string_buffer(packet[0:4] + packet[5] + packet[4] + packet[6:])
-        else: 
-            pu8Payload = ctypes.create_string_buffer(packet)
+        #if sh_le[1] == 4097 and False:
+        #    pu8Payload = ctypes.create_string_buffer(packet[0:4] + packet[5] + packet[4] + packet[6:])
+        #else: 
+        #    pu8Payload = ctypes.create_string_buffer(packet)
+        pu8Payload = ctypes.create_string_buffer(packet)
+        
         self.lib.vSAFE_UDP_RX__UDPPacket(ctypes.byref(pu8Payload), u16PacketLength, u16DestPort)
         
         # Note: If you have a full ethernet packet, you can use the following to inject it. 
@@ -386,8 +388,10 @@ class Fcu:
         data = self.sim.sensors['accel'][u8DeviceIndex].to_raw(real_data)
         #self.logger.debug("Accel data from the sensor is {}".format(data))
         # Note: '.contents' and '.raw' do not work for setting the value -- use pu8X[0] = <c value> (e.g. ps16x.contents = something won't set the value)
-        ps16X[0] = ctypes.c_int16(data.x)
-        ps16Y[0] = ctypes.c_int16(data.y)
+        
+        # NOTE: The physical FCU is rotated 90 degrees such that +y data-wise is +x physical (and +x is -y due to the rotation) -- see http://confluence.rloop.org/display/SD/2.+Determine+Pod+Kinematics, tube frame of reference
+        ps16X[0] = ctypes.c_int16(-data.y)  # Rotated 90 degrees -- +x comes in as -y
+        ps16Y[0] = ctypes.c_int16(data.x)   # The data comes in where +x is +y
         ps16Z[0] = ctypes.c_int16(data.z)
 
         #self.logger.debug("s32FCU_ACCELL__Get_CurrentAccel_mmss({}) -- pre: {}; post: {} (mm/s^2); (should be {})".format(u8DeviceIndex, pre_accel, post_accel, data))
@@ -495,7 +499,7 @@ class Fcu:
         # Accelerometers
         self.logger.info("- Creating Sensors")
         self.accel_listeners = []
-        for i, accel_config in enumerate(self.sim.config.sensors.accel):
+        for i, accel_config in self.sim.config.sensors.accel.iteritems():
             self.logger.info("  - Creating Accelerometer {} with sampling rate {}".format(i, accel_config['sampling_rate']))
             # Timers
             sampling_rate = Units.SI(accel_config['sampling_rate'])

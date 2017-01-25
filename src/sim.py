@@ -65,16 +65,17 @@ class Sim:
 
         # - Accelerometers
         self.sensors['accel'] = []
-        for i, sensor_config in enumerate(self.config.sensors.accel):
+                
+        for idx, sensor_config in self.config.sensors.accel.iteritems():
             # Note: we need to create a Config object here because Config does not currently handle lists very well...
             self.sensors['accel'].append(Accelerometer(self, Config(sensor_config)))
-            self.sensors['accel'][i].add_step_listener(AccelerometerTestListener(self, self.sensors['accel'][i].config))
+            self.sensors['accel'][idx].add_step_listener(AccelerometerTestListener(self, self.sensors['accel'][idx].config))
         
         # - Laser Contrast Sensors
         self.sensors['laser_contrast'] = []
-        for i, sensor_config in enumerate(self.config.sensors.laser_contrast):
+        for idx, sensor_config in self.config.sensors.laser_contrast.iteritems():
             self.sensors['laser_contrast'].append(LaserContrastSensor(self, Config(sensor_config)))
-            self.sensors['laser_contrast'][i].add_step_listener(LaserContrastTestListener(self, self.sensors['laser_contrast'][i].config))
+            self.sensors['laser_contrast'][idx].add_step_listener(LaserContrastTestListener(self, self.sensors['laser_contrast'][idx].config))
 
         # - Laser Opto Sensors (height and yaw)
         pass

@@ -52,7 +52,7 @@ class PodComms:
             dest_addr = dest_node.tx_address
             dest_addr = ('127.255.255.255', dest_addr[1])  # Broadcast? Working on a way to get around the port binding issue (can't transmit out of python if bound on 127.0.0.1 and a port)
             #self.logger.debug("Bytes are {}".format(bytes))
-            payload = bytes[8:]  # Strip off the UDP header (?)
+            payload = bytes[8:]  # Strip off the UDP header, leaving only the SafeUDP headers and payload
             #self.logger.debug("PodComms.eth_tx_callback: using NetworkNode.send_udp() to get a packet back to the ground station")
             return self.port_node_map[dest_port].send_udp(payload, dest_addr)  # Send the UDP payload
     
@@ -125,7 +125,7 @@ class NetworkNode:
             self.logger.error(e)
 
         while True and self.enable_rx:
-            self.logger.debug('Waiting to receive message')
+            #self.logger.debug('Waiting to receive message')
             data, source_address = self.sock.recvfrom(self.buffer_len)
     
             dest_address = self.rx_address  # We are the destination, so use our rx_port
@@ -200,7 +200,7 @@ class SpacexNode(NetworkNode):
         # @todo: do we need to filter out packets meant for the ground station? 
         self.send_udp(packet, dest_address)
 
-# ----
+# ---- Not used below here
 
 class SpacexPacket:
     def __init__(self):
@@ -268,7 +268,7 @@ class UdpListener(object):
         #sock.ioctl(socket.SIO_RCVALL, socket.RCVALL_ON)   # Receive all
 
         while True:
-            self.logger.debug('Waiting to receive message')
+            #self.logger.debug('Waiting to receive message')
             data, address = sock.recvfrom(4096)
     
             dest_port = self.port  # We are the destination, so use our rx_port

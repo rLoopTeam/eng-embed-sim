@@ -11,7 +11,7 @@ class Accelerometer(PollingSensor):
 
     def __init__(self, sim, config):
         PollingSensor.__init__(self, sim, config)
-        self.logger = logging.getLogger("LaserContrastSensor")
+        self.logger = logging.getLogger("Accelerometer")
         
         self.data = namedtuple('AccelerometerData', ['t', 'x', 'y', 'z'])
 

@@ -104,31 +104,38 @@ sim:
             enabled: True
             filename: pod.csv
         laser_opto:
-            - he_height_offset: 12.3mm
-              sampling_rate: 250 Hz
-              noise:
-                  scale: .0001
-                  center: 0.0
-            - he_height_offset: 14.0 mm
-              sampling_rate: 250 Hz
-              noise:
-                  scale: .0001
-                  center: 0.0        
+            0: 
+                he_height_offset: 12.3mm
+                sampling_rate: 250 Hz
+                noise:
+                    scale: .0001
+                    center: 0.0
+            1: 
+                he_height_offset: 14.0 mm
+                sampling_rate: 250 Hz
+                noise:
+                    scale: .0001
+                    center: 0.0        
         accel:
-            - sampling_rate: 100 Hz
-              noise: {scale: 0.0, center: 0.0}
-            - sampling_rate: 100 Hz
-              noise: {scale: 0.0, center: 0.0}
+            0:
+                sampling_rate: 100 Hz
+                noise: {scale: 0.0, center: 0.0}
+            1:
+                sampling_rate: 100 Hz
+                noise: {scale: 0.0, center: 0.0}
 
         laser_contrast:
             # Note: each entry in the following list represents a config for a laser contrast sensor
             # RDA: x offsets measured 1/19/2016
-            - pod_x_offset: -177 mm
-              noise: {scale: 0.0, center: 0.0}
-            - pod_x_offset: -827 mm
-              noise: {scale: 0.0, center: 0.0}
-            - pod_x_offset: -1487 mm
-              noise: {scale: 0.0, center: 0.0}
+            0:
+                pod_x_offset: -177 mm
+                noise: {scale: 0.0, center: 0.0}
+            1:
+                pod_x_offset: -827 mm
+                noise: {scale: 0.0, center: 0.0}
+            2: 
+                pod_x_offset: -1487 mm
+                noise: {scale: 0.0, center: 0.0}
 
     pod:
         mass: 350 kg

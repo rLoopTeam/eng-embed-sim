@@ -51,6 +51,7 @@ class Config(MutableMapping):
             self.__internal[name] = value
     
     def __iter__(self):
+        
         return iter(self.__internal)
 
     def __contains__(self, value):
