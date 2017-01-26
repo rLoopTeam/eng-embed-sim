@@ -124,9 +124,10 @@ class Brake:
 
         self.logger = logging.getLogger("Brake")
 
-        # Callbacks (called when gap hits the limits)
-        self.retract_sw_callback = None
-        self.extend_sw_callback = None
+        # Limit Switches
+        # Switch activation: We only want to call the callback when the switch is tripped, not repeatedly
+        self.retract_sw_activated = False  
+        self.extend_sw_activated = False
 
         # Volatile
         #self.gap = Units.SI(self.config.initial_gap)  # @todo: make this work 
@@ -180,11 +181,8 @@ class Brake:
         # Step size: .05  # Half steps
         # => 400 steps per revolution at half steps
     
-    def set_retract_sw_callback(self, callback):
-        self.retract_sw_callback = callback
-    
-    def set_extend_sw_callback(self, callback):
-        self.extend_sw_callback = callback
+    def stepdrive_update_position(self):
+        pass
     
     def get_mlp_value(self):
         """ Use the brake gap and our min/max settings to calculate the raw value for the MLP """
@@ -217,10 +215,16 @@ class Brake:
         
         # Handle the limit switches
         # @todo: Watch out for floating point errors...
-        if self.gap <= self.min_gap and self.extend_sw_callback is not None:
-            self.extend_sw_callback()
-        elif self.gap >= self.max_gap and self.retract_sw_callback is not None:
-            self.retract_sw_callback()
+        if self.gap <= self.min_gap:
+            # Note: this should only be called when the switch activates (needs to deactivate then re-activate before being called again)
+            self.extend_sw_activated = True
+        elif self.gap >= self.max_gap:
+            self.retract_sw_activated = True
+        else:
+            # Reset the switches
+            self.extend_sw_activated = False
+            self.retract_sw_activated = False
+
 
         # Force calculations
         gap = self.gap
@@ -312,3 +316,48 @@ class Motor:
         self.state = "FREE_SPIN"  # {FREE_SPIN, DRIVE, HOLD}
 
         pass
+        
+        
+if __name__ == "__main__":
+    from config import Config
+    import numpy as np
+
+    conf = """
+    initial_gap: 25.4mm
+    min_gap: 2.5mm
+    max_gap: 25.4mm
+    gap_close_min_time: 2.5s
+    # Set the min and max values for the MLP. In theory this is 0-4096, but it's more like 300-3000 in practice.
+    # Note that the raw min and raw max will be different per brake due to differences in MLP mounting
+    mlp_raw_retracted: 314  
+    mlp_raw_extended: 3000
+    """
+    
+    
+    
+    sim = Sim()
+    brake_config = Config()
+    brake_config.load(conf)
+    b = Brake(sim, brake_config)
+
+    def retract_sw_callback():
+        print "Retract limit switch activated"
+
+    def extend_sw_callback():
+        print "Extend limit switch activated"
+
+    #b.set_retract_sw_callback(retract_sw_callback)
+    #b.set_extend_sw_callback(extend_sw_callback)
+    
+    # Extend the brakes
+    b._gap_target = b.min_gap
+    
+    # Go back and forth
+    for i in xrange(1000):
+        b.step(1000)
+        if b.gap <= b.min_gap:
+            b._gap_target = b.max_gap  # Go out
+        elif b.gap >= b.max_gap:
+            b._gap_target = b.min_gap  # Go in
+    
+    print "Done. Did we trip anything?"

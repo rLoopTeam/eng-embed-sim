@@ -294,8 +294,10 @@ if __name__ == "__main__":
 
     # Note: 'configfile' is a list of one or more config files. Later files overlay previous ones. 
     sim = Sim( Sim.load_config_files(args.configfile), 'data/test')
-    t = sim.run_threaded()
+    #t = sim.run_threaded()
     #t.join()
+    
+    sim.run()
     
     while True:
         try:

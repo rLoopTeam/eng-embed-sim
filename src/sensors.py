@@ -318,13 +318,13 @@ class SensorCsvWriter(SensorListener):
         # @todo: dig into this and get it into better shape
         if self.enabled:
             if not self._headers_written: 
-                with open(self.output_filename, 'w') as f:
-                    w = csv.writer(f)
+                with open(self.output_filename, 'wb') as f:
+                    w = csv.writer(f, lineterminator=os.linesep)
                     w.writerow(sensor.get_csv_headers())
                 self._headers_written = True
                 
             with open(self.output_filename, 'a') as f:
-                w = csv.writer(f)
+                w = csv.writer(f, lineterminator=os.linesep)
                 for sample in step_samples:
                     w.writerow(list(sample))  # Note: each sample is assumed to be a namedtuple of some sort
                 

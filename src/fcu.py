@@ -400,6 +400,8 @@ class Fcu:
 
     def stepdrive_update_position_callback(self, u8MotorIndex, u8Step, u8Dir, s32Position):
         # Public Delegate Sub STEPDRIVE_WIN32__Set_UpdatePositionCallbackDelegate(u8MotorIndex As Byte, u8Step As Byte, u8Dir As Byte, s32Position As Int32)
+        
+
         self.logger.debug("Fcu.stepdrive_update_position_callback({}, {}, {}, {})".format(u8MotorIndex, u8Step, u8Dir, s32Position))
 
     def SC16IS_txdata_callback(self, u8DeviceIndex, pu8Data, u8Length):
@@ -632,7 +634,7 @@ class Fcu:
             for iSwitch in [0, 1]:
                 self.lib.vFCU_BRAKES_SW_WIN32__Inject_SwitchState(iBrake, iSwitch, 0)
         
-        self.logger.debug("Made it this far; entering process loop. Here goes...")
+        self.logger.debug("Beginning FCU process loop")
 
         
         # 'stay here until thread abort
@@ -645,7 +647,6 @@ class Fcu:
             # 'call process
             try:
                 self.lib.vFCU__Process()
-
             except Exception as e:
                 self.logger.error(e)
 
@@ -684,7 +685,7 @@ class Fcu:
                 
             #'just wait a little bit
             #time.sleep(0.01)
-            time.sleep(0.01)  
+            time.sleep(0.01)
             # @todo Question -- isn't this what the 10ms or 100ms timer is for (calling vFCU__Process())? or should we use a timer for that? 
             counter += 1
             
@@ -735,7 +736,8 @@ if __name__ == "__main__":
 
     #fcu = Fcu(sim, fcu_config)  # This is incorporated into the simulator
     
-    sim_thread = sim.run_threaded()
+    #sim_thread = sim.run_threaded()
+    sim.run()
 
     #fcu_thread = fcu.run_threaded()  # this is now integrated into the simulator
     #fcu_thread.join()   # For testing -- right now it cuts off after a certain number of steps

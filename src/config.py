@@ -24,17 +24,21 @@ class Config(MutableMapping):
         
     def loadfile(self, filename):
         stream = file(filename, 'r')
-        config_yaml = yaml.load(stream)
+        self.load(stream)
+        return self  # fluent
+
+    def loadfiles(self, filenames):
+        for filename in filenames:
+            self.loadfile(filename)
+    
+    def load(self, string):
+        config_yaml = yaml.load(string)
         if not self.__internal:  # Note: empty dicts evaluate to False
             self.__internal = config_yaml
         else:
             self.__internal = Config.merge(self.__internal, config_yaml)
         return self  # fluent
-    
-    def loadfiles(self, filenames):
-        for filename in filenames:
-            self.loadfile(filename)
-    
+        
     def __getattr__(self, name):
         if name in ['_Config__internal']:
             return self.__dict__['__internal']
