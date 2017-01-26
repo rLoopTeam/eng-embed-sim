@@ -73,6 +73,9 @@ class TimeDialator(object):
         self.ema_alpha = 0.08  # Lower alpha gives previous values more influence in the current value
         self.ema_previous = 1.0
         self.ema_current = 1.0
+        
+        # Dialation factor
+        self.dialation = 1.0
 
     def add_timer(self, timer):
         self.timers.append(timer)

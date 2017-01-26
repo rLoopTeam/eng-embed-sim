@@ -181,10 +181,11 @@ class Brake:
         # Step size: .05  # Half steps
         # => 400 steps per revolution at half steps
     
-    def stepdrive_update_position(self):
+    def stepdrive_update_position(self, u8Step, u8Dir, s32Position):
+        # @todo: update the position (and correct the function signature)
         pass
     
-    def get_mlp_value(self):
+    def get_mlp_raw(self):
         """ Use the brake gap and our min/max settings to calculate the raw value for the MLP """
         return np.interp(self.gap, [self.min_gap, self.max_gap], [self.mlp_raw_extended, self.mlp_raw_retracted])
 

@@ -196,7 +196,7 @@ class PollingSensor(Sensor):
         return (1.0-self.step_lerp_pcts)*start_value + self.step_lerp_pcts*end_value
         
     def _get_gaussian_noise(self, samples, noise_center=0.0, noise_scale=0.1):
-        if noise_scale > 0:
+        if self.config.noise.enabled and noise_scale > 0.0:
             return np.random.normal(noise_center, noise_scale, len(samples))
         else:
             return 0
@@ -323,12 +323,30 @@ class SensorCsvWriter(SensorListener):
                     w.writerow(sensor.get_csv_headers())
                 self._headers_written = True
                 
-            with open(self.output_filename, 'a') as f:
+            with open(self.output_filename, 'ab') as f:
                 w = csv.writer(f, lineterminator=os.linesep)
                 for sample in step_samples:
                     w.writerow(list(sample))  # Note: each sample is assumed to be a namedtuple of some sort
+
+class SensorRawCsvWriter(SensorCsvWriter):
+    def __init__(self, sim, config):
+        SensorCsvWriter.__init__(self, sim, config)
+        self.logger = logging.getLogger("SensorRawCsvWriter")
+        self.output_filename = os.path.join(self.sim.config.working_dir, "raw_"+self.config.log_filename)
+        self.logger.info("SensorRawCsvWriter ({}) initialized with filename {}".format(self.enabled, self.output_filename))
+
+    def step_callback(self, sensor, step_samples):
+        if self.enabled:
+            if not self._headers_written: 
+                with open(self.output_filename, 'wb') as f:
+                    w = csv.writer(f, lineterminator=os.linesep)
+                    w.writerow(sensor.get_csv_headers())
+                self._headers_written = True
                 
-        
+            with open(self.output_filename, 'ab') as f:
+                w = csv.writer(f, lineterminator=os.linesep)
+                for sample in step_samples:
+                    w.writerow(list(sensor.to_raw(sample)))  # Note: each sample is assumed to be a namedtuple of some sort
 
 class CompoundSensorListener(object):
     """ A listener object that just calls other listeners """

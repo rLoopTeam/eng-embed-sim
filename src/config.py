@@ -65,7 +65,10 @@ class Config(MutableMapping):
         return len(self.__internal)
     
     def __getitem__(self, key):
-        return self.__internal[key]
+        if isinstance(self.__internal[key], dict):
+            return Config(self.__internal[key])
+        else:
+            return self.__internal[key]
 
     def __setitem__(self, key, value):
         self.__internal[key] = value

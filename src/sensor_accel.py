@@ -12,11 +12,11 @@ class Accelerometer(PollingSensor):
     def __init__(self, sim, config):
         PollingSensor.__init__(self, sim, config)
         self.logger = logging.getLogger("Accelerometer")
-        
+                
         self.data = namedtuple('AccelerometerData', ['t', 'x', 'y', 'z'])
 
         # Quantities for converting to raw values
-        self.sensor_input_range = (- 4 * 9.81, 4 * 9.81)  # Gravity * g force (to convert 4 G to m/s^2)
+        self.sensor_input_range = (-4 * 9.81, 4 * 9.81)  # Gravity * g force (to convert 4 G to m/s^2)
         self.sensor_output_range = (-2048, 2048)  # @todo: get this from config
 
         # Conversion
@@ -35,8 +35,12 @@ class Accelerometer(PollingSensor):
 
         # @todo: apply a rotation matrix to simulate the actual 
         z_accel = 9.81  # Gravity
-        # @todo: remove the y accel -- it's just for testing whether or not we are getting data into the FCU
-        return [self.data(t, sample_data[i], 0, z_accel) for i, t in enumerate(sample_times)]
+
+        # NOTE: Accel is mounted such that it is rotated 90 degrees in the horizontal plane such that:
+        #       +y accel = +x pod reference frame, +x accel = -y pod reference frame
+        #       ^ This is the format for the data.
+        # @todo: move this to config somehow (tbd)
+        return [self.data(t, 0, sample_data[i], z_accel) for i, t in enumerate(sample_times)]
         
     def to_raw(self, sample):
         """ Convert a sample to its raw form for the FCU """

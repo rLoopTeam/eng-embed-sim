@@ -390,8 +390,9 @@ class Fcu:
         # Note: '.contents' and '.raw' do not work for setting the value -- use pu8X[0] = <c value> (e.g. ps16x.contents = something won't set the value)
         
         # NOTE: The physical FCU is rotated 90 degrees such that +y data-wise is +x physical (and +x is -y due to the rotation) -- see http://confluence.rloop.org/display/SD/2.+Determine+Pod+Kinematics, tube frame of reference
-        ps16X[0] = ctypes.c_int16(-data.y)  # Rotated 90 degrees -- +x comes in as -y
-        ps16Y[0] = ctypes.c_int16(data.x)   # The data comes in where +x is +y
+        #       ^ This is handled in the accel sensors themselves. See sensor_accel.py.
+        ps16X[0] = ctypes.c_int16(data.x)  # Rotated 90 degrees -- +x comes in as -y
+        ps16Y[0] = ctypes.c_int16(data.y)   # The data comes in where +x is +y
         ps16Z[0] = ctypes.c_int16(data.z)
 
         #self.logger.debug("s32FCU_ACCELL__Get_CurrentAccel_mmss({}) -- pre: {}; post: {} (mm/s^2); (should be {})".format(u8DeviceIndex, pre_accel, post_accel, data))
@@ -400,9 +401,59 @@ class Fcu:
 
     def stepdrive_update_position_callback(self, u8MotorIndex, u8Step, u8Dir, s32Position):
         # Public Delegate Sub STEPDRIVE_WIN32__Set_UpdatePositionCallbackDelegate(u8MotorIndex As Byte, u8Step As Byte, u8Dir As Byte, s32Position As Int32)
-        
-
         self.logger.debug("Fcu.stepdrive_update_position_callback({}, {}, {}, {})".format(u8MotorIndex, u8Step, u8Dir, s32Position))
+
+        pod = self.sim.pod
+
+        # @TODO: Need to call the brake stepdrive move function
+        # @todo: put the brake switch code here
+        
+        # .....
+        
+        # Brake Linear Position Sensor
+        
+        # vFCU_BRAKES_MLP_WIN32__ForceADC(0, CUShort(sMLP))
+        self.lib.vFCU_BRAKES_MLP_WIN32__ForceADC(u8MotorIndex, pod.brakes[u8MotorIndex].get_mlp_raw())
+                
+        # Brake Limit Switches
+        
+        brake_index = u8MotorIndex  # Just for convenience -- the motor index is the same as the brake index (there is 1 motor per brake)
+                
+        # Note
+        #void vFCU_BRAKES_SW_WIN32__Inject_SwitchState(Luint8 u8Brake, Luint8 u8ExtendRetract, Luint8 u8Value)
+        
+        # For clarity
+        EXTEND = 1
+        RETRACT = 0
+
+        if pod.brakes[u8DeviceIndex].extend_sw_activated:
+            # Inject the extend switch state and hit the ISR
+            self.lib.vFCU_BRAKES_SW_WIN32__Inject_SwitchState(brake_index, EXTEND, 1)
+            self.lib.vFCU_BRAKES_SW__Left_SwitchExtend_ISR()
+        elif pod.brakes[u8DeviceIndex].retract_sw_activated:
+            # Inject the retract switch state and hit the ISR
+            self.lib.vFCU_BRAKES_SW_WIN32__Inject_SwitchState(brake_index, RETRACT, 1)
+            self.lib.vFCU_BRAKES_SW__Left_SwitchRetract_ISR()
+        else:
+            # Set both to zero
+            self.lib.vFCU_BRAKES_SW_WIN32__Inject_SwitchState(brake_index, EXTEND, 0)
+            self.lib.vFCU_BRAKES_SW_WIN32__Inject_SwitchState(brake_index, RETRACT, 0)
+        
+        """
+        '75mm
+        If s32Position > 750000 Then
+            vFCU_BRAKES_SW_WIN32__Inject_SwitchState(0, 1, 1)
+            vFCU_BRAKES_SW__Left_SwitchExtend_ISR()
+        ElseIf s32Position < -300 Then
+            'fake some cal limit
+            vFCU_BRAKES_SW_WIN32__Inject_SwitchState(0, 0, 1)
+            vFCU_BRAKES_SW__Left_SwitchRetract_ISR()
+        Else
+            vFCU_BRAKES_SW_WIN32__Inject_SwitchState(0, 1, 0)
+            vFCU_BRAKES_SW_WIN32__Inject_SwitchState(0, 0, 0)
+        End If        
+        """
+        
 
     def SC16IS_txdata_callback(self, u8DeviceIndex, pu8Data, u8Length):
         """ When the SC16 subsystem wants to transmit """
@@ -685,7 +736,7 @@ class Fcu:
                 
             #'just wait a little bit
             #time.sleep(0.01)
-            time.sleep(0.01)
+            time.sleep(0.01 * self.sim.time_dialator.dialation)
             # @todo Question -- isn't this what the 10ms or 100ms timer is for (calling vFCU__Process())? or should we use a timer for that? 
             counter += 1
             

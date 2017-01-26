@@ -22,6 +22,10 @@ class LaserOptoSensors(list):
         pass
 
 class LaserOptoSensor(PollingSensor):
+    """ Laser Opto Sensor (height sensors) """
+    """
+    @see http://www.micro-epsilon.com/download/manuals/man--optoNCDT-1320--en.pdf, page 55 (p57 for behavior)
+    """
     
     def __init__(self, sim, config):
         PollingSensor.__init__(self, sim, config)
@@ -29,6 +33,12 @@ class LaserOptoSensor(PollingSensor):
         
         # Get the height offset for this sensor?
         self.he_height_offset = Units.SI(self.config.he_height_offset)
+        
+        # Get model info (min/max, raw values, etc.)
+        self.model = self.sim.config.sensors.models[self.config.model]
+        # Set ranges for mapping real to raw and vice versa
+        self.real_range = [Units.SI(self.model.real_min), Units.SI(self.model.real_max)]
+        self.raw_range = [self.model.raw_min, self.model.raw_max]
                 
         # Data types
         self.data = namedtuple('LaserOptoSensorData', ('t_usec', 'height'))
@@ -98,6 +108,15 @@ class LaserOptoSensor(PollingSensor):
         # print contiguous_sample_groups
         samples[indices] += 12.27 # @todo: adjust appropriately to match data collected at test weekend -- this just adds 0.5"
 
+    def to_raw(self, sample):
+        """ Convert a sample to its raw form """
+        # Note: Raw error value: 65467
+        return self.data(sample.t_usec, int(np.interp(sample.height, self.real_range, self.raw_range)))
+
+    def from_raw(self, sample):
+        """ Map a raw sample (self.data format) to its real value """
+        return self.data(sample.t_usec, np.interp(sample.height, self.raw_range, self.real_range))
+
     def get_csv_headers(self):
         return self.data._fields
 
@@ -106,10 +125,13 @@ class LaserOptoTestListener(object):
     def __init__(self, sim, config=None):
         self.sim = sim
         self.config = config
+        self.logger = logging.getLogger("LaserOptoTestListener")
+
         self.n_gaps = 0
         
     def step_callback(self, sensor, samples):
         for sample in samples:
+            self.logger.debug("Samples: {}".format(samples))
             # Note: sample[0] is the sample time, sample[1] is the height value
             if sample.height > .028:  # we're adding 12.7 mm or so for right now to test this
                 self.n_gaps += 1

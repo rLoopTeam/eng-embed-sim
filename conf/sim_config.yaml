@@ -99,7 +99,23 @@ sim:
         track_gap_interval: 2m
         
     sensors:
-        # A special sensor for pod data (see sensor.py, PodSensor)
+        
+        # Various models of sensors (to avoid repeating ourselves. The code grabs the values as needed)
+        models:
+            optoNCDT_1320:
+                # @see http://www.micro-epsilon.com/download/manuals/man--optoNCDT-1320--en.pdf, page 55 (p57 for behavior)
+                raw_min: 643
+                raw_max: 64877
+                real_min: 0 mm
+                real_max: 50 mm
+                # Error value: 65467 = ~50.459 mm
+                error_value: 65467
+
+            cm_distance:
+                # @see http://www.noptel.fi/download/nms/manuals/CM3_CM5_APIGuide1_5.pdf, page 12
+                pass: pass
+                
+        # A special 'sensor' for 'real' pod data (see sensor.py, PodSensor)
         pod:
             enabled: True
             log_filename: pod.csv
@@ -112,21 +128,28 @@ sim:
             1:
                 log_filename: accel_1.csv
                 sampling_rate: 100 Hz
-                noise: {scale: 0.0, center: 0.0}
+                noise: {enabled: False, scale: 0.0, center: 0.0}
                 
         laser_opto:
+            # Height sensors
+            # @see http://www.micro-epsilon.com/download/manuals/man--optoNCDT-1320--en.pdf, page 55
+            # [0, 50] mm = [643, 64877] raw
             0: 
+                model: optoNCDT_1320
                 log_filename: laser_opto_0.csv
                 he_height_offset: 12.3mm
                 sampling_rate: 250 Hz
                 noise:
+                    enabled: False
                     scale: .0001
                     center: 0.0
             1: 
+                model: optoNCDT_1320
                 log_filename: laser_opto_1.csv
                 he_height_offset: 14.0 mm
                 sampling_rate: 250 Hz
                 noise:
+                    enabled: False
                     scale: .0001
                     center: 0.0
 
@@ -136,15 +159,15 @@ sim:
             0:
                 log_filename: laser_contrast_0.csv
                 pod_x_offset: -177 mm
-                noise: {scale: 0.0, center: 0.0}
+                noise: {enabled: False, scale: 0.0, center: 0.0}
             1:
                 log_filename: laser_contrast_1.csv
                 pod_x_offset: -827 mm
-                noise: {scale: 0.0, center: 0.0}
+                noise: {enabled: False, scale: 0.0, center: 0.0}
             2: 
                 log_filename: laser_contrast_2.csv
                 pod_x_offset: -1487 mm
-                noise: {scale: 0.0, center: 0.0}
+                noise: {enabled: False, scale: 0.0, center: 0.0}
 
     pod:
         mass: 350 kg
