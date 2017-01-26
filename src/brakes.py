@@ -122,23 +122,27 @@ class Brake:
         self.sim = sim
         self.config = config
 
-
         self.logger = logging.getLogger("Brake")
+
+        # Callbacks (called when gap hits the limits)
+        self.retract_sw_callback = None
+        self.extend_sw_callback = None
 
         # Volatile
         #self.gap = Units.SI(self.config.initial_gap)  # @todo: make this work 
-        self.gap = Units.SI(self.config.initial_gap) # m -- @todo: move this to configuration and get the correct fully retracted gap
-        self.minimum_gap = Units.SI(self.config.minimum_gap)
-        self.maximum_gap = Units.SI(self.config.maximum_gap)
+        self.gap = Units.SI(self.config.initial_gap)
+        self.min_gap = Units.SI(self.config.min_gap)
+        self.max_gap = Units.SI(self.config.max_gap)
 
         # Linear Position Sensor
-        self.mlp = {}
-        
+        # These values will be mapped between min and max gap. Backwards is ok (e.g. 25.4mm -> 2.5mm ==> 3004 -> 298)
+        self.mlp_raw_retracted = self.config.mlp_raw_retracted
+        self.mlp_raw_extended = self.config.mlp_raw_extended 
 
         # TESTING ONLY
         self._gap_target = self.gap
         self._gap_close_time = Units.SI(self.config.gap_close_min_time)
-        self._gap_close_dist = self.maximum_gap - self.minimum_gap
+        self._gap_close_dist = self.max_gap - self.min_gap
         self._gap_close_speed = self._gap_close_dist / self._gap_close_time  # meters/second -- this is just a guess -- .007 m/s = closing 21mm in 3s
         self.logger.debug("Brake gap close speed: {} m/s".format(self._gap_close_speed))
         # /TESTING
@@ -175,7 +179,17 @@ class Brake:
         # 1.8 deg per full step
         # Step size: .05  # Half steps
         # => 400 steps per revolution at half steps
-        
+    
+    def set_retract_sw_callback(self, callback):
+        self.retract_sw_callback = callback
+    
+    def set_extend_sw_callback(self, callback):
+        self.extend_sw_callback = callback
+    
+    def get_mlp_value(self):
+        """ Use the brake gap and our min/max settings to calculate the raw value for the MLP """
+        return np.interp(self.gap, [self.min_gap, self.max_gap], [self.mlp_raw_extended, self.mlp_raw_retracted])
+
     def _move_to_gap_target(self, gap_target):
         # TESTING ONLY
         self._gap_target = gap_target
@@ -201,9 +215,17 @@ class Brake:
             self.gap = self._gap_target
         # /TESTING
         
+        # Handle the limit switches
+        # @todo: Watch out for floating point errors...
+        if self.gap <= self.min_gap and self.extend_sw_callback is not None:
+            self.extend_sw_callback()
+        elif self.gap >= self.max_gap and self.retract_sw_callback is not None:
+            self.retract_sw_callback()
+
+        # Force calculations
         gap = self.gap
         
-        # Calculate lift and drag
+        # Calculate lift (normal force) and drag
         # @see https://rloop.slack.com/archives/eng-numsim/p1484029898001697
         
         F_lift = (3265.1 * np.exp(-209.4*gap)) * np.log(v + 1) - (2636.7 * np.exp(-207*gap)) * (v + .6) * np.exp(-.16*v)  # Newtons, For one brake
@@ -240,6 +262,10 @@ class Brake:
         # Negator Torque. Since the negator attempts to drive the screw in the -x direction (which deploys the brakes), we subtract it
         tl_drive_torque = drive_torque - self.negator_torque
         tl_backdrive_torque = backdrive_torque - self.negator_torque
+        
+        # @todo: add in the mass of the brake (12.3kg) x acceleration -- it's a significant force. Probably should apply to backdrive torque. 
+        
+        # @todo: determine when to trip the limit switches
         
         #self.logger.debug("Brakes: v={}, Gap={}, F_lift={}, F_drag={}, F_screw={}, dr_tq={}, bd_tq={}".format(v, self.gap, F_lift, F_drag, F_screw, drive_torque, backdrive_torque))
         p = self.sim.pod.position
