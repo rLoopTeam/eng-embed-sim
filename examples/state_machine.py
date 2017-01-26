@@ -18,6 +18,7 @@ def process():
 def process_mission_phase():
     
     # @TODO: Handle pod stop command
+    # @TODO: Manual override (any state, interlocked)
     
     # @todo: maybe have startup/reset state? 
     
@@ -33,12 +34,17 @@ def process_mission_phase():
             if test_mode_interlock_execute():
                 mission_state = 'TEST_MODE'
 
+        # Aux Prop
+        if aux_prop_interlock_unlocked():
+            if aux_prop_interlock_execute():
+                mission_state = 'AUX_PROP'
+
         # Flight setup interlock condition (1 packet to enable transition, another to activate it)
         if flight_setup_interlock_unlocked():
             if flight_setup_interlock_execute():
                 mission_state = 'FLIGHT_SETUP'
 
-        # Shutdown
+        # Shutdown (@todo: do we need an interlock here? Maybe -- we also have the pod stop, so in an emergency that can be used)
         if shutdown_interlock_unlocked():
             if shutdown_interlock_execute():
                 mission_state = 'SHUTDOWN'
@@ -62,7 +68,6 @@ def process_mission_phase():
             # Set a flag to indicate that the hover engines should start up
             he_target_state = 'RUNNING'
         # - Landing gear up
-        # - Networking connected
         # - (other subsystems?)
         # - If not ^, FAULT/ABORT
 
@@ -73,12 +78,16 @@ def process_mission_phase():
         # @todo: any other way out of FLIGHT_SETUP? Fault only? Spindown? 
         if tests_passed() and brakes_retracted() and pusher_interlock_confirmed() and manual_ready_cmd():
             mission_state = 'READY'
+            lockout_pod_stop()
+            lockout_brakes()
         
     elif mission_state == 'READY':
 
         # @TODO: interlock to exit in case of, say, spacex error/delay? Will that be allowed? What do we do in the case that the pusher fails? 
+            # Pod stop to get out of this? No -- the brakes will deploy. Pod stop needs to be locked out here. 
             # No timeouts allowed? 
             # Don't want to hover too long (can't, in fact)
+            # Manual abort? -> test mode or fault/shutdown? Or rely on pod stop here?
         
         # NOTE: CAN NOT transition to FAULT. Can raise faults -- how do we handle those in the case that push has not started? (see above)
         
@@ -103,6 +112,9 @@ def process_mission_phase():
             
     elif mission_state == 'COAST':
         
+        unlock_pod_stop()
+        unlock_brakes()
+        
         # Exit criteria
         if coast_timer_expired():
             mission_state = 'BRAKE'
@@ -121,13 +133,13 @@ def process_mission_phase():
         
         # NOTE: Can transition to FAULT (e.g. if a relay gets stuck or something -- need to indicate that it's not safe to approach)
         
-        # @TODO: what happens if we don't successfully shut everything down? 
+        # @TODO: what happens if we don't successfully shut everything down? Fault.
         
         if spindown_complete():  # Maybe have a general function for checking pod safety? Might want to use that elsewhere (e.g. on startup)
             mission_state = 'POD_SAFE'
 
     elif mission_state == 'POD_SAFE':
-        # @TODO: Handle interlock command
+        # Make the pod safe for people -- shut down systems, lock out brakes, etc.
         # ...
 
         # NOTE: Can transition to FAULT
@@ -136,10 +148,10 @@ def process_mission_phase():
         if pod_safe_interlock_unlocked():
             if pod_safe_interlock_execute():
                 # @todo: are there any other states we can transition to? How do we control that if we want to? 
-                mission_state = 'EGRESS'
+                mission_state = 'AUX_PROP'
 
-    elif mission_state == 'EGRESS':
-        # Handle egress commands (clutch, drive, etc.)
+    elif mission_state == 'AUX_PROP':
+        # Handle aux prop commands (clutch, drive, etc.); allow manual operation (same as test mode, generally)
 
         # NOTE: Can transition to FAULT
 
@@ -149,9 +161,9 @@ def process_mission_phase():
 
     elif mission_state == 'SHUTDOWN':
         # Shut down the pod. This is the final state.
-        
+        pass
         # (power is off now)
-
+        
     else:
         raise Exception("How did we get here?!?")
     
