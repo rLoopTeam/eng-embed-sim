@@ -301,7 +301,7 @@ class SensorCsvWriter(SensorListener):
         
         self.enabled = self.config.enabled or True
         
-        self.output_filename = os.path.join(self.sim.config.working_dir, self.config.filename)
+        self.output_filename = os.path.join(self.sim.config.working_dir, self.config.log_filename)
         self.logger.info("SensorCsvWriter ({}) initialized with filename {}".format(self.enabled, self.output_filename))
         
         # Internal

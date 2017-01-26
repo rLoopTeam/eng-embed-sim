@@ -56,7 +56,9 @@ class Accelerometer(PollingSensor):
         xyz = np.array((sample.x, sample.y, sample.z))
         return self.data(sample.t, *np.interp(xyz, self.sensor_output_range, self.sensor_input_range))
         
-        
+    def get_csv_headers(self):
+        return self.data._fields
+    
 class AccelerometerTestListener(object):
     def __init__(self, sim, config=None):
         self.sim = sim

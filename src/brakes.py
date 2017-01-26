@@ -40,9 +40,11 @@ class Brakes(object):
         self.sim = sim
         self.config = config  # Note: this is a list of configurations
         
+        print "Config: {}".format(self.config)
+        
         self._list = []
                 
-        for brake_config in self.config:
+        for i, brake_config in self.config.iteritems():
             self._list.append( Brake(self.sim, Config(brake_config)) )
 
         # Testing movement
@@ -83,6 +85,34 @@ class Brakes(object):
         return tl_force
 
 
+class MLP:
+    """ Linear Positioning Sensor """
+    def __init__(self, sim, config):
+        self.sim = sim
+        self.config = config
+        
+        self.logger = logging.getLogger("MLP")
+        
+        # Config
+        
+        # These are the values that the MLP should return at the minimum and maximum physical measurement that you'll be taking 
+        # Note that this is akin to what the MLP would read in real life if you were to move your device to the minimum or maximum position and measure the value of the MLP
+        # Note that reversed ranges are fine e.g. value_at_min = 100, value_at_max = 19
+        # The max and min values are defined in whatever is using the MLP (e.g. the brake system)
+        self.value_at_min = self.config.value_at_min
+        self.value_at_max = self.config.value_at_max
+
+        # Volatile
+
+    def set_physical_minmax(self, min, max):
+        """ Set the range of physical values that should map onto the MLP """
+        # This allows you to set the min and the max of the quantity that you want the MLP to measure. 
+        # Once you set this, you can pass in a physical number to get_mlp_value() and it will be mapped to an MLP value and returned
+        pass
+        
+        # Maybe we should let the holder of the MLP determine these values and do the mapping? 
+        
+
 class Brake:
     """
     Model of a single braking unit
@@ -100,6 +130,10 @@ class Brake:
         self.gap = Units.SI(self.config.initial_gap) # m -- @todo: move this to configuration and get the correct fully retracted gap
         self.minimum_gap = Units.SI(self.config.minimum_gap)
         self.maximum_gap = Units.SI(self.config.maximum_gap)
+
+        # Linear Position Sensor
+        self.mlp = {}
+        
 
         # TESTING ONLY
         self._gap_target = self.gap

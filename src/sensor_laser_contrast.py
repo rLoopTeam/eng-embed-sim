@@ -80,6 +80,9 @@ class LaserContrastSensor(InterruptingSensor):
     def on_falling_edge(self):
         pass
         
+    def get_csv_headers(self):
+        return self.data._fields
+
 
 class LaserContrastTestListener(object):
     def __init__(self, sim, config=None):

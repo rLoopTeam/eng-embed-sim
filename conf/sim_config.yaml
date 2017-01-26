@@ -102,38 +102,47 @@ sim:
         # A special sensor for pod data (see sensor.py, PodSensor)
         pod:
             enabled: True
-            filename: pod.csv
+            log_filename: pod.csv
+
+        accel:
+            0:
+                log_filename: accel_0.csv
+                sampling_rate: 100 Hz
+                noise: {scale: 0.0, center: 0.0}
+            1:
+                log_filename: accel_1.csv
+                sampling_rate: 100 Hz
+                noise: {scale: 0.0, center: 0.0}
+                
         laser_opto:
             0: 
+                log_filename: laser_opto_0.csv
                 he_height_offset: 12.3mm
                 sampling_rate: 250 Hz
                 noise:
                     scale: .0001
                     center: 0.0
             1: 
+                log_filename: laser_opto_1.csv
                 he_height_offset: 14.0 mm
                 sampling_rate: 250 Hz
                 noise:
                     scale: .0001
-                    center: 0.0        
-        accel:
-            0:
-                sampling_rate: 100 Hz
-                noise: {scale: 0.0, center: 0.0}
-            1:
-                sampling_rate: 100 Hz
-                noise: {scale: 0.0, center: 0.0}
+                    center: 0.0
 
         laser_contrast:
             # Note: each entry in the following list represents a config for a laser contrast sensor
             # RDA: x offsets measured 1/19/2016
             0:
+                log_filename: laser_contrast_0.csv
                 pod_x_offset: -177 mm
                 noise: {scale: 0.0, center: 0.0}
             1:
+                log_filename: laser_contrast_1.csv
                 pod_x_offset: -827 mm
                 noise: {scale: 0.0, center: 0.0}
             2: 
+                log_filename: laser_contrast_2.csv
                 pod_x_offset: -1487 mm
                 noise: {scale: 0.0, center: 0.0}
 
@@ -175,19 +184,7 @@ sim:
             up_speed_loaded: something
             down_speed_loaded: something
         sensors:
-            CONTRAST_1: 
-                pod_ref_x_offset: -0.5m
-            CONTRAST_2:
-                pod_ref_x_offset: -0.7m
-            CONTRAST_3:
-                pod_ref_x_offset: -0.9m                
-            LASER_DIST:
-                pod_ref_x_offset: 0.8m    
-            ACCEL_1:
-                # The accelerometer is not going to be perfectly zeroed, so let's give it a bit of an initial error that will need to be mathematically corrected
-                mount_roll:
-                mount_pitch: 
-                mount_yaw:  
+
         actuators:
             lgu_actuators:  "Should be a list or something"
         physical:
@@ -203,21 +200,23 @@ sim:
             material_density: 
             # With this and velocity, we can get F_lift and F_drag? 
         brakes:
-            - initial_gap: 25.4mm
-              maximum_gap: 25.4mm
-              minimum_gap: 2.5mm
-              gap_close_min_time: 2.5s
-              # Set the min and max values for the MLP. In theory this is 0-4096, but it's more like 300-3000 in practice.
-              # Note that the raw min and raw max will be different per brake due to differences in MLP mounting
-              mlp_raw_min: 300  
-              mlp_raw_max: 3000
-            - initial_gap: 25.4mm
-              maximum_gap: 25.4mm
-              minimum_gap: 2.5mm
-              gap_close_min_time: 2.5s
-              # Set the min and max values for the MLP. In theory this is 0-4096, but it's more like 300-3000 in practice.
-              # Note that the raw min and raw max will be different per brake due to differences in MLP mounting
-              mlp_raw_min: 300
-              mlp_raw_max: 3000
+            0:
+                initial_gap: 25.4mm
+                maximum_gap: 25.4mm
+                minimum_gap: 2.5mm
+                gap_close_min_time: 2.5s
+                # Set the min and max values for the MLP. In theory this is 0-4096, but it's more like 300-3000 in practice.
+                # Note that the raw min and raw max will be different per brake due to differences in MLP mounting
+                mlp_raw_min: 314  
+                mlp_raw_max: 3000
+            1:
+                initial_gap: 25.4mm
+                maximum_gap: 25.4mm
+                minimum_gap: 2.5mm
+                gap_close_min_time: 2.5s
+                # Set the min and max values for the MLP. In theory this is 0-4096, but it's more like 300-3000 in practice.
+                # Note that the raw min and raw max will be different per brake due to differences in MLP mounting
+                mlp_raw_min: 300
+                mlp_raw_max: 3000
 
         

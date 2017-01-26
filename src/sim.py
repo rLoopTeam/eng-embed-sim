@@ -69,20 +69,31 @@ class Sim:
         for idx, sensor_config in self.config.sensors.accel.iteritems():
             # Note: we need to create a Config object here because Config does not currently handle lists very well...
             self.sensors['accel'].append(Accelerometer(self, Config(sensor_config)))
-            self.sensors['accel'][idx].add_step_listener(AccelerometerTestListener(self, self.sensors['accel'][idx].config))
+            sensor = self.sensors['accel'][idx]
+            sensor.add_step_listener(AccelerometerTestListener(self, sensor.config))
+            sensor.add_step_listener(SensorCsvWriter(self, sensor.config))
         
         # - Laser Contrast Sensors
         self.sensors['laser_contrast'] = []
         for idx, sensor_config in self.config.sensors.laser_contrast.iteritems():
             self.sensors['laser_contrast'].append(LaserContrastSensor(self, Config(sensor_config)))
-            self.sensors['laser_contrast'][idx].add_step_listener(LaserContrastTestListener(self, self.sensors['laser_contrast'][idx].config))
+            sensor = self.sensors['laser_contrast'][idx]
+            sensor.add_step_listener(LaserContrastTestListener(self, sensor.config))
+            sensor.add_step_listener(SensorCsvWriter(self, sensor.config))
 
         # - Laser Opto Sensors (height and yaw)
-        pass
+        self.sensors['laser_opto'] = []
+        for idx, sensor_config in self.config.sensors.laser_opto.iteritems():
+            self.sensors['laser_opto'].append(LaserOptoSensor(self, Config(sensor_config)))
+            sensor = self.sensors['laser_opto'][idx]
+            sensor.add_step_listener(LaserOptoTestListener(self, sensor.config))
+            sensor.add_step_listener(SensorCsvWriter(self, sensor.config))
         
-        # - Other
+        # - Laser Distance Sensor
         pass  # @todo: add in other sensors
 
+        # - Brake Sensors: MLP, limit switches (for both)
+        pass
         
         # Networking
         self.comms = PodComms(self, self.config.networking)

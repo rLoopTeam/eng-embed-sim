@@ -31,7 +31,7 @@ class LaserOptoSensor(PollingSensor):
         self.he_height_offset = Units.SI(self.config.he_height_offset)
                 
         # Data types
-        self.data = namedtuple('LaserOptoSensorData', 'time height')
+        self.data = namedtuple('LaserOptoSensorData', ('t_usec', 'height'))
         
     def create_step_samples(self, dt_usec):
         # Create height samples
@@ -98,9 +98,13 @@ class LaserOptoSensor(PollingSensor):
         # print contiguous_sample_groups
         samples[indices] += 12.27 # @todo: adjust appropriately to match data collected at test weekend -- this just adds 0.5"
 
+    def get_csv_headers(self):
+        return self.data._fields
+
 
 class LaserOptoTestListener(object):
-    def __init__(self, config=None):
+    def __init__(self, sim, config=None):
+        self.sim = sim
         self.config = config
         self.n_gaps = 0
         
