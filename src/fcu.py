@@ -404,7 +404,7 @@ class Fcu:
         # u8MotorIndex: 0 or 1, left or right
         # Step is just 1, to say that a step has happened. Should probably never have a 0 (could have been falling edge)
         # Direction: 1 or 0 -- extend = 1 or 0 -- one is reversed, one is not. So delegate to the brake and allow that in config
-        # Position: current lead screw position that it's moved to -- so I don't have to calculate it.
+        # Position: current lead screw position  that it's moved to -- so I don't have to calculate it.
         self.logger.debug("Fcu.stepdrive_update_position_callback({}, {}, {}, {})".format(u8MotorIndex, u8Step, u8Dir, s32Position))
 
         pod = self.sim.pod

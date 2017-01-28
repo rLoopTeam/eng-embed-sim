@@ -253,6 +253,7 @@ sim:
             # With this and velocity, we can get F_lift and F_drag? 
         brakes:
             0:
+                initial_screw_pos: 
                 initial_gap: 25.4mm
                 min_gap: 2.5mm
                 max_gap: 25.4mm

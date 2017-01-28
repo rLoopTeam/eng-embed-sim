@@ -131,6 +131,10 @@ class Brake:
 
         # Volatile
         #self.gap = Units.SI(self.config.initial_gap)  # @todo: make this work 
+
+        # @todo: Screw pos will be the main value from which we calculate the gap and MLP values. [0, 75000]um fully retracted to fully extended (maps to brake gap)
+        # Note: screw position is updated by the callback from the FCU
+        self.screw_pos = Units.SI(self.config.initial_screw_pos)   
         self.gap = Units.SI(self.config.initial_gap)
         self.min_gap = Units.SI(self.config.min_gap)
         self.max_gap = Units.SI(self.config.max_gap)
