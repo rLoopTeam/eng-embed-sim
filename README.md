@@ -22,23 +22,29 @@
     https://repo.continuum.io/archive/Anaconda2-4.2.0-Windows-x86.exe
     ```
 
-4. Create the anaconda virtualenv (this will create env 'rloop'). See http://conda.pydata.org/docs/using/envs.html if you need more help. 
+4. Create the anaconda root virtualenv. See http://conda.pydata.org/docs/using/envs.html if you need more help. 
     If you're not using anaconda, try ```pip install -r requirements.txt```
     ```
-    conda env create -f environment.yml
+    conda create root
     ```
 
 5. Activate the virtualenv
 __Remember: You will need to do this at the start of any session working with the simulator.__ See the above link or http://docs.python-guide.org/en/latest/dev/virtualenvs/ for more details.
 
     ```
-    activate rloop
+    activate root
     ```
 
-6. Run the simulator
+6. Install the necessary packages into the environment
 
     ```
-    python src/fcu.py conf/sim_config.py
+    pip install -r requirements.txt
+    ```
+
+7. Run the simulator (from the top level of eng-embed-sim)
+
+    ```
+    python src/sim.py conf/sim_config.py
     ```
 
 (todo: fill in mor documentation)
