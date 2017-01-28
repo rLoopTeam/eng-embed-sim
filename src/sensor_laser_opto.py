@@ -31,25 +31,27 @@ class LaserOptoSensor(PollingSensor):
         PollingSensor.__init__(self, sim, config)
         self.logger = logging.getLogger("LaserOptoSensor")
         
-        # Get the height offset for this sensor?
-        self.he_height_offset = Units.SI(self.config.he_height_offset)
         
         # Get model info (min/max, raw values, etc.)
         self.model = self.sim.config.sensors.models[self.config.model]
         # Set ranges for mapping real to raw and vice versa
         self.real_range = [Units.SI(self.model.real_min), Units.SI(self.model.real_max)]
         self.raw_range = [self.model.raw_min, self.model.raw_max]
-                
+
+        # Get the height offset for this sensor?
+        self.he_height_offset = Units.SI(self.config.he_height_offset)
+        self.measurement_offset = self.he_height_offset - Units.SI(self.model.internal_offset)
+
+
         # Data types
         self.data = namedtuple('LaserOptoSensorData', ('t_usec', 'height'))
         
     def create_step_samples(self, dt_usec):
         # Create height samples
         
-        # @todo: check error if step straddles a gap
-
-        height_samples = self._lerp(self.sim.pod.last_he_height, self.sim.pod.he_height)
-        height_samples += self.he_height_offset
+        # @todo: check error if step straddles a gap (done -- see below)
+        # @TODO: need to get the x offset to see where 
+        height_samples = self._lerp(self.sim.pod.last_he_height + self.measurement_offset, self.sim.pod.he_height + self.measurement_offset)
         
         # Add noise. @todo: we might want to do this after we adjust for gaps? 
         height_samples += self._get_gaussian_noise(height_samples, self.noise_center, self.noise_scale)

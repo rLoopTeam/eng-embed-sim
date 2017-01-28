@@ -126,10 +126,12 @@ sim:
 
         accel:
             0:
+                id: 0
                 log_filename: accel_0.csv
                 sampling_rate: 100 Hz
                 noise: {scale: 0.0, center: 0.0}
             1:
+                id: 1
                 log_filename: accel_1.csv
                 sampling_rate: 100 Hz
                 noise: {enabled: False, scale: 0.0, center: 0.0}
@@ -138,12 +140,17 @@ sim:
             # Height sensors
             # @see http://www.micro-epsilon.com/download/manuals/man--optoNCDT-1320--en.pdf, page 55
             # [0, 50] mm = [643, 64877] raw
+            # Height measurements taken by Jonathan on 1/28/17 (@jrd7284, https://rloop.slack.com/archives/eng-syst/p1485615378002863)
+                # Sensor 1 -> HE1 43.13mm
+                # Sensor 2 -> HE4 40.25mm
+                # Sensor3 ->  HE5 41.65mm
+                # Sensor4 -> HE8 43.14mm
             0: 
                 id: 1
                 desc: Front Left
                 model: optoNCDT_1320
-                log_filename: laser_opto_0.csv
-                he_height_offset: 12.3mm
+                log_filename: laser_opto_1.csv
+                he_height_offset: 43.13mm
                 sampling_rate: 250 Hz
                 noise:
                     enabled: False
@@ -153,8 +160,8 @@ sim:
                 id: 2
                 desc: Rear Left
                 model: optoNCDT_1320
-                log_filename: laser_opto_1.csv
-                he_height_offset: 14.0 mm
+                log_filename: laser_opto_2.csv
+                he_height_offset: 40.25mm
                 sampling_rate: 250 Hz
                 noise:
                     enabled: False
@@ -164,18 +171,19 @@ sim:
                 id: 3
                 desc: Rear Right
                 model: optoNCDT_1320
-                log_filename: laser_opto_1.csv
-                he_height_offset: 14.0 mm
+                log_filename: laser_opto_3.csv
+                he_height_offset: 41.65mm
                 sampling_rate: 250 Hz
                 noise:
                     enabled: False
                     scale: .0001
                     center: 0.0
             3: 
+                id: 4
                 desc: Front Right
                 model: optoNCDT_1320
-                log_filename: laser_opto_1.csv
-                he_height_offset: 14.0 mm
+                log_filename: laser_opto_4.csv
+                he_height_offset: 43.14mm
                 sampling_rate: 250 Hz
                 noise:
                     enabled: False
@@ -253,15 +261,31 @@ sim:
             # With this and velocity, we can get F_lift and F_drag? 
         brakes:
             0:
-                initial_screw_pos: 
-                initial_gap: 25.4mm
-                min_gap: 2.5mm
-                max_gap: 25.4mm
-                gap_close_min_time: 2.5s
+                # Note: we might want to set initial_gap here and use that to calculate initial screw position (and force it in the FCU).
+                #       From then on, we would use the screw position to calculate gap
+                # For use in vSTEPDRIVE_WIN32__ForcePosition and vSTEPDRIVE_WIN32__Set_UpdatePositionCallback
+
+                # Initial brake gap -- note: the initial lead screw position will be calculated from this
                 # Set the min and max values for the MLP. In theory this is 0-4096, but it's more like 300-3000 in practice.
                 # Note that the raw min and raw max will be different per brake due to differences in MLP mounting
-                mlp_raw_retracted: 314  
-                mlp_raw_extended: 3000
+                gap:
+                    initial_gap: 25.4mm
+                    min_gap: 2.5mm
+                    max_gap: 25.4mm
+                    # Testing only
+                    gap_close_min_time: 2.5s
+                lead_screw:
+                    range_min: 0 um
+                    range_max: 75000 um
+                    # Physical points where the limit switches engage
+                    limit_sw_retract: 310 um
+                    limit_sw_extend: 71234 um
+                # Linear position sensor
+                mlp:
+                    raw_min: 0
+                    raw_max: 4096 
+                    limit_sw_retract: 300
+                    limit_sw_extend:  3000
             1:
                 initial_gap: 25.4mm
                 maximum_gap: 25.4mm

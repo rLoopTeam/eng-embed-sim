@@ -191,6 +191,7 @@ class Brake:
     
     def get_mlp_raw(self):
         """ Use the brake gap and our min/max settings to calculate the raw value for the MLP """
+        #print "MLP raw: {}".format(np.interp(self.gap, [self.min_gap, self.max_gap], [self.mlp_raw_extended, self.mlp_raw_retracted]))
         return np.interp(self.gap, [self.min_gap, self.max_gap], [self.mlp_raw_extended, self.mlp_raw_retracted])
 
     def _move_to_gap_target(self, gap_target):

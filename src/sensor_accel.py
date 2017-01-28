@@ -12,6 +12,8 @@ class Accelerometer(PollingSensor):
     def __init__(self, sim, config):
         PollingSensor.__init__(self, sim, config)
         self.logger = logging.getLogger("Accelerometer")
+
+        self.logger.info("Initializing accelerometer {}".format(self.config.id))
                 
         self.data = namedtuple('AccelerometerData', ['t', 'x', 'y', 'z'])
 
