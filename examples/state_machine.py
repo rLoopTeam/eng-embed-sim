@@ -18,12 +18,12 @@ def process():
 def process_mission_phase():
     
     # @TODO: Handle pod stop command
-    # @TODO: Manual override (any state, interlocked)
+    # @TODO: Manual override (in any state, interlocked command -- => spindown => pod_safe, no [automatic] brake movement)
     
     # @todo: maybe have startup/reset state? 
     
     if mission_state == 'IDLE':
-        # Pod must be totally idle in this state. No chance of movement or anything that could cause injury. (@todo: maybe use POD_SAFE here?)
+        # Pod must be totally idle in this state. No chance of movement or anything that could cause injury.
 
         # NOTE: Can transition to FAULT
         

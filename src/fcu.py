@@ -214,7 +214,7 @@ class Fcu:
     def set_return_types(self):
         """ Set the return types for various DLL methods. NOTE: You must do this or risk bad auto-conversions (e.g. int16 -2001 => int32 62259) """
         
-        #DLL_DECLARATION void vSTEPDRIVE_WIN32__ForcePosition(Luint8 u8MotorIndex, Lint32 s32Position);
+        # DLL_DECLARATION void vSTEPDRIVE_WIN32__ForcePosition(Luint8 u8MotorIndex, Lint32 s32Position);
         self.lib.vSTEPDRIVE_WIN32__ForcePosition.argtypes = [ctypes.c_uint8, ctypes.c_int32]
         self.lib.vSTEPDRIVE_WIN32__ForcePosition.restype = None
         
@@ -401,6 +401,10 @@ class Fcu:
 
     def stepdrive_update_position_callback(self, u8MotorIndex, u8Step, u8Dir, s32Position):
         # Public Delegate Sub STEPDRIVE_WIN32__Set_UpdatePositionCallbackDelegate(u8MotorIndex As Byte, u8Step As Byte, u8Dir As Byte, s32Position As Int32)
+        # u8MotorIndex: 0 or 1, left or right
+        # Step is just 1, to say that a step has happened. Should probably never have a 0 (could have been falling edge)
+        # Direction: 1 or 0 -- extend = 1 or 0 -- one is reversed, one is not. So delegate to the brake and allow that in config
+        # Position: current lead screw position that it's moved to -- so I don't have to calculate it.
         self.logger.debug("Fcu.stepdrive_update_position_callback({}, {}, {}, {})".format(u8MotorIndex, u8Step, u8Dir, s32Position))
 
         pod = self.sim.pod
@@ -485,8 +489,8 @@ class Fcu:
         """
         Example (manual version):
         vSTEPDRIVE_WIN32__UpdatePositionCallback = ctypes.CFUNCTYPE(None, ctypes.c_ubyte, ctypes.c_ubyte, ctypes.c_ubyte, ctypes.c_int32)
-        vSTEPDRIVE_WIN32__Set_UpdatePositionCallback = lib.vSTEPDRIVE_WIN32__Set_UpdatePositionCallback
-        vSTEPDRIVE_WIN32__Set_UpdatePositionCallback.argtypes = [vSTEPDRIVE_WIN32__UpdatePositionCallback]
+        #vSTEPDRIVE_WIN32__Set_UpdatePositionCallback = lib.vSTEPDRIVE_WIN32__Set_UpdatePositionCallback
+        lib.vSTEPDRIVE_WIN32__Set_UpdatePositionCallback.argtypes = [vSTEPDRIVE_WIN32__UpdatePositionCallback]
         vSTEPDRIVE_WIN32__Set_UpdatePositionCallback.restype = None
         
         Ethernet_TxCallback = ctypes.CFUNCTYPE(None, ctypes.POINTER(ctypes.c_ubyte), ctypes.c_uint16)

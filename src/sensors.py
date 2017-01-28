@@ -85,6 +85,12 @@ class PodSensor(Sensor):
         for key, force in self.sim.pod.step_forces.iteritems():
             pod_fields.extend(['F_'+key+"_x", 'F_'+key+"_y", 'F_'+key+"_z"])
 
+        """
+        for i in [0,1]:
+            brake = self.sim.pod.brakes[i]
+            bp = 'brake_{}_'.format(i)
+            pod_fields.extend([bp+gap, bp+'f_normal', bp+'f_drag', bp+'load_torque', bp+'drive_torque'])
+        """
         self.data = namedtuple('pod_actual', pod_fields)
         
     def step(self, dt_usec):

@@ -6,7 +6,7 @@
 # Author:   Ryan Adams (@ninetimeout), Keith Stormo (@kstorminator), Sean (@capsulecorplab)
 # Date:     2016-Dec-16
 
-# In A34, drag is for one brake, lift is for both (@kstorminator)
+# In A34, drag is for one brake, normal is for both (@kstorminator)
 
 # Holding torque: 2.8Nm
 # moving torque is something like 80% of that, depending on step size 1, .5, .25, .125, etc.
@@ -25,7 +25,7 @@
 """
 @see https://rloop.slack.com/archives/eng-numsim/p1484038814001761
 @see a34data-ra.xlsx and the grapher output (Ryan's Mac)
-F_lift(gap, v) = (3265.1 * e^(-209.4*gap)) * ln(v + 1) - (2636.7 * e^(-207*gap)) * (v + .6) * e ^ (-.16*v)
+F_normal(gap, v) = (3265.1 * e^(-209.4*gap)) * ln(v + 1) - (2636.7 * e^(-207*gap)) * (v + .6) * e ^ (-.16*v)
 F_drag(gap, v) = (5632 * e^(-202*gap)) * (-e^(-.3*v) + 1) * (1.5 * e^(-.02*v) + 1)
 """
 
@@ -150,10 +150,10 @@ class Brake:
         
         self.deployed_pct = 0.0  # @todo: need to calculate this based on the initial position. Or let this set the initial gap? Probably calculate it from max_gap and 
 
-        self.lift_force = 0.0  # N -- lift against the rail; +lift is away from the rail
+        self.normal_force = 0.0  # N -- normal against the rail; +normal is away from the rail
         self.drag_force = 0.0  # N -- drag on the pod; -drag is toward the back of the pod
 
-        self.last_lift_force = 0.0
+        self.last_normal_force = 0.0
         self.last_drag_force = 0.0
 
         # Components
@@ -183,7 +183,7 @@ class Brake:
     
     def stepdrive_update_position(self, u8Step, u8Dir, s32Position):
         # @todo: update the position (and correct the function signature)
-        pass
+        vFCU_BRAKES_MLP_WIN32__ForceADC()
     
     def get_mlp_raw(self):
         """ Use the brake gap and our min/max settings to calculate the raw value for the MLP """
@@ -197,7 +197,7 @@ class Brake:
         """ Calculate our movement this step, and the forces that are acting on us. Notify if, for instance, brake force overcomes motor torque """
         # Note: doing all these calculations in a single function because function calls are expensive
 
-        self.last_lift_force = self.lift_force
+        self.last_normal_force = self.normal_force
         self.last_drag_force = self.drag_force
         
         v = self.sim.pod.velocity
@@ -230,10 +230,13 @@ class Brake:
         # Force calculations
         gap = self.gap
         
-        # Calculate lift (normal force) and drag
+        # Calculate normal (normal force) and drag
         # @see https://rloop.slack.com/archives/eng-numsim/p1484029898001697
         
-        F_lift = (3265.1 * np.exp(-209.4*gap)) * np.log(v + 1) - (2636.7 * np.exp(-207*gap)) * (v + .6) * np.exp(-.16*v)  # Newtons, For one brake
+        F_normal = (3265.1 * np.exp(-209.4*gap)) * np.log(v + 1) - (2636.7 * np.exp(-207*gap)) * (v + .6) * np.exp(-.16*v)  # Newtons, For one brake
+        
+        # Save the normal force (to be used for logging)
+        self.normal_force = F_normal
         
         # F_drag(gap, v) = (5632 * np.exp(-202*gap)) * (-np.exp(-.3*v) + 1) * (1.5 * np.exp(-.02*v) + 1)  # For both brakes
         F_drag = - (2816 * np.exp(-202*gap)) * (-np.exp(-.3*v) + 1) * (1.5 * np.exp(-.02*v) + 1)  # Newtons, For one brake
@@ -243,15 +246,16 @@ class Brake:
         self.drag_force = F_drag
 
         # Get linear force acting on lead screw due to the brakes
-        # Note: Formula has a 17 degree angle to the rail. Lift force is normal to the rail, drag force is parallel to it. 
-        # Force applied to screw is lift*sin(17) + drag*cos(17)
-        F_screw = F_lift * 0.292371705 + F_drag * 0.956304756
-        #self.logger.debug("Brakes: F_lift = {}; F_drag = {}; F_screw = {}".format(F_lift, F_drag, F_screw))
+        # Note: Formula has a 17 degree angle to the rail. normal force is normal to the rail, drag force is parallel to it. 
+        # Force applied to screw is normal*sin(17) + drag*cos(17)
+        F_screw = F_normal * 0.292371705 + F_drag * 0.956304756
+        #self.logger.debug("Brakes: F_normal = {}; F_drag = {}; F_screw = {}".format(F_normal, F_drag, F_screw))
+        
         
         # Convert linear force to drive torque (motor driven) and backdrive torque (driven by linear force on the screw)
         # Note: Drive torque is the torque required to move the load, and backdrive torque is the torque required for the load to turn the screw on its own
         """
-        Should we use back driving torque formuala here? Or torque to lift load? 
+        Should we use back driving torque formuala here? Or torque to normal load? 
         Let's see:
         - the torque exerted on the motor by the brakes is backdriving torque
         - The torque exerted by the negator on the motor is just 0.7Nm
@@ -261,21 +265,25 @@ class Brake:
         """
         # Formulas: http://www.nookindustries.com/LinearLibraryItem/Ballscrew_Torque_Calculations
         # Note: Drive and backdrive torques are only used to see if the motor can handle the load
-        drive_torque = F_screw * self._drive_torque_multiplier
-        backdrive_torque = F_screw * self._backdrive_torque_multiplier
+        drive_torque = F_screw * self._drive_torque_multiplier   # Torque generated by the motor
+        backdrive_torque = F_screw * self._backdrive_torque_multiplier  # Torque generated by the load
         
         # Negator Torque. Since the negator attempts to drive the screw in the -x direction (which deploys the brakes), we subtract it
         tl_drive_torque = drive_torque - self.negator_torque
         tl_backdrive_torque = backdrive_torque - self.negator_torque
         
+
+        self.drive_torque_reqd = tl_drive_torque   # is this the drive torque required or the drive torque that's being applied (e.g. the motor is moving)
+        self.backdrive_torque_applied = tl_backdrive_torque
+
         # @todo: add in the mass of the brake (12.3kg) x acceleration -- it's a significant force. Probably should apply to backdrive torque. 
         
         # @todo: determine when to trip the limit switches
         
-        #self.logger.debug("Brakes: v={}, Gap={}, F_lift={}, F_drag={}, F_screw={}, dr_tq={}, bd_tq={}".format(v, self.gap, F_lift, F_drag, F_screw, drive_torque, backdrive_torque))
+        #self.logger.debug("Brakes: v={}, Gap={}, F_normal={}, F_drag={}, F_screw={}, dr_tq={}, bd_tq={}".format(v, self.gap, F_normal, F_drag, F_screw, drive_torque, backdrive_torque))
         p = self.sim.pod.position
         a = self.sim.pod.acceleration
-        #self.logger.debug("\t".join([str(x) for x in (p, v, a, self.gap, F_lift, F_drag, F_screw, drive_torque, backdrive_torque, tl_drive_torque, tl_backdrive_torque)]))
+        #self.logger.debug("\t".join([str(x) for x in (p, v, a, self.gap, F_normal, F_drag, F_screw, drive_torque, backdrive_torque, tl_drive_torque, tl_backdrive_torque)]))
 
         # Calculate new gap based on motor / slipping movement
         
@@ -284,7 +292,7 @@ class Brake:
     
     def get_motor_load_torque(self):
         """ Get the torque on the motor from the brakes """
-        # Start with the brake lift
+        # Start with the brake normal
         # change to 17deg (tan 17?)
         # change to torque using the pitch of the thread on the ball screw
         # (^ make sure to take friction into account)

@@ -6,6 +6,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 # Import FigureCanvas
 from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
+from matplotlib.backends.backend_pdf import PdfPages, FigureCanvas
 from matplotlib.figure import Figure
 from collections import OrderedDict
 
@@ -75,7 +76,7 @@ class PlotPostProcessor:
         h = data['he_height']
     
 
-        fig = Figure()
+        fig = Figure(figsize=(16,12), dpi=100)
         canvas = FigureCanvas(fig)
         
         axes['v'] = fig.add_subplot(n_axes, 1, axis_counter)
@@ -97,23 +98,25 @@ class PlotPostProcessor:
         lines.append([p, data['F_aero_x']])
         lines.append([p, data['F_brakes_x']])
         lines.append([p, data['F_gimbals_x']])
-        lines.append([p, data['F_hover_engines_x']])
+        lines.append([p, data['F_hover_engines_x'], 'b'])
         lines.append([p, data['F_lateral_stability_x']])
         lines.append([p, data['F_landing_gear_x']])
         axis_counter += 1
         axes['f'] = fig.add_subplot(n_axes, 1, axis_counter)
         ax = axes['f']
         ax.set_ylabel('Forces (N)')
-        for line in lines:
+        
+        for i, line in enumerate(lines):
             ax.plot(*line)
 
         axis_counter += 1
         axes['h'] = fig.add_subplot(n_axes, 1, axis_counter)
         ax = axes['h']
         ax.set_ylabel('Height (mm)')
-        l2 = (p, h, 'b-')
+        l2 = (p, h*1000, 'b-')
         ax.plot(*l2)
 
+        """
         axis_counter += 1
         axes['f'] = fig.add_subplot(n_axes, 1, axis_counter)
         ax = axes['f']
@@ -121,6 +124,7 @@ class PlotPostProcessor:
         ax.set_xlabel('Position (m)')
         l2 = (t, v, 'r-')
         ax.plot(*l2)
+        """
         
         fig.tight_layout()
 

@@ -104,11 +104,15 @@ sim:
         models:
             optoNCDT_1320:
                 # @see http://www.micro-epsilon.com/download/manuals/man--optoNCDT-1320--en.pdf, page 55 (p57 for behavior)
+                # The sensor automatically subtracts 25mm from the output value before sending it out
+                internal_offset: 25 mm
+                # Raw value range from the sensor
                 raw_min: 643
                 raw_max: 64877
+                # Actual physical values after conversion
                 real_min: 0 mm
                 real_max: 50 mm
-                # Error value: 65467 = ~50.459 mm
+                # Error indicator value: 65467 = ~50.459 mm
                 error_value: 65467
 
             cm_distance:
@@ -135,6 +139,8 @@ sim:
             # @see http://www.micro-epsilon.com/download/manuals/man--optoNCDT-1320--en.pdf, page 55
             # [0, 50] mm = [643, 64877] raw
             0: 
+                id: 1
+                desc: Front Left
                 model: optoNCDT_1320
                 log_filename: laser_opto_0.csv
                 he_height_offset: 12.3mm
@@ -144,6 +150,29 @@ sim:
                     scale: .0001
                     center: 0.0
             1: 
+                id: 2
+                desc: Rear Left
+                model: optoNCDT_1320
+                log_filename: laser_opto_1.csv
+                he_height_offset: 14.0 mm
+                sampling_rate: 250 Hz
+                noise:
+                    enabled: False
+                    scale: .0001
+                    center: 0.0
+            2: 
+                id: 3
+                desc: Rear Right
+                model: optoNCDT_1320
+                log_filename: laser_opto_1.csv
+                he_height_offset: 14.0 mm
+                sampling_rate: 250 Hz
+                noise:
+                    enabled: False
+                    scale: .0001
+                    center: 0.0
+            3: 
+                desc: Front Right
                 model: optoNCDT_1320
                 log_filename: laser_opto_1.csv
                 he_height_offset: 14.0 mm
