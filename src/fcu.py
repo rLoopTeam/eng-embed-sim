@@ -144,6 +144,11 @@ class Fcu:
             'vAMC7812_WIN32__Set_DACVoltsCallback', None,
             [ctypes.c_uint8, ctypes.c_float])
 
+
+        #Mission phase callback
+        self.register_callback(self.FCU_REPORT_MissionPhaseCallback,
+            'vDEBUG_RECORD_WIN32__Set_MissionPhaseCallback', None,
+            [ctypes.c_uint8])
         # ------------------------
         #  Callable DLL Functions
         # ------------------------
@@ -468,6 +473,11 @@ class Fcu:
         """ When the DAC voltage is updated """
         # Public Delegate Sub AMC7812_WIN32__Set_DACVoltsCallbackDelegate(u8Channel As Byte, f32Volts As Single)
         self.logger.debug("Fcu.AMC7812_DAC_volts_callback({}, {})".format(u8Channel, f32Volts))
+
+    def FCU_REPORT_MissionPhaseCallback(self, u8MissionPhase):
+        """ When Mission phase is updated """
+        # Public Delegate Sub FCU_REPORT_MissionPhaseCallbackDelegate(u8MissionPhase As Byte)
+        self.logger.debug("Fcu.FCU_REPORT_MissionPhaseCallback({}, {})".format(u8MissionPhase))
 
     def register_callback(self, python_function, dll_function_name, restype, args):
 
