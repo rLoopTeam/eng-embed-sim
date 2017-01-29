@@ -12,6 +12,7 @@ class LaserOptoSensors(list):
     def __init__(self, sim, config):
         self.sim = sim
         self.config = config
+
         
         for i, sensor_config in enumerate(self.config):
             sensor_config['id'] = i   # Inject the sensor ID
@@ -31,6 +32,7 @@ class LaserOptoSensor(PollingSensor):
         PollingSensor.__init__(self, sim, config)
         self.logger = logging.getLogger("LaserOptoSensor")
         
+        self.logger.info("Initializing Laser Opto Sensor {}".format(self.config.id))
         
         # Get model info (min/max, raw values, etc.)
         self.model = self.sim.config.sensors.models[self.config.model]

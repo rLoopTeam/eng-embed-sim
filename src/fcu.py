@@ -67,7 +67,7 @@ class Fcu:
         self.dll_path = self.config.dll_path
         self.dll_filename = self.config.dll_filename
         self.dll_filepath = (os.path.join(self.dll_path, self.dll_filename))
-        self.logger.info("- Loading dll '{}'".format(self.dll_filepath))
+        self.logger.info("Loading FCU DLL '{}'".format(self.dll_filepath))
         try:
             self.lib = ctypes.CDLL(self.dll_filepath)
         except Exception as e:
@@ -422,26 +422,27 @@ class Fcu:
         # .....
         
         # Brake Linear Position Sensor
-        
-        # vFCU_BRAKES_MLP_WIN32__ForceADC(0, CUShort(sMLP))
-        self.lib.vFCU_BRAKES_MLP_WIN32__ForceADC(u8MotorIndex, pod.brakes[u8MotorIndex].get_mlp_raw())
-                
-        # Brake Limit Switches
-        
         brake_index = u8MotorIndex  # Just for convenience -- the motor index is the same as the brake index (there is 1 motor per brake)
+        
+        # Set the screw position on the brake. This will update mlp_raw and gap in the brake
+        pod.brakes[brake_index].stepdrive_update_position(u8Step, u8Dir, s32Position)
+        
+        # Set the value of the MLP in the FCU
+        # vFCU_BRAKES_MLP_WIN32__ForceADC(0, CUShort(sMLP))
+        self.lib.vFCU_BRAKES_MLP_WIN32__ForceADC(brake_index, pod.brakes[brake_index].mlp_raw)
                 
-        # Note
+        # Brake Limit Switches                
         #void vFCU_BRAKES_SW_WIN32__Inject_SwitchState(Luint8 u8Brake, Luint8 u8ExtendRetract, Luint8 u8Value)
         
         # For clarity
         EXTEND = 1
         RETRACT = 0
 
-        if pod.brakes[u8DeviceIndex].extend_sw_activated:
+        if pod.brakes[brake_index].extend_sw_activated:
             # Inject the extend switch state and hit the ISR
             self.lib.vFCU_BRAKES_SW_WIN32__Inject_SwitchState(brake_index, EXTEND, 1)
             self.lib.vFCU_BRAKES_SW__Left_SwitchExtend_ISR()
-        elif pod.brakes[u8DeviceIndex].retract_sw_activated:
+        elif pod.brakes[brake_index].retract_sw_activated:
             # Inject the retract switch state and hit the ISR
             self.lib.vFCU_BRAKES_SW_WIN32__Inject_SwitchState(brake_index, RETRACT, 1)
             self.lib.vFCU_BRAKES_SW__Left_SwitchRetract_ISR()
@@ -564,21 +565,21 @@ class Fcu:
         # Private Shared Sub vFCU__RTI_100MS_ISR()
         # Private Shared Sub vSTEPDRIVE_TIMEBASE__ISR()   # Note: 50usec
 
-        self.logger.info("- Creating timers")
+        self.logger.info("Initializing timers")
         self.timers.append(Timer(Units.seconds("50 usec"), self.lib.vSTEPDRIVE_TIMEBASE__ISR))
         self.timers.append(Timer(Units.seconds("10 ms"), self.lib.vFCU__RTI_10MS_ISR))
         self.timers.append(Timer(Units.seconds("100 ms"), self.lib.vFCU__RTI_100MS_ISR))
         
         # Accelerometers
-        self.logger.info("- Creating Sensors")
+        #self.logger.info("Initializing Sensor Timers")
         self.accel_listeners = []
         for i, accel_config in self.sim.config.sensors.accel.iteritems():
-            self.logger.info("  - Creating Accelerometer {} with sampling rate {}".format(i, accel_config['sampling_rate']))
             # Timers
             sampling_rate = Units.SI(accel_config['sampling_rate'])
             timer_delay = 1.0 / sampling_rate  # Hz 
+            self.logger.info("  Creating Accelerometer {} timer: sampling rate = {}, delay = {}".format(i, accel_config['sampling_rate'], timer_delay))
             # Note: in the following lambda function, we bind x=i now so that it will use that value rather than binding at call time
-            self.logger.debug("    Accelerometer sampling rate is {}; delay for timer is {}".format(sampling_rate, timer_delay))
+            #self.logger.debug("    Accelerometer sampling rate is {}; delay for timer is {}".format(sampling_rate, timer_delay))
             self.timers.append( Timer(timer_delay, lambda x=i: self.lib.vMMA8451_WIN32__TriggerInterrupt(x) ) )
 
             # Tie it to the appropriate sensor
@@ -588,13 +589,13 @@ class Fcu:
     
             
         # Add our timers to the sim's time dialator so that we can stay in sync
-        self.logger.info("- Initializing time dialator")
+        self.logger.info("Initializing time dialator")
         self.sim.time_dialator.add_timers(self.timers)
         
         # Start the timers
-        self.logger.info("- Starting the timers")
+        self.logger.info("Starting timer threads")
         for timer in self.timers:
-            self.logger.info("  - Starting {} timer to call {}".format(timer.interval, str(timer.callback)))
+            #self.logger.info("  Starting {} timer to call {}".format(timer.interval, str(timer.callback)))
             timer.start_threaded()
         
 
@@ -630,7 +631,7 @@ class Fcu:
         End If
         """
 
-        self.logger.debug("FCU starting up")
+        self.logger.debug("Starting FCU main thread")
     
         thread_main = threading.Thread(target=self.main)
         thread_main.daemon = True
@@ -643,7 +644,7 @@ class Fcu:
         return thread_main
         
     def main(self):
-        self.logger.debug("Got to main()!")
+        #self.logger.debug("Got to main()!")
         """
         ''' This is the same as Main() in C
         ''' </summary>
@@ -790,6 +791,8 @@ if __name__ == "__main__":
     import yaml
 
     #logging.basicConfig(level=logging.DEBUG)
+
+    print "Running fcu.py"
 
     with open('conf/logging.conf') as f:  # @todo: make this work when run from anywhere (this works if run from top directory)
         logging.config.dictConfig(yaml.load(f))

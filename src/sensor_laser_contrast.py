@@ -13,6 +13,8 @@ class LaserContrastSensor(InterruptingSensor):
         InterruptingSensor.__init__(self, sim, config)
         self.logger = logging.getLogger("LaserContrastSensor")
         
+        self.logger.info("Initializing LaserContrastSensor {}".format(self.config.id))
+        
         self.data = namedtuple('LaserContrastSensorData', ['t', 'pos', 'pin_state'])
         
     def create_step_samples(self, dt_usec):

@@ -103,7 +103,6 @@ class Sim:
 
         # FCU (!)
         if self.config.fcu.enabled:
-            self.logger.info("Initializing FCU")
             self.fcu = Fcu(self, self.config.fcu)
         else:
             # @todo: will this have any side effects (e.g. not having an fcu?)
@@ -174,6 +173,8 @@ class Sim:
 
         # Step the time dialator to keep our timers in sync
         self.time_dialator.step(dt_usec)
+        if self.n_steps_taken % 500 == 0:
+            self.logger.debug("Time dialation factor is {} after {} steps".format(self.time_dialator.dialation, self.n_steps_taken))
         
         self.elapsed_time_usec += dt_usec
         self.n_steps_taken += 1
@@ -187,11 +188,11 @@ class Sim:
         return t  # Return the thread, but don't join it (the caller can join if they want to)
 
     def run(self):
-        self.logger.info("Starting simulation")
+        self.logger.info("Working directory is {} ({})".format(self.config.working_dir, os.path.join(os.getcwd(), self.config.working_dir)))
         
         self.ensure_working_dir()
 
-        self.logger.info("Working directory is {} ({})".format(self.config.working_dir, os.path.join(os.getcwd(), self.config.working_dir)))
+        self.logger.info("Starting simulation")
 
         finished = False
         sim_start_t = time.time()
@@ -283,7 +284,14 @@ class SimEndCondition(object):
 
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.DEBUG)
+    import logging
+    import logging.config
+    import yaml
+
+    with open('conf/logging.conf') as f:  # @todo: make this work when run from anywhere (this works if run from top directory)
+        logging.config.dictConfig(yaml.load(f))
+
+    #logging.basicConfig(level=logging.DEBUG)
 
     from config import *
 

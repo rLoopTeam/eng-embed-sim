@@ -194,14 +194,17 @@ sim:
             # Note: each entry in the following list represents a config for a laser contrast sensor
             # RDA: x offsets measured 1/19/2016
             0:
+                id: 0
                 log_filename: laser_contrast_0.csv
                 pod_x_offset: -177 mm
                 noise: {enabled: False, scale: 0.0, center: 0.0}
             1:
+                id: 1
                 log_filename: laser_contrast_1.csv
                 pod_x_offset: -827 mm
                 noise: {enabled: False, scale: 0.0, center: 0.0}
             2: 
+                id: 2
                 log_filename: laser_contrast_2.csv
                 pod_x_offset: -1487 mm
                 noise: {enabled: False, scale: 0.0, center: 0.0}
@@ -268,32 +271,72 @@ sim:
                 # Initial brake gap -- note: the initial lead screw position will be calculated from this
                 # Set the min and max values for the MLP. In theory this is 0-4096, but it's more like 300-3000 in practice.
                 # Note that the raw min and raw max will be different per brake due to differences in MLP mounting
+                id: 0
                 gap:
                     initial_gap: 25.4mm
-                    min_gap: 2.5mm
-                    max_gap: 25.4mm
+                    # Min and max gap correspond to the locations that the limit switches are triggered
+                    extended_gap: 2.5mm
+                    retracted_gap: 25.4mm
                     # Testing only
                     gap_close_min_time: 2.5s
                 lead_screw:
-                    range_min: 0 um
-                    range_max: 75000 um
                     # Physical points where the limit switches engage
+                    # @todo: does the difference between these have to be the same for both brakes? We use this range to map the values, so we need a fixed difference...
                     limit_sw_retract: 310 um
                     limit_sw_extend: 71234 um
+
+                    # Total range of the lead screw
+                    range_min: 0 um
+                    # @TODO: is this 75000 um (7.5cm) or 750000 um (75cm)?
+                    range_max: 75000 um
+                    # Efficiency of driving (torque from motor) and backdrive (linear force applied to lead screw creating load torque on motor)
+                    # @see http://www.nookindustries.com/LinearLibraryItem/Ballscrew_Torque_Calculations
+                    drive_efficiency: 0.90 
+                    backdrive_efficiency: 0.80
+                    # Screw characteristics
+                    pitch: 4 mm
                 # Linear position sensor
                 mlp:
                     raw_min: 0
                     raw_max: 4096 
+                    # MLP values when the limit switches are hit. 
                     limit_sw_retract: 300
                     limit_sw_extend:  3000
+                negator:
+                    # The physical pull cord that winds around the spool on the end of the motor to acutate the brakes in case of no power
+                    torque: 0.7 N*m
             1:
-                initial_gap: 25.4mm
-                maximum_gap: 25.4mm
-                minimum_gap: 2.5mm
-                gap_close_min_time: 2.5s
-                # Set the min and max values for the MLP. In theory this is 0-4096, but it's more like 300-3000 in practice.
-                # Note that the raw min and raw max will be different per brake due to differences in MLP mounting
-                mlp_raw_retracted: 314  
-                mlp_raw_extended: 3000
+                id: 1
+                gap:
+                    initial_gap: 25.4mm
+                    # Min and max gap correspond to the locations that the limit switches are triggered
+                    extended_gap: 2.5mm
+                    retracted_gap: 25.4mm
+                    # Testing only
+                    gap_close_min_time: 2.5s
+                lead_screw:
+                    # Physical points where the limit switches engage
+                    # @todo: does the difference between these have to be the same for both brakes? We use this range to map the values, so we need a fixed difference...
+                    limit_sw_retract: 310 um
+                    limit_sw_extend: 71234 um
+                    # Total range of the lead screw
+                    range_min: 0 um
+                    range_max: 750000 um
+                    # Efficiency of driving (torque from motor) and backdrive (linear force applied to lead screw creating load torque on motor)
+                    # @see http://www.nookindustries.com/LinearLibraryItem/Ballscrew_Torque_Calculations
+                    drive_efficiency: 0.90 
+                    backdrive_efficiency: 0.80
+                    # Screw characteristics
+                    pitch: 4 mm
+                # Linear position sensor
+                mlp:
+                    raw_min: 0
+                    raw_max: 4096 
+                    # MLP values when the limit switches are hit. 
+                    limit_sw_retract: 300
+                    limit_sw_extend:  3000
+                # The negator is the physical pull cord that winds around the spool on the end of the motor to acutate the brakes in case of no power
+                negator:
+                    torque: 0.7 N*m
 
         

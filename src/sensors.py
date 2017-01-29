@@ -307,11 +307,10 @@ class SensorCsvWriter(SensorListener):
         
         self.enabled = self.config.enabled or True
         
-        self.output_filename = os.path.join(self.sim.config.working_dir, self.config.log_filename)
-        self.logger.info("SensorCsvWriter ({}) initialized with filename {}".format(self.enabled, self.output_filename))
-        
         # Internal
-        self._headers_written = False
+        self._headers_written = False        
+        
+        self.output_filename = os.path.join(self.sim.config.working_dir, self.config.log_filename)        
         
     def play(self):
         self.enabled = True
@@ -339,7 +338,7 @@ class SensorRawCsvWriter(SensorCsvWriter):
         SensorCsvWriter.__init__(self, sim, config)
         self.logger = logging.getLogger("SensorRawCsvWriter")
         self.output_filename = os.path.join(self.sim.config.working_dir, "raw_"+self.config.log_filename)
-        self.logger.info("SensorRawCsvWriter ({}) initialized with filename {}".format(self.enabled, self.output_filename))
+        #self.logger.info("SensorRawCsvWriter ({}) initialized with filename {}".format(self.enabled, self.output_filename))
 
     def step_callback(self, sensor, step_samples):
         if self.enabled:

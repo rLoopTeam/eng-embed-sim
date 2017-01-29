@@ -132,49 +132,49 @@ class Brake:
         # Volatile
         #self.gap = Units.SI(self.config.initial_gap)  # @todo: make this work 
 
-        # @todo: Screw pos will be the main value from which we calculate the gap and MLP values. [0, 75000]um fully retracted to fully extended (maps to brake gap)
+        # Rail Gap
+        # Screw pos is the main value from which we calculate the gap and MLP values. [0, 75000]um fully retracted to fully extended (maps to brake gap)
         # Note: screw position is updated by the callback from the FCU
-        self.screw_pos = Units.SI(self.config.initial_screw_pos)   
         self.gap = Units.SI(self.config.initial_gap)
-        self.min_gap = Units.SI(self.config.min_gap)
-        self.max_gap = Units.SI(self.config.max_gap)
+        self.retracted_gap = Units.SI(self.config.retracted_gap)
+        self.extended_gap = Units.SI(self.config.extended_gap)
+        self.gap_range = [self.retracted_gap, self.extended_gap]
 
+        # Screw
+        self.screw_limit_sw_retract = Units.SI(self.config.lead_screw.limit_sw_retract)
+        self.screw_limit_sw_extend = Units.SI(self.config.lead_screw.limit_sw_extend)
+        self.screw_range = [self.screw_limit_sw_retract, self.screw_limit_sw_extend]
+        # Calculate initial screw position from the initial gap (note: during processing it's the other way around)
+        self.screw_pos = np.interp(self.gap, self.gap_range, self.screw_range)
+        
         # Linear Position Sensor
-        # These values will be mapped between min and max gap. Backwards is ok (e.g. 25.4mm -> 2.5mm ==> 3004 -> 298)
-        self.mlp_raw_retracted = self.config.mlp_raw_retracted
-        self.mlp_raw_extended = self.config.mlp_raw_extended 
+        self.mlp_range = [self.config.mlp_raw_retracted, self.config.mlp_raw_extended]
+        # Calculate raw MLP value from the screw position
+        self.mlp_raw = np.interp(self.screw_pos, self.screw_range, self.mlp_range)
+
+        # Negator 
+        self.negator_torque = Units.SI(self.config.negator.torque)
 
         # TESTING ONLY
-        self._gap_target = self.gap
+        self._gap_target = self.gap  # Initialize to current value so we don't move yet
         self._gap_close_time = Units.SI(self.config.gap_close_min_time)
-        self._gap_close_dist = self.max_gap - self.min_gap
+        self._gap_close_dist = self.retracted_gap - self.extended_gap
         self._gap_close_speed = self._gap_close_dist / self._gap_close_time  # meters/second -- this is just a guess -- .007 m/s = closing 21mm in 3s
-        self.logger.debug("Brake gap close speed: {} m/s".format(self._gap_close_speed))
+        #self.logger.debug("Brake gap close speed: {} m/s".format(self._gap_close_speed))
         # /TESTING
         
-        self.deployed_pct = 0.0  # @todo: need to calculate this based on the initial position. Or let this set the initial gap? Probably calculate it from max_gap and 
-
         self.normal_force = 0.0  # N -- normal against the rail; +normal is away from the rail
         self.drag_force = 0.0  # N -- drag on the pod; -drag is toward the back of the pod
 
         self.last_normal_force = 0.0
         self.last_drag_force = 0.0
-
-        # Components
-        self.motor = None  # Should be a model of a motor?
         
-        # Configuration
-        self.negator_torque = 0.7  # Nm -- @todo: move this to config
-        #self.min_gap = 2.5mm  # ?
-        #self.max_gap = 25mm   # ?
-        
-
         # Lead Screw
         # revs per cm=2.5  There are 4 mm per single lead so 2.5 turns move the carriage 1 cm
         # Formulas: http://www.nookindustries.com/LinearLibraryItem/Ballscrew_Torque_Calculations
-        self.screw_pitch = .004  # Meters @todo: move to config
-        self.drive_efficiency = 0.90  # @todo: to config
-        self.backdrive_efficiency = 0.80  # @todo: to config
+        self.screw_pitch = Units.SI(self.config.lead_screw.pitch)
+        self.drive_efficiency = self.config.lead_screw.drive_efficiency
+        self.backdrive_efficiency = self.config.lead_screw.backdrive_efficiency
         
         # Lead Screw Precalculated Values
         self._drive_torque_multiplier = self.screw_pitch / (self.drive_efficiency * 2 * 3.14)
@@ -186,14 +186,28 @@ class Brake:
         # => 400 steps per revolution at half steps
     
     def stepdrive_update_position(self, u8Step, u8Dir, s32Position):
-        # @todo: update the position (and correct the function signature)
-        vFCU_BRAKES_MLP_WIN32__ForceADC()
-    
-    def get_mlp_raw(self):
-        """ Use the brake gap and our min/max settings to calculate the raw value for the MLP """
-        #print "MLP raw: {}".format(np.interp(self.gap, [self.min_gap, self.max_gap], [self.mlp_raw_extended, self.mlp_raw_retracted]))
-        return np.interp(self.gap, [self.min_gap, self.max_gap], [self.mlp_raw_extended, self.mlp_raw_retracted])
+        # Note: the only thing we need here is s32Position, which represents the new position of the screw in microns [0, 75000]um
+        # u8Step is always 1, indicating that a step has occured
+        # u8Dir is the direction of the step (0=counterclockwise, 1=clockwise ?)
+        
+        self.screw_pos = s32Position # Note: this is in microns. No need to convert since it's always in microns (we calculate it initially from brake gap)
 
+        self.gap = np.interp(self.screw_pos, self.screw_range, self.gap_range)
+        self.mlp_raw = np.interp(self.screw_pos, self.screw_range, self.mlp_range)
+
+        # Set the limit switch states
+        # Note: this assumes the screw_pos is smaller when retracted
+        if self.screw_pos <= self.screw_limit_sw_retract:
+            self.retract_sw_activated = True
+        elif self.screw_pos >= self.screw_limit_sw_extend:
+            self.extend_sw_activated = True
+        else:
+            # Neither limit switch is activated
+            self.retract_sw_activated = False
+            self.extend_sw_activated = False
+        
+        self.logger.debug("stepdrive_update_position({}, {}, {}): gap: {}, mlp_raw: {}, retract_sw: {}, extend_sw: {}".format(u8Step, u8Dir, s32Position, self.gap, self.mlp_raw, self.retract_sw_activated, self.extend_sw_activated))
+    
     def _move_to_gap_target(self, gap_target):
         # TESTING ONLY
         self._gap_target = gap_target
@@ -208,6 +222,8 @@ class Brake:
         v = self.sim.pod.velocity
         
         # TESTING ONLY -- move the gap to the target
+        """
+        # @todo: need to convert this to use screw positioning for it to work for testing
         if self.gap > self._gap_target:
             dist = self._gap_close_speed * (dt_usec / 1000000.0)
             self.gap -= dist
@@ -230,8 +246,7 @@ class Brake:
             # Reset the switches
             self.extend_sw_activated = False
             self.retract_sw_activated = False
-
-
+        """
         # Force calculations
         gap = self.gap
         
