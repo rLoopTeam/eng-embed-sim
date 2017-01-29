@@ -317,7 +317,9 @@ class Fcu:
         
         
     def errcheck_callback(self, result, func, arguments):
-        self.logger.debug("Fcu.errcheck_callback({}, {}, {})".format(result, func, arguments))
+        """ Function that can be set as a callback on methods in a dll to check the return values (search ctypes errcheck) """
+        pass
+        #self.logger.debug("Fcu.errcheck_callback({}, {}, {})".format(result, func, arguments))
         
     def debug_printf_callback(self, message):
         # Public Delegate Sub DEBUG_PRINTF__CallbackDelegate(ByVal pu8String As IntPtr)
@@ -485,7 +487,11 @@ class Fcu:
         callback_functype = ctypes.CFUNCTYPE(restype, *args)
 
         # Set the attributes on the method
-        dll_method = getattr(self.lib, dll_function_name)
+        try:
+            dll_method = getattr(self.lib, dll_function_name)
+        except AttributeError as e:
+            self.logger.error("** ERROR in register_callback: {} callback not registered.".format(e))
+            return
         dll_method.argtypes = [callback_functype]
         dll_method.restype = restype
         dll_method.errcheck = self.errcheck_callback   # Maybe don't need/want this? 

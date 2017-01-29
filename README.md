@@ -25,8 +25,9 @@
 4. Create the anaconda root virtualenv. See http://conda.pydata.org/docs/using/envs.html if you need more help. 
     If you're not using anaconda, try ```pip install -r requirements.txt```
     ```
-    conda create root
+    conda create --name root
     ```
+    __Note: It's ok if this command gives an error that the environment is already created. We're just making sure that it exists before activating it.__
 
 5. Activate the virtualenv
 __Remember: You will need to do this at the start of any session working with the simulator.__ See the above link or http://docs.python-guide.org/en/latest/dev/virtualenvs/ for more details.

@@ -40,7 +40,7 @@ class Brakes(object):
         self.sim = sim
         self.config = config  # Note: this is a list of configurations
         
-        print "Config: {}".format(self.config)
+        # print "Config: {}".format(self.config)
         
         self._list = []
                 
