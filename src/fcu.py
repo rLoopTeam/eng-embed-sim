@@ -40,7 +40,7 @@ import bitstring
 from config import Config
 from units import Units
 from networking import PodComms, UdpListener
-from sensors import QueueingListener
+from sensors import QueueingRawListener
 
 # IMPORTANT: This must be run as administrator (PowerShell on Windows) or it will encounter a write error.
 
@@ -144,11 +144,11 @@ class Fcu:
             'vAMC7812_WIN32__Set_DACVoltsCallback', None,
             [ctypes.c_uint8, ctypes.c_float])
 
-
-        #Mission phase callback
+        # Mission phase callback
         self.register_callback(self.FCU_REPORT_MissionPhaseCallback,
             'vDEBUG_RECORD_WIN32__Set_MissionPhaseCallback', None,
             [ctypes.c_uint8])
+
         # ------------------------
         #  Callable DLL Functions
         # ------------------------
@@ -533,6 +533,26 @@ class Fcu:
         # Call the method on the dll and pass in our reference
         dll_method(device_index, self.callback_refs[dll_function_name])
         
+    def update_accel(self, index):
+        if self.accel_listeners[index].has_samples():  # if the queue has something for us
+            self.lib.vMMA8451_WIN32__TriggerInterrupt(index)
+        
+    def update_laser_opto(self, index):
+        """ Update the raw value of the laser opto sensor in the FCU """
+        sample = self.laser_opto_listeners[index].pop()
+        if sample is not None:
+            # Note: if we don't have samples yet (at the beginning of the sim), it's because the timers are asking too early. 
+            f32Value = ctypes.c_float(sample.height)
+            self.lib.vFCU_LASEROPTO_WIN32__Set_DistanceRaw(index, f32Value)
+
+    def update_laser_dist(self):
+        """ Update the laser distance sensor raw value directly """
+        # Private Shared Sub vFCU_LASERDIST_WIN32__Set_DistanceRaw(f32Value As Single)
+        sample = self.laser_dist_listener.pop()
+        if sample is not None: 
+            f32Value = ctypes.c_float(sample.distance)
+            self.lib.vFCU_LASERDIST_WIN32__Set_DistanceRaw(f32Value)
+        
     def run_threaded(self):
         self.logger.debug("Starting FCU main thread")
 
@@ -577,26 +597,50 @@ class Fcu:
             # Timers
             sampling_rate = Units.SI(accel_config['sampling_rate'])
             timer_delay = 1.0 / sampling_rate  # Hz 
-            self.logger.info("  Creating Accelerometer {} timer: sampling rate = {}, delay = {}".format(i, accel_config['sampling_rate'], timer_delay))
+            self.logger.info("  Creating Accelerometer {} timer: sampling rate = {}, delay = {}".format(accel_config.id, accel_config['sampling_rate'], timer_delay))
             # Note: in the following lambda function, we bind x=i now so that it will use that value rather than binding at call time
             #self.logger.debug("    Accelerometer sampling rate is {}; delay for timer is {}".format(sampling_rate, timer_delay))
-            self.timers.append( Timer(timer_delay, lambda x=i: self.lib.vMMA8451_WIN32__TriggerInterrupt(x) ) )
+            self.timers.append( Timer(timer_delay, lambda x=i: self.update_accel(x) ) )
 
             # Tie it to the appropriate sensor
-            self.accel_listeners.append( QueueingListener(self.sim, None) )  # Note: we tie it to the sensor in the next line
+            self.accel_listeners.append( QueueingRawListener(self.sim, None) )  # Note: we tie it to the sensor in the next line
             self.sim.sensors['accel'][i].add_step_listener(self.accel_listeners[i])
             # Now we have a handle to a listener for each accel. We'll use those in MMA8451_readdata_callback
     
-            
+        # 'Laser Distance
+        # Private Shared Sub vFCU_LASERDIST_WIN32__Set_DistanceRaw(f32Value As Single)
+        self.laser_dist_listener = None  # Just for clarity, declare it here
+        sensor_config = self.sim.config.sensors.laser_dist
+        # Timers
+        sampling_rate = Units.SI(sensor_config['sampling_rate'])
+        timer_delay = 1.0 / sampling_rate
+        self.logger.info("  Creating LaserDist timer: sampling rate = {}, delay = {}".format(sensor_config['sampling_rate'], timer_delay))
+        self.timers.append( Timer(timer_delay, lambda x=i: self.update_laser_dist() ) )
+
+        # Tie it to the appropriate sensor
+        self.laser_dist_listener = QueueingRawListener(self.sim, None)  # Note: we tie it to the sensor in the next line
+        self.sim.sensors['laser_dist'].add_step_listener(self.laser_dist_listener)
+        # Now we have a handle to a queue (listener) for each sensor
+
+        # 'laser optoncdt
+        # Private Shared Sub vFCU_LASEROPTO_WIN32__Set_DistanceRaw(u32Index As UInt32, f32Value As Single)
+        self.laser_opto_listeners = []
+        for i, sensor_config in self.sim.config.sensors.laser_opto.iteritems():
+            # Timers
+            sampling_rate = Units.SI(sensor_config['sampling_rate'])
+            timer_delay = 1.0 / sampling_rate
+            self.logger.info("  Creating LaserOpto {} timer: sampling rate = {}, delay = {}".format(i, sensor_config['sampling_rate'], timer_delay))
+            self.timers.append( Timer(timer_delay, lambda x=i: self.update_laser_opto(x) ) )
+
+            # Tie it to the appropriate sensor
+            self.laser_opto_listeners.append( QueueingRawListener(self.sim, None) )  # Note: we tie it to the sensor in the next line
+            self.sim.sensors['laser_opto'][i].add_step_listener(self.laser_opto_listeners[i])
+            # Now we have a handle to a queue (listener) for each sensor
+
+
         # Add our timers to the sim's time dialator so that we can stay in sync
         self.logger.info("Initializing time dialator")
         self.sim.time_dialator.add_timers(self.timers)
-        
-        # Start the timers
-        self.logger.info("Starting timer threads")
-        for timer in self.timers:
-            #self.logger.info("  Starting {} timer to call {}".format(timer.interval, str(timer.callback)))
-            timer.start_threaded()
         
 
         """
@@ -636,6 +680,12 @@ class Fcu:
         thread_main = threading.Thread(target=self.main)
         thread_main.daemon = True
         thread_main.start()
+
+        # Start the timers
+        self.logger.info("Starting timer threads")
+        for timer in self.timers:
+            #self.logger.info("  Starting {} timer to call {}".format(timer.interval, str(timer.callback)))
+            timer.start_threaded()
 
         # UDP Injector -- testing only! (networking will need to go in the sim)
         #udp = UdpListener(self.sim, self.sim.config.networking.nodes.flight_control, self.handle_fcu_packet)

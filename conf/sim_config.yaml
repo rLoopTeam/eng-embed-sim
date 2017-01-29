@@ -135,7 +135,15 @@ sim:
                 log_filename: accel_1.csv
                 sampling_rate: 100 Hz
                 noise: {enabled: False, scale: 0.0, center: 0.0}
-                
+        laser_dist: 
+            sampling_rate: 50 Hz
+            # Maximum distance the sensor can see
+            max_dist: 100m
+            log_filename: laser_dist.csv
+            noise:
+                enabled: False
+                scale: .0001
+                center: 0.0
         laser_opto:
             # Height sensors
             # @see http://www.micro-epsilon.com/download/manuals/man--optoNCDT-1320--en.pdf, page 55
@@ -149,7 +157,7 @@ sim:
                 id: 1
                 desc: Front Left
                 model: optoNCDT_1320
-                log_filename: laser_opto_1.csv
+                log_filename: laser_opto_0.csv
                 he_height_offset: 43.13mm
                 sampling_rate: 250 Hz
                 noise:
@@ -160,7 +168,7 @@ sim:
                 id: 2
                 desc: Rear Left
                 model: optoNCDT_1320
-                log_filename: laser_opto_2.csv
+                log_filename: laser_opto_1.csv
                 he_height_offset: 40.25mm
                 sampling_rate: 250 Hz
                 noise:
@@ -171,7 +179,7 @@ sim:
                 id: 3
                 desc: Rear Right
                 model: optoNCDT_1320
-                log_filename: laser_opto_3.csv
+                log_filename: laser_opto_2.csv
                 he_height_offset: 41.65mm
                 sampling_rate: 250 Hz
                 noise:
@@ -182,7 +190,7 @@ sim:
                 id: 4
                 desc: Front Right
                 model: optoNCDT_1320
-                log_filename: laser_opto_4.csv
+                log_filename: laser_opto_3.csv
                 he_height_offset: 43.14mm
                 sampling_rate: 250 Hz
                 noise:

@@ -274,11 +274,14 @@ class QueueingListener(SensorListener):
         self.q = deque()
         self.last_data = None
 
+    def has_samples(self):
+        return bool(len(self.q))
+
     def step_callback(self, sensor, step_samples):
         # Push the samples onto the queue
         self.q.extendleft(step_samples)
         self.last_data = self.q[-1]
-        
+    
     def pop(self):
         # Pop one off the queue
         # Note: we'll just return our last sample in case there are no items in the queue. @todo: probly should think through this behavior
@@ -286,7 +289,15 @@ class QueueingListener(SensorListener):
             return self.q.pop()
         else:
             return self.last_data
+
+class QueueingRawListener(QueueingListener):
+    def __init__(self, sim, config):
+        QueueingListener.__init__(self, sim, config)
         
+    def step_callback(self, sensor, step_samples):
+        """ Add the raw values to the queue """
+        self.q.extendleft([sensor.to_raw(s) for s in step_samples])
+        self.last_data = self.q[-1]
         
 class SensorConsoleWriter(SensorListener):
     """ A sensor step listener that writes to the console """

@@ -21,6 +21,8 @@ from pusher import Pusher
 from track import Track
 
 from sensor_laser_contrast import *
+from sensor_laser_dist import *
+from sensor_laser_opto import *
 from sensor_accel import *
 
 from networking import PodComms
@@ -93,7 +95,10 @@ class Sim:
             sensor.add_step_listener(SensorRawCsvWriter(self, sensor.config))
         
         # - Laser Distance Sensor
-        pass  # @todo: add in other sensors
+        self.sensors['laser_dist'] = LaserDistSensor(self, Config(self.config.sensors.laser_dist))
+        sensor = self.sensors['laser_dist']
+        sensor.add_step_listener(SensorCsvWriter(self, sensor.config))
+        sensor.add_step_listener(SensorRawCsvWriter(self, sensor.config))
 
         # - Brake Sensors: MLP, limit switches (for both)
         pass
@@ -284,6 +289,7 @@ class SimEndCondition(object):
 
 
 if __name__ == "__main__":
+    import sys
     import logging
     import logging.config
     import yaml
