@@ -30,7 +30,7 @@ import os
 import ctypes
 import pprint
 
-from timers import Timer
+from timers import TimeRunner, CallbackTimer
 import time
 import threading
 import struct
@@ -57,8 +57,8 @@ class Fcu:
 
         self.logger.info("Initializing FCU")
 
-        # Timers for various callbacks 
-        self.timers = []
+        # Time Runner 
+        self.timerunner = TimeRunner()
 
         # TESTING ONLY @todo: this should probably come from self.sim.networking
         #self.comms = PodComms(self, self.sim.config.networking)
@@ -491,7 +491,7 @@ class Fcu:
         try:
             dll_method = getattr(self.lib, dll_function_name)
         except AttributeError as e:
-            self.logger.error("** ERROR in register_callback: {} callback not registered.".format(e))
+            self.logger.error("** ERROR in register_callback: {}. Callback not registered.".format(e))
             return
         dll_method.argtypes = [callback_functype]
         dll_method.restype = restype
@@ -553,7 +553,7 @@ class Fcu:
             f32Value = ctypes.c_float(sample.distance)
             self.lib.vFCU_LASERDIST_WIN32__Set_DistanceRaw(f32Value)
         
-    def run_threaded(self):
+    def run_threaded_DEPRECATED(self):
         self.logger.debug("Starting FCU main thread")
 
         """ Run the FCU """
@@ -586,9 +586,13 @@ class Fcu:
         # Private Shared Sub vSTEPDRIVE_TIMEBASE__ISR()   # Note: 50usec
 
         self.logger.info("Initializing timers")
-        self.timers.append(Timer(Units.seconds("50 usec"), self.lib.vSTEPDRIVE_TIMEBASE__ISR))
-        self.timers.append(Timer(Units.seconds("10 ms"), self.lib.vFCU__RTI_10MS_ISR))
-        self.timers.append(Timer(Units.seconds("100 ms"), self.lib.vFCU__RTI_100MS_ISR))
+        #self.timers.append(Timer(Units.seconds("50 usec"), self.lib.vSTEPDRIVE_TIMEBASE__ISR))
+        #self.timers.append(Timer(Units.seconds("10 ms"), self.lib.vFCU__RTI_10MS_ISR))
+        #self.timers.append(Timer(Units.seconds("100 ms"), self.lib.vFCU__RTI_100MS_ISR))
+        self.timerunner.add_timer(CallbackTimer(Units.seconds("50 usec"), self.lib.vSTEPDRIVE_TIMEBASE__ISR, name="vSTEPDRIVE_TIMEBASE__ISR"))
+        self.timerunner.add_timer(CallbackTimer(Units.seconds("10 ms"), self.lib.vFCU__RTI_10MS_ISR, name="vFCU__RTI_10MS_ISR"))
+        self.timerunner.add_timer(CallbackTimer(Units.seconds("100 ms"), self.lib.vFCU__RTI_100MS_ISR, name="vFCU__RTI_100MS_ISR"))
+        
         
         # Accelerometers
         #self.logger.info("Initializing Sensor Timers")
@@ -597,10 +601,10 @@ class Fcu:
             # Timers
             sampling_rate = Units.SI(accel_config['sampling_rate'])
             timer_delay = 1.0 / sampling_rate  # Hz 
-            self.logger.info("  Creating Accelerometer {} timer: sampling rate = {}, delay = {}".format(accel_config.id, accel_config['sampling_rate'], timer_delay))
+            self.logger.info("  Creating Accelerometer {} timer: sampling rate = {}, delay = {}s".format(accel_config.id, accel_config['sampling_rate'], timer_delay))
             # Note: in the following lambda function, we bind x=i now so that it will use that value rather than binding at call time
             #self.logger.debug("    Accelerometer sampling rate is {}; delay for timer is {}".format(sampling_rate, timer_delay))
-            self.timers.append( Timer(timer_delay, lambda x=i: self.update_accel(x) ) )
+            self.timerunner.add_timer( CallbackTimer(timer_delay, lambda x=i: self.update_accel(x), name="Accel[{}] timer".format(i) ) )
 
             # Tie it to the appropriate sensor
             self.accel_listeners.append( QueueingRawListener(self.sim, None) )  # Note: we tie it to the sensor in the next line
@@ -614,8 +618,8 @@ class Fcu:
         # Timers
         sampling_rate = Units.SI(sensor_config['sampling_rate'])
         timer_delay = 1.0 / sampling_rate
-        self.logger.info("  Creating LaserDist timer: sampling rate = {}, delay = {}".format(sensor_config['sampling_rate'], timer_delay))
-        self.timers.append( Timer(timer_delay, lambda x=i: self.update_laser_dist() ) )
+        self.logger.info("  Creating LaserDist timer: sampling rate = {}, delay = {}s".format(sensor_config['sampling_rate'], timer_delay))
+        self.timerunner.add_timer( CallbackTimer(timer_delay, lambda x=i: self.update_laser_dist() ) )
 
         # Tie it to the appropriate sensor
         self.laser_dist_listener = QueueingRawListener(self.sim, None)  # Note: we tie it to the sensor in the next line
@@ -629,8 +633,8 @@ class Fcu:
             # Timers
             sampling_rate = Units.SI(sensor_config['sampling_rate'])
             timer_delay = 1.0 / sampling_rate
-            self.logger.info("  Creating LaserOpto {} timer: sampling rate = {}, delay = {}".format(i, sensor_config['sampling_rate'], timer_delay))
-            self.timers.append( Timer(timer_delay, lambda x=i: self.update_laser_opto(x) ) )
+            self.logger.info("  Creating LaserOpto {} timer: sampling rate = {}, delay = {}s".format(i, sensor_config['sampling_rate'], timer_delay))
+            self.timerunner.add_timer( CallbackTimer(timer_delay, lambda x=i: self.update_laser_opto(x), name="LaserOpto[{}] timer".format(i) ) )
 
             # Tie it to the appropriate sensor
             self.laser_opto_listeners.append( QueueingRawListener(self.sim, None) )  # Note: we tie it to the sensor in the next line
@@ -692,8 +696,49 @@ class Fcu:
         #udp.run_threaded()
 
         return thread_main
+    
+    def fcu_init(self):
+        """ Initialize the FCU """
+        self.lib.vFCU__Init()
         
-    def main(self):
+        #'needs to be done due to WIN32_ETH_Init
+        #vETH_WIN32__Set_Ethernet_TxCallback(Me.m_pETH_TX__Delegate)
+        self.lib.vETH_WIN32__Set_Ethernet_TxCallback(self.callback_refs['vETH_WIN32__Set_Ethernet_TxCallback'])
+
+        # 'force the two motor positions to random so as we can simulate the cal process
+        self.lib.vSTEPDRIVE_WIN32__ForcePosition(0, -34)
+        self.lib.vSTEPDRIVE_WIN32__ForcePosition(1, 175)
+
+        self.lib.vFCU_BRAKES_MLP_WIN32__ForceADC(0, 0)
+        self.lib.vFCU_BRAKES_MLP_WIN32__ForceADC(1, 0)
+
+        # 'config the brake switches into some state
+        for iBrake in [0, 1]:
+            for iSwitch in [0, 1]:
+                self.lib.vFCU_BRAKES_SW_WIN32__Inject_SwitchState(iBrake, iSwitch, 0)
+        
+        
+    def fcu_process(self):
+        """ FCU process function (called as part of the run loop) """
+        try:
+            self.lib.vFCU__Process()
+        except Exception as e:
+            self.logger.error(e)
+
+    
+    def run_threaded(self):
+        self.logger.debug("Starting FCU main thread")
+    
+        t = threading.Thread(target=self.run)
+        t.daemon = True
+        t.start()
+        return t
+
+    def run(self):
+        self.timerunner.add_timer(CallbackTimer(0.01, self.fcu_process, name="FCU Process Loop Timer"))
+        self.timerunner.run()    
+
+    def main_DEPRECATED(self):
         #self.logger.debug("Got to main()!")
         """
         ''' This is the same as Main() in C
