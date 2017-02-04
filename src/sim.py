@@ -92,7 +92,7 @@ class Sim:
             sensor = self.sensors['laser_opto'][idx]
             #sensor.add_step_listener(LaserOptoTestListener(self, sensor.config))  # For debugging
             sensor.add_step_listener(SensorCsvWriter(self, sensor.config))
-            sensor.add_step_listener(SensorRawCsvWriter(self, sensor.config))
+            sensor.add_step_listener(SensorRawCsvWriter(self, sensor.config))   
         
         # - Laser Distance Sensor
         self.sensors['laser_dist'] = LaserDistSensor(self, Config(self.config.sensors.laser_dist))
@@ -294,6 +294,9 @@ if __name__ == "__main__":
     import logging.config
     import yaml
 
+    from debug import stacktracer
+    stacktracer.trace_start("trace.html",interval=5,auto=True) # Set auto flag to always update file!
+
     with open('conf/logging.conf') as f:  # @todo: make this work when run from anywhere (this works if run from top directory)
         logging.config.dictConfig(yaml.load(f))
 
@@ -320,6 +323,7 @@ if __name__ == "__main__":
         try:
             time.sleep(0.1)
         except:
+            stactracer.trace_stop()
             sys.exit(0)
     
     """

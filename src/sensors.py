@@ -199,6 +199,7 @@ class PollingSensor(Sensor):
         
     def _lerp(self, start_value, end_value):
         """ Lerp between the two values using the self.step_lerp_pcts vector and return a vector of lerp'd values """
+        # @todo: can probably replace this with np.interp(self.step_lerp_pcts, [0, 1], [start_value, end_value])
         return (1.0-self.step_lerp_pcts)*start_value + self.step_lerp_pcts*end_value
         
     def _get_gaussian_noise(self, samples, noise_center=0.0, noise_scale=0.1):

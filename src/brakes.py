@@ -135,9 +135,11 @@ class Brake:
         # Rail Gap
         # Screw pos is the main value from which we calculate the gap and MLP values. [0, 75000]um fully retracted to fully extended (maps to brake gap)
         # Note: screw position is updated by the callback from the FCU
-        self.gap = Units.SI(self.config.initial_gap)
-        self.retracted_gap = Units.SI(self.config.retracted_gap)
-        self.extended_gap = Units.SI(self.config.extended_gap)
+        self.gap = Units.SI(self.config.gap.initial_gap)
+        #print "Gap after conversion is {}".format(self.gap)
+        #exit()
+        self.retracted_gap = Units.SI(self.config.gap.retracted_gap)
+        self.extended_gap = Units.SI(self.config.gap.extended_gap)
         self.gap_range = [self.retracted_gap, self.extended_gap]
 
         # Screw
@@ -263,6 +265,7 @@ class Brake:
         #F_drag = - (5632 * np.exp(-202*gap)) * (-np.exp(-.3*v) + 1) * (1.5 * np.exp(-.02*v) + 1)  # Newtons, For two brakes? @TODO @todo: Confirm brake strength from A34 data!!
 
         # Save the drag force (to be used by force_brakes.py)
+        #print "Brakes F_drag is {} (v is {}, gap is {})".format(F_drag, v, gap)
         self.drag_force = F_drag
 
         # Get linear force acting on lead screw due to the brakes

@@ -40,7 +40,7 @@ class PlotPostProcessor:
 
         axes = OrderedDict()
 
-        data = np.genfromtxt('data/pod.csv', delimiter=',', dtype=None, names=True)
+        data = np.genfromtxt(os.path.join(self.working_dir, 'pod.csv'), delimiter=',', dtype=None, names=True)
         print data.dtype.names
         """
         t_usec
@@ -129,11 +129,51 @@ class PlotPostProcessor:
         fig.tight_layout()
 
         # fig.savefig('foo.png', bbox_inches='tight')  # Tight spacing
-        fig.savefig(os.path.join(self.working_dir, 'foo.png'))  # Tight spacing
+        fig.savefig(os.path.join(self.working_dir, 'run.png'))  # Tight spacing
         
+        # ----
+        # Parasitic drag (drag x position)
+        fig = Figure(figsize=(16,6), dpi=100)
+        fig.suptitle("Parasitic Brake Drag (Force / Position)", fontsize=20)
+        canvas = FigureCanvas(fig)
+        
+        ax = fig.add_subplot(1, 1, 1)
+        #l1 = (p, data['F_hover_engines_x'], 'b-')
+        l2 = (p, 2*data['F_brakes_x'], 'b-')  # 2* data to include both brakes
+        #ax.set_xlabel('Velocity (m/s)')
+        ax.set_xlabel('Position along track (m)')
+        ax.set_ylabel('Drag (N)')
+        #ax.plot(*l1)
+        ax.plot(*l2, label="Brake drag (both brakes)")
+        ax.legend()
+
+        #fig.tight_layout()
+
+        fig.savefig(os.path.join(self.working_dir, 'parasitic_drag_position.png')) 
+
+        # Parasitic drag (drag x velocity)
+        fig = Figure(figsize=(16,6), dpi=100)
+        fig.suptitle("Parasitic Brake Drag (Force / Velocity)", fontsize=20)
+        canvas = FigureCanvas(fig)
+
+        ax = fig.add_subplot(1, 1, 1)
+        #l1 = (p, data['F_hover_engines_x'], 'b-')
+        l2 = (v, 2*data['F_brakes_x'], 'b-')  # 2* data to include both brakes
+        ax.set_xlabel('Velocity (m/s)')
+        #ax.set_xlabel('Position along track (m)')
+        ax.set_ylabel('Drag (N)')
+        #ax.plot(*l1)
+        ax.plot(*l2, label="Brake drag (both brakes)")
+        ax.legend()
+
+        #fig.tight_layout()
+
+        # fig.savefig('foo.png', bbox_inches='tight')  # Tight spacing
+        fig.savefig(os.path.join(self.working_dir, 'parasitic_drag_velocity.png')) 
+
         
 if __name__ == "__main__":
     logging.basicConfig(level=logging.DEBUG)
-    p = PlotPostProcessor(None, None, './data')
+    p = PlotPostProcessor(None, None, './data/test')
     p.create_plots()
     

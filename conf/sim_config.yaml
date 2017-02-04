@@ -281,7 +281,7 @@ sim:
                 # Note that the raw min and raw max will be different per brake due to differences in MLP mounting
                 id: 0
                 gap:
-                    initial_gap: 25.4mm
+                    initial_gap: 24.5mm
                     # Min and max gap correspond to the locations that the limit switches are triggered
                     extended_gap: 2.5mm
                     retracted_gap: 25.4mm
@@ -316,7 +316,7 @@ sim:
             1:
                 id: 1
                 gap:
-                    initial_gap: 25.4mm
+                    initial_gap: 24.5mm
                     # Min and max gap correspond to the locations that the limit switches are triggered
                     extended_gap: 2.5mm
                     retracted_gap: 25.4mm
