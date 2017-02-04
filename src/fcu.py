@@ -644,7 +644,7 @@ class Fcu:
 
         # Add our timers to the sim's time dialator so that we can stay in sync
         self.logger.info("Initializing time dialator")
-        self.sim.time_dialator.add_timers(self.timers)
+        self.sim.time_dialator.add_timers(self.timerunner.get_timers())
         
 
         """
@@ -717,7 +717,68 @@ class Fcu:
             for iSwitch in [0, 1]:
                 self.lib.vFCU_BRAKES_SW_WIN32__Inject_SwitchState(iBrake, iSwitch, 0)
         
+    def fcu_setup(self):
+        self.logger.info("Initializing timers")
+        #self.timers.append(Timer(Units.seconds("50 usec"), self.lib.vSTEPDRIVE_TIMEBASE__ISR))
+        #self.timers.append(Timer(Units.seconds("10 ms"), self.lib.vFCU__RTI_10MS_ISR))
+        #self.timers.append(Timer(Units.seconds("100 ms"), self.lib.vFCU__RTI_100MS_ISR))
+        self.timerunner.add_timer(CallbackTimer(Units.seconds("50 usec"), self.lib.vSTEPDRIVE_TIMEBASE__ISR, name="vSTEPDRIVE_TIMEBASE__ISR"))
+        self.timerunner.add_timer(CallbackTimer(Units.seconds("10 ms"), self.lib.vFCU__RTI_10MS_ISR, name="vFCU__RTI_10MS_ISR"))
+        self.timerunner.add_timer(CallbackTimer(Units.seconds("100 ms"), self.lib.vFCU__RTI_100MS_ISR, name="vFCU__RTI_100MS_ISR"))
         
+        # Accelerometers
+        #self.logger.info("Initializing Sensor Timers")
+        self.accel_listeners = []
+        for i, accel_config in self.sim.config.sensors.accel.iteritems():
+            # Timers
+            sampling_rate = Units.SI(accel_config['sampling_rate'])
+            timer_delay = 1.0 / sampling_rate  # Hz 
+            self.logger.info("  Creating Accelerometer {} timer: sampling rate = {}, delay = {}s".format(accel_config.id, accel_config['sampling_rate'], timer_delay))
+            # Note: in the following lambda function, we bind x=i now so that it will use that value rather than binding at call time
+            #self.logger.debug("    Accelerometer sampling rate is {}; delay for timer is {}".format(sampling_rate, timer_delay))
+            self.timerunner.add_timer( CallbackTimer(timer_delay, lambda x=i: self.update_accel(x), name="Accel[{}] timer".format(i) ) )
+
+            # Tie it to the appropriate sensor
+            self.accel_listeners.append( QueueingRawListener(self.sim, None) )  # Note: we tie it to the sensor in the next line
+            self.sim.sensors['accel'][i].add_step_listener(self.accel_listeners[i])
+            # Now we have a handle to a listener for each accel. We'll use those in MMA8451_readdata_callback
+    
+        # 'Laser Distance
+        # Private Shared Sub vFCU_LASERDIST_WIN32__Set_DistanceRaw(f32Value As Single)
+        self.laser_dist_listener = None  # Just for clarity, declare it here
+        sensor_config = self.sim.config.sensors.laser_dist
+        # Timers
+        sampling_rate = Units.SI(sensor_config['sampling_rate'])
+        timer_delay = 1.0 / sampling_rate
+        self.logger.info("  Creating LaserDist timer: sampling rate = {}, delay = {}s".format(sensor_config['sampling_rate'], timer_delay))
+        self.timerunner.add_timer( CallbackTimer(timer_delay, lambda x=i: self.update_laser_dist() ) )
+
+        # Tie it to the appropriate sensor
+        self.laser_dist_listener = QueueingRawListener(self.sim, None)  # Note: we tie it to the sensor in the next line
+        self.sim.sensors['laser_dist'].add_step_listener(self.laser_dist_listener)
+        # Now we have a handle to a queue (listener) for each sensor
+
+        # 'laser optoncdt
+        # Private Shared Sub vFCU_LASEROPTO_WIN32__Set_DistanceRaw(u32Index As UInt32, f32Value As Single)
+        self.laser_opto_listeners = []
+        for i, sensor_config in self.sim.config.sensors.laser_opto.iteritems():
+            # Timers
+            sampling_rate = Units.SI(sensor_config['sampling_rate'])
+            timer_delay = 1.0 / sampling_rate
+            self.logger.info("  Creating LaserOpto {} timer: sampling rate = {}, delay = {}s".format(i, sensor_config['sampling_rate'], timer_delay))
+            self.timerunner.add_timer( CallbackTimer(timer_delay, lambda x=i: self.update_laser_opto(x), name="LaserOpto[{}] timer".format(i) ) )
+
+            # Tie it to the appropriate sensor
+            self.laser_opto_listeners.append( QueueingRawListener(self.sim, None) )  # Note: we tie it to the sensor in the next line
+            self.sim.sensors['laser_opto'][i].add_step_listener(self.laser_opto_listeners[i])
+            # Now we have a handle to a queue (listener) for each sensor
+
+
+        # Add our timers to the sim's time dialator so that we can stay in sync
+        self.logger.info("Initializing time dialator")
+        self.sim.time_dialator.add_timers(self.timerunner.get_timers())
+
+
     def fcu_process(self):
         """ FCU process function (called as part of the run loop) """
         try:
@@ -735,7 +796,12 @@ class Fcu:
         return t
 
     def run(self):
+        self.fcu_setup()
+        self.fcu_init()        
+
+        # Set up to call fcu_process using a timer
         self.timerunner.add_timer(CallbackTimer(0.01, self.fcu_process, name="FCU Process Loop Timer"))
+
         self.timerunner.run()    
 
     def main_DEPRECATED(self):

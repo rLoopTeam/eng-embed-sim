@@ -141,18 +141,20 @@ class TimeRunner:
     
     def stop(self):
         self.stop_flag = True
-    
+
+    def get_timers(self):
+        return self.timers
     
 class CallbackTimer:
     
     def __init__(self, interval_sec, callback, **kwargs):
-        self.interval_sec = interval_sec
+        self.interval = interval_sec
         self.callback = callback
         self.stop_flag = False
         self.dialation = 1.0
 
         # kwargs
-        self.name = kwargs.get('name', "{}s timer".format(interval_sec))
+        self.name = kwargs.get('name', "{}s timer".format(self.interval))
         self.debug_callback = kwargs.get('debug_callback', None)
 
         self.gen = self._create_generator()
@@ -163,7 +165,7 @@ class CallbackTimer:
             if self.stop_flag:
                 break
             t1 = time.clock()
-            delay = self.interval_sec * self.dialation  # @todo: can we move this out of here for better performance? 
+            delay = self.interval * self.dialation  # @todo: can we move this out of here for better performance? 
             if t1 - t0 >= delay:
                 t0 = t1
                 if self.debug_callback is not None:
