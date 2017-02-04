@@ -52,7 +52,7 @@ class Timer:
 
     def stop(self):
         self.stop_flag = True
-        
+
 
 class TimeDialator(object):
     """ A timer that controls the dialation of time (sim time vs real time) for other timers.
@@ -121,6 +121,66 @@ class TimeDialator(object):
         
 # @todo: add a TimeAdjustor class that adjust delay (and maybe overhead) for timers that are lagging/speeding
 
+class TimeRunner:
+    def __init__(self):
+        self.timers = []
+        
+    def add_timer(self, timer):
+        self.timers.append(timer)
+        
+    def run(self):
+        while True:
+            for timer in self.timers:
+                next(timer)
+
+    def run_threaded(self):
+        t = threading.Thread(target=self.run, args=())
+        t.daemon = True
+        t.start()
+        return t    
+    
+    def stop(self):
+        self.stop_flag = True
+    
+    
+class CallbackTimer:
+    
+    def __init__(self, interval_sec, callback, **kwargs):
+        self.interval_sec = interval_sec
+        self.callback = callback
+        self.stop_flag = False
+        self.dialation = 1.0
+
+        # kwargs
+        self.name = kwargs.get('name', "{}s timer".format(interval_sec))
+        self.debug_callback = kwargs.get('debug_callback', None)
+
+        self.gen = self._create_generator()
+
+    def _create_generator(self):
+        t0 = time.clock()
+        while True:
+            if self.stop_flag:
+                break
+            t1 = time.clock()
+            delay = self.interval_sec * self.dialation  # @todo: can we move this out of here for better performance? 
+            if t1 - t0 >= delay:
+                t0 = t1
+                if self.debug_callback is not None:
+                    self.debug_callback(self)
+                yield self.callback()
+            else:
+                yield
+    
+    
+    def next(self):
+        next(self.gen)
+
+    def update_dialation(self, dialation):
+        """ set the time-dialated delay """
+        self.dialation = dialation
+        self.delay = self.interval * self.dialation
+
 
 class TimerTest:
     # Test a 10 microsecond timer in python on windows
@@ -161,6 +221,17 @@ class TimerTest:
 if __name__ == "__main__":
     print "-- Timer Test -----"
 
-    tt = TimerTest(100000)
-    tt.run()
+    def debug_print(timer):
+        print timer.name        
 
+    def do_nothing():
+        pass
+
+    #tt = TimerTest(100000)
+    #tt.run()
+
+    tr = TimeRunner()
+    tr.add_timer(CallbackTimer(0.01, do_nothing, debug_callback=debug_print, name="0.01 second timer"))
+    tr.add_timer(CallbackTimer(0.03, do_nothing, debug_callback=debug_print))
+    
+    tr.run()
