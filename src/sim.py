@@ -50,6 +50,10 @@ class Sim:
         if working_dir is not None: 
             self.set_working_dir(working_dir)
 
+        self.logger.info("Working directory is {} ({})".format(self.config.working_dir, os.path.join(os.getcwd(), self.config.working_dir)))
+        
+        self.ensure_working_dir()
+
         # Time
         self.fixed_timestep_usec = Units.usec(config.fixed_timestep)  # Convert to usec
         self.time_dialator = TimeDialator(self)  # We're going to step this
@@ -74,7 +78,7 @@ class Sim:
             sensor = self.sensors['accel'][idx]
             sensor.add_step_listener(AccelerometerTestListener(self, sensor.config))
             sensor.add_step_listener(SensorCsvWriter(self, sensor.config))
-            sensor.add_step_listener(SensorRawCsvWriter(self, sensor.config))
+            #sensor.add_step_listener(SensorRawCsvWriter(self, sensor.config))
         
         # - Laser Contrast Sensors
         self.sensors['laser_contrast'] = []
@@ -92,13 +96,13 @@ class Sim:
             sensor = self.sensors['laser_opto'][idx]
             #sensor.add_step_listener(LaserOptoTestListener(self, sensor.config))  # For debugging
             sensor.add_step_listener(SensorCsvWriter(self, sensor.config))
-            sensor.add_step_listener(SensorRawCsvWriter(self, sensor.config))   
+            #sensor.add_step_listener(SensorRawCsvWriter(self, sensor.config))   
         
         # - Laser Distance Sensor
         self.sensors['laser_dist'] = LaserDistSensor(self, Config(self.config.sensors.laser_dist))
         sensor = self.sensors['laser_dist']
         sensor.add_step_listener(SensorCsvWriter(self, sensor.config))
-        sensor.add_step_listener(SensorRawCsvWriter(self, sensor.config))
+        #sensor.add_step_listener(SensorRawCsvWriter(self, sensor.config))
 
         # - Brake Sensors: MLP, limit switches (for both)
         pass
@@ -193,9 +197,6 @@ class Sim:
         return t  # Return the thread, but don't join it (the caller can join if they want to)
 
     def run(self):
-        self.logger.info("Working directory is {} ({})".format(self.config.working_dir, os.path.join(os.getcwd(), self.config.working_dir)))
-        
-        self.ensure_working_dir()
 
         self.logger.info("Starting simulation")
 
@@ -295,7 +296,7 @@ if __name__ == "__main__":
     import yaml
 
     from debug import stacktracer
-    stacktracer.trace_start("trace.html",interval=5,auto=True) # Set auto flag to always update file!
+    #stacktracer.trace_start("trace.html",interval=5,auto=True) # Set auto flag to always update file!
 
     with open('conf/logging.conf') as f:  # @todo: make this work when run from anywhere (this works if run from top directory)
         logging.config.dictConfig(yaml.load(f))
@@ -313,7 +314,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # Note: 'configfile' is a list of one or more config files. Later files overlay previous ones. 
-    sim = Sim( Sim.load_config_files(args.configfile), 'data/test')
+    sim = Sim( Sim.load_config_files(args.configfile), '../eng-embed-sim-data/test')
     #t = sim.run_threaded()
     #t.join()
     

@@ -15,7 +15,7 @@ class Accelerometer(PollingSensor):
 
         self.logger.info("Initializing Accelerometer {}".format(self.config.id))
                 
-        self.data = namedtuple('AccelerometerData', ['t', 'x', 'y', 'z'])
+        self.data = namedtuple('AccelerometerData', ['t_usec', 'raw_x', 'raw_y', 'raw_z', 'real_x', 'real_y', 'real_z'])
 
         # Quantities for converting to raw values
         self.sensor_input_range = (-4 * 9.81, 4 * 9.81)  # Gravity * g force (to convert 4 G to m/s^2)
@@ -36,14 +36,30 @@ class Accelerometer(PollingSensor):
         sample_times = sample_times = self._get_sample_times(dt_usec)
 
         # @todo: apply a rotation matrix to simulate the actual 
-        z_accel = 9.81  # Gravity
 
         # NOTE: Accel is mounted such that it is rotated 90 degrees in the horizontal plane such that:
         #       +y accel = +x pod reference frame, +x accel = -y pod reference frame
         #       ^ This is the format for the data.
         # @todo: move this to config somehow (tbd)
-        return [self.data(t, 0, sample_data[i], z_accel) for i, t in enumerate(sample_times)]
-        
+
+        # Map real values to sample values
+
+        samples = []
+        for i, t in enumerate(sample_times):
+            real_x = 0
+            real_y = sample_data[i]
+            real_z = 9.81  # Accel due to gravity
+
+            # @todo: Apply a rotation matrix? 
+
+            # Map 
+            xyz = np.array((real_x, real_y, real_z))
+            xyz = np.interp(xyz, self.sensor_input_range, self.sensor_output_range)  
+            xyz = xyz.astype(int)
+            samples.append(self.data(t, xyz[0], xyz[1], xyz[2], real_x, real_y, real_z))
+            
+        return samples
+                        
     def to_raw(self, sample):
         """ Convert a sample to its raw form for the FCU """
         # @todo: This depends on mode (e.g. 4g, 8g, etc.) -- right now it's 4g
@@ -52,7 +68,7 @@ class Accelerometer(PollingSensor):
         # @todo: what happens if the G force goes above the highest value? 
         # Note: 1G = 9.81m/s^2
 
-        xyz = np.array((sample.x, sample.y, sample.z))
+        xyz = np.array((sample.real_x, sample.real_y, sample.real_z))
         # xyz = np.clip(xyz, *self.sensor_input_range)   # Clip to the input range (4g) to avoid  (Note: np.interp clips)
         xyz = np.interp(xyz, self.sensor_input_range, self.sensor_output_range)  
         return self.data(sample.t, *xyz.astype(int))

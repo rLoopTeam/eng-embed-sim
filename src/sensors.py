@@ -281,7 +281,12 @@ class QueueingListener(SensorListener):
     def step_callback(self, sensor, step_samples):
         # Push the samples onto the queue
         self.q.extendleft(step_samples)
-        self.last_data = self.q[-1]
+        # @TODO: there is a potential threading problem wherein the following results in a 'deque index out of range' error. Fix this by switching to thread-safe queue
+        #        ...or during the switch to multiprocessing this should be fixed since we'd be moving to another method anyway
+        try: 
+            self.last_data = self.q[-1]
+        except Exception as e:
+            self.logger.error(e)
     
     def pop(self):
         # Pop one off the queue
@@ -298,7 +303,12 @@ class QueueingRawListener(QueueingListener):
     def step_callback(self, sensor, step_samples):
         """ Add the raw values to the queue """
         self.q.extendleft([sensor.to_raw(s) for s in step_samples])
-        self.last_data = self.q[-1]
+        # @TODO: There is a probably threading problem here that occasionally causes the following to raise an IndexError
+        try:
+            self.last_data = self.q[-1]
+        except Exception as e:
+            # For now just log it -- it won't materially affect the simulation
+            self.logger.error(e)
         
 class SensorConsoleWriter(SensorListener):
     """ A sensor step listener that writes to the console """
@@ -320,9 +330,16 @@ class SensorCsvWriter(SensorListener):
         self.enabled = self.config.enabled or True
         
         # Internal
-        self._headers_written = False        
+        self._started = False        
+        self._headers_written = False
         
         self.output_filename = os.path.join(self.sim.config.working_dir, self.config.log_filename)        
+        
+        # Create the step callback generator and get it started
+        self.gen = self._step_callback_gen()
+        
+        # Start the generator (open csv file for writing)
+        next(self.gen)        
         
     def play(self):
         self.enabled = True
@@ -330,21 +347,30 @@ class SensorCsvWriter(SensorListener):
     def pause(self):
         self.enabled = False
 
-    def step_callback(self, sensor, step_samples):
-        # This opens the file every time?? Hmm seems that it doesn't screw with sim time too badly. Maybe it's kept open in the background?
-        # @todo: dig into this and get it into better shape
-        if self.enabled:
-            if not self._headers_written: 
-                with open(self.output_filename, 'wb') as f:
-                    w = csv.writer(f, lineterminator=os.linesep)
-                    w.writerow(sensor.get_csv_headers())
-                self._headers_written = True
-                
-            with open(self.output_filename, 'ab') as f:
-                w = csv.writer(f, lineterminator=os.linesep)
-                for sample in step_samples:
-                    w.writerow(list(sample))  # Note: each sample is assumed to be a namedtuple of some sort
+    def _step_callback_gen(self):
+        """ Generator for writing a csv file """
 
+        with open(self.output_filename, 'wb') as f:   # Note: need to use wb since windows
+            w = csv.writer(f, lineterminator=os.linesep)  # Also lineterminator=os.linesep for cross platform compatibility
+
+            while True:
+                sensor, step_samples = (yield)   # Wait for step_callback to send us the a sample
+
+                if not self._headers_written: 
+                    w.writerow(sensor.get_csv_headers())
+                    self._headers_written = True
+                
+                if self.enabled:
+                    for sample in step_samples:
+                        w.writerow(list(sample))  # Note: each sample is assumed to be a namedtuple of some sort
+                        
+    def step_callback(self, sensor, step_samples):
+        """ Generator-based step callback """
+
+        # Send our sensor and samples to the generator
+        self.gen.send((sensor, step_samples))
+
+        
 class SensorRawCsvWriter(SensorCsvWriter):
     def __init__(self, sim, config):
         SensorCsvWriter.__init__(self, sim, config)
@@ -352,7 +378,29 @@ class SensorRawCsvWriter(SensorCsvWriter):
         self.output_filename = os.path.join(self.sim.config.working_dir, "raw_"+self.config.log_filename)
         #self.logger.info("SensorRawCsvWriter ({}) initialized with filename {}".format(self.enabled, self.output_filename))
 
-    def step_callback(self, sensor, step_samples):
+    
+    def _step_callback_gen(self):
+        """ Generator for writing a csv file """
+
+        self.logger.debug("step_callback_gen called -- starting")
+
+        with open(self.output_filename, 'wb') as f:   # Note: need to use wb since windows
+            w = csv.writer(f, lineterminator=os.linesep)  # Also lineterminator=os.linesep for cross platform compatibility
+
+            while True:
+                sensor, step_samples = (yield)   # Wait for step_callback to send us the a sample
+
+                if not self._headers_written: 
+                    self.logger.debug("Writing headers for sensor {}".format(sensor.config.desc))
+                    w.writerow(sensor.get_csv_headers())
+                    self._headers_written = True
+                
+                if self.enabled:
+                    for sample in step_samples:
+                        w.writerow(list(sensor.to_raw(sample)))  # Note: each sample is assumed to be a namedtuple of some sort. @todo: include raw with the sensor data? 
+
+
+    def step_callback_DEPRECATED(self, sensor, step_samples):
         if self.enabled:
             if not self._headers_written: 
                 with open(self.output_filename, 'wb') as f:

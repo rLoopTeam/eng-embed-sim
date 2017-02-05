@@ -40,7 +40,7 @@ import bitstring
 from config import Config
 from units import Units
 from networking import PodComms, UdpListener
-from sensors import QueueingRawListener
+from sensors import QueueingListener, QueueingRawListener
 
 # IMPORTANT: This must be run as administrator (PowerShell on Windows) or it will encounter a write error.
 
@@ -385,22 +385,26 @@ class Fcu:
         #pre_accel = self.lib.s32FCU_ACCELL__Get_CurrentAccel_mmss(u8DeviceIndex)
         #pre_displacement = self.lib.s32FCU_ACCELL__Get_CurrentDisplacement_mm(ctypes.c_ubyte(u8DeviceIndex))
         try:
-            real_data = self.accel_listeners[u8DeviceIndex].pop()
+            data = self.accel_listeners[u8DeviceIndex].pop()
         except IndexError as e:
             self.logger.debug(e)
             return
-                        
+
+        # @todo: debug this -- sometimes the data is None right at the beginning of the time. Maybe the FCU calls this without prompting during FCU__Init()?
+        if data is None:
+            return
+
         # Set the values
         # @TODO: What is the orientation of our accelerometers? We need to know that to be able to provide proper data...
-        data = self.sim.sensors['accel'][u8DeviceIndex].to_raw(real_data)
+        #data = self.sim.sensors['accel'][u8DeviceIndex].to_raw(real_data)
         #self.logger.debug("Accel data from the sensor is {}".format(data))
         # Note: '.contents' and '.raw' do not work for setting the value -- use pu8X[0] = <c value> (e.g. ps16x.contents = something won't set the value)
         
         # NOTE: The physical FCU is rotated 90 degrees such that +y data-wise is +x physical (and +x is -y due to the rotation) -- see http://confluence.rloop.org/display/SD/2.+Determine+Pod+Kinematics, tube frame of reference
         #       ^ This is handled in the accel sensors themselves. See sensor_accel.py.
-        ps16X[0] = ctypes.c_int16(data.x)  # Rotated 90 degrees -- +x comes in as -y
-        ps16Y[0] = ctypes.c_int16(data.y)   # The data comes in where +x is +y
-        ps16Z[0] = ctypes.c_int16(data.z)
+        ps16X[0] = ctypes.c_int16(data.raw_x)  # Rotated 90 degrees -- +x comes in as -y
+        ps16Y[0] = ctypes.c_int16(data.raw_y)   # The data comes in where +x is +y
+        ps16Z[0] = ctypes.c_int16(data.raw_z)
 
         #self.logger.debug("s32FCU_ACCELL__Get_CurrentAccel_mmss({}) -- pre: {}; post: {} (mm/s^2); (should be {})".format(u8DeviceIndex, pre_accel, post_accel, data))
         #self.logger.debug("s32FCU_ACCELL__Get_CurrentDisplacement_mm({}) -- pre: {}; post: {}".format(u8DeviceIndex, pre_displacement, post_displacement))
@@ -739,7 +743,7 @@ class Fcu:
             self.timerunner.add_timer( CallbackTimer(timer_delay, lambda x=i: self.update_accel(x), name="Accel[{}] timer".format(i) ) )
 
             # Tie it to the appropriate sensor
-            self.accel_listeners.append( QueueingRawListener(self.sim, None) )  # Note: we tie it to the sensor in the next line
+            self.accel_listeners.append( QueueingListener(self.sim, None) )  # Note: we tie it to the sensor in the next line
             self.sim.sensors['accel'][i].add_step_listener(self.accel_listeners[i])
             # Now we have a handle to a listener for each accel. We'll use those in MMA8451_readdata_callback
     

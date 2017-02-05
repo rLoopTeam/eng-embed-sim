@@ -8,7 +8,7 @@
 #     ref to bottom of he (147.44) - 37.3 = 110.14 (reference to bottom of laser opto sensor ** Remember to add in the built-in 25mm offset for calculations **)
 
 sim:
-    fixed_timestep: 1000 usec
+    fixed_timestep: 5000 usec
     # Interval to recalculate time dialation (real time vs sim time) for the FCU timers
     time_dialation_interval: 100msec
     fcu:
