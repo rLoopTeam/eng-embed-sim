@@ -100,25 +100,25 @@ class Fcu:
         # @see FIRMWARE/COMMON_CODE/MULTICORE/LCCM325__MULTICORE__802_3/eth.h
         # typedef void (__cdecl * pETH_WIN32__TxCallback_FuncType)(Luint8 * pu8Buffer, Luint16 u16BufferLength);
         self.register_callback(self.eth_tx_callback, 
-            'vETH_WIN32__Set_Ethernet_TxCallback', None, 
+            'vSIL3_ETH_WIN32__Set_Ethernet_TxCallback', None, 
             [ctypes.POINTER(ctypes.c_ubyte), ctypes.c_uint16])
 
         # 'mma8451
-        # Public Shared Sub vMMA8451_WIN32__Set_ReadDataCallback(ByVal callback As MulticastDelegate)
+        # Public Shared Sub vSIL3_MMA8451_WIN32__Set_ReadDataCallback(ByVal callback As MulticastDelegate)
         # Public Delegate Sub MMA8451_WIN32__ReadDataCallbackDelegate(u8DeviceIndex As Byte, pu8X As IntPtr, pu8Y As IntPtr, pu8Z As IntPtr)
         # @see FIRMWARE/COMMON_CODE/MULTICORE/LCCM418__MULTICORE__MMA8451/mma8451.h
-        # void vMMA8451_WIN32__ReadData(Luint8 u8DeviceIndex, Lint16 *ps16X, Lint16 *ps16Y, Lint16 *ps16Z);
+        # void vSIL3_MMA8451_WIN32__ReadData(Luint8 u8DeviceIndex, Lint16 *ps16X, Lint16 *ps16Y, Lint16 *ps16Z);
         self.register_callback(self.MMA8451_readdata_callback, 
-            'vMMA8451_WIN32__Set_ReadDataCallback', None, 
+            'vSIL3_MMA8451_WIN32__Set_ReadDataCallback', None, 
             [ctypes.c_uint8, ctypes.POINTER(ctypes.c_int16), ctypes.POINTER(ctypes.c_int16), ctypes.POINTER(ctypes.c_int16)])
 
         # 'stepper system
-        # Public Shared Sub vSTEPDRIVE_WIN32__Set_UpdatePositionCallback(ByVal callback As MulticastDelegate)
+        # Public Shared Sub vSIL3_STEPDRIVE_WIN32__Set_UpdatePositionCallback(ByVal callback As MulticastDelegate)
         # Public Delegate Sub STEPDRIVE_WIN32__Set_UpdatePositionCallbackDelegate(u8MotorIndex As Byte, u8Step As Byte, u8Dir As Byte, s32Position As Int32)
         # @see FIRMWARE/COMMON_CODE/MULTICORE/LCCM231__MULTICORE__STEPPER_DRIVE/stepper_drive.h
         # typedef void (__cdecl * pSTEPDRIVE_WIN32__UpdatePosCallback_FuncType)(Luint8 u8MotorIndex, Luint8 u8Step, Luint8 u8Dir, Lint32 s32Position);
         self.register_callback(self.stepdrive_update_position_callback, 
-            'vSTEPDRIVE_WIN32__Set_UpdatePositionCallback', None, 
+            'vSIL3_STEPDRIVE_WIN32__Set_UpdatePositionCallback', None, 
             [ctypes.c_uint8, ctypes.c_uint8, ctypes.c_uint8, ctypes.c_int32])
 
         # 'SC16 UARTS
@@ -128,13 +128,14 @@ class Fcu:
         # void vSC16IS_WIN32__TxData(Luint8 u8DeviceIndex, Luint8 *pu8Data, Luint8 u8Length);
         # NOTE: @todo: This set callback method takes a device index -- not sure yet but I think this needs to be handled differently than the rest of the callbacks
         #    DLL_DECLARATION void vSC16IS_WIN32__Set_TxData_Callback(Luint8 u8DeviceIndex, pSC16IS_WIN32_TxData_Callback_FuncType pFunc);
+        
         for device_index in xrange(self.C_NUM__SC16IS):
             self.register_SC16IS_callback(device_index, self.SC16IS_txdata_callback, 
-                'vSC16IS_WIN32__Set_TxData_Callback', None,
+                'vSIL3_SC16IS_WIN32__Set_TxData_Callback', None,
                 [ctypes.c_ubyte, ctypes.POINTER(ctypes.c_int), ctypes.c_ubyte])
 
         
-        # 'AMC7812 for HE Thrott
+        # 'AMC7812 for HE Throttle
         # Public Shared Sub vAMC7812_WIN32__Set_DACVoltsCallback(ByVal callback As MulticastDelegate)
         # Public Delegate Sub AMC7812_WIN32__Set_DACVoltsCallbackDelegate(u8Channel As Byte, f32Volts As Single)
         # @see FIRMWARE/COMMON_CODE/MULTICORE/LCCM658__MULTICORE__AMC7812/amc7812.h
@@ -145,9 +146,10 @@ class Fcu:
             [ctypes.c_uint8, ctypes.c_float])
 
         # Mission phase callback
-        self.register_callback(self.FCU_REPORT_MissionPhaseCallback,
-            'vDEBUG_RECORD_WIN32__Set_MissionPhaseCallback', None,
-            [ctypes.c_uint8])
+        # @todo: 2017-06-17 RDA -- this seems to be missing from the DLL
+        #self.register_callback(self.FCU_REPORT_MissionPhaseCallback,
+        #    'vDEBUG_RECORD_WIN32__Set_MissionPhaseCallback', None,
+        #    [ctypes.c_uint8])
 
         # ------------------------
         #  Callable DLL Functions
@@ -156,8 +158,8 @@ class Fcu:
         # '''Debugging / Testing / Simulating
         
         # Public Shared Sub vETH_WIN32__Ethernet_Input(pu8Buffer() As Byte, u16BufferLength As UInt16)
-        # Public Shared Sub vMMA8451_WIN32__TriggerInterrupt(u8DeviceIndex As Byte)
-        # Public Shared Sub vSTEPDRIVE_WIN32__ForcePosition(u8MotorIndex As Byte, s32Position As Int32)
+        # Public Shared Sub vSIL3_MMA8451_WIN32__TriggerInterrupt(u8DeviceIndex As Byte)
+        # Public Shared Sub vSIL3_STEPDRIVE_WIN32__ForcePosition(u8MotorIndex As Byte, s32Position As Int32)
         # Public Shared Sub vSC16IS_WIN32__InjectData(u8DeviceIndex As Byte, pu8Data() As Byte, u8Length As Byte)
 
         # '''Running
@@ -167,7 +169,7 @@ class Fcu:
         # Private Shared Sub vFCU__Process()
         # Private Shared Sub vFCU__RTI_10MS_ISR()
         # Private Shared Sub vFCU__RTI_100MS_ISR()
-        # Private Shared Sub vSTEPDRIVE_TIMEBASE__ISR()   # Note: 50usec
+        # Private Shared Sub vSIL3_STEPDRIVE_TIMEBASE__ISR()   # Note: 50usec
         
         # 'Laser Distance
         # Private Shared Sub vFCU_LASERDIST_WIN32__Set_DistanceRaw(f32Value As Single)
@@ -219,17 +221,17 @@ class Fcu:
     def set_return_types(self):
         """ Set the return types for various DLL methods. NOTE: You must do this or risk bad auto-conversions (e.g. int16 -2001 => int32 62259) """
         
-        # DLL_DECLARATION void vSTEPDRIVE_WIN32__ForcePosition(Luint8 u8MotorIndex, Lint32 s32Position);
-        self.lib.vSTEPDRIVE_WIN32__ForcePosition.argtypes = [ctypes.c_uint8, ctypes.c_int32]
-        self.lib.vSTEPDRIVE_WIN32__ForcePosition.restype = None
+        # DLL_DECLARATION void vSIL3_STEPDRIVE_WIN32__ForcePosition(Luint8 u8MotorIndex, Lint32 s32Position);
+        self.lib.vSIL3_STEPDRIVE_WIN32__ForcePosition.argtypes = [ctypes.c_uint8, ctypes.c_int32]
+        self.lib.vSIL3_STEPDRIVE_WIN32__ForcePosition.restype = None
         
         # DLL_DECLARATION Luint16 u16DAQ__Get_FIFO_Level(Luint16 u16Index);
-        self.lib.u16DAQ__Get_FIFO_Level.argtypes = [ctypes.c_uint16]
-        self.lib.u16DAQ__Get_FIFO_Level.restype = ctypes.c_uint16
+        self.lib.u16SIL3_DAQ__Get_FIFO_Level.argtypes = [ctypes.c_uint16]
+        self.lib.u16SIL3_DAQ__Get_FIFO_Level.restype = ctypes.c_uint16
         
         # DLL_DECLARATION Luint16 u16DAQ__Get_FIFO_Max(Luint16 u16Index);
-        self.lib.u16DAQ__Get_FIFO_Max.argtypes = [ctypes.c_uint16]
-        self.lib.u16DAQ__Get_FIFO_Max.restype = ctypes.c_uint16
+        self.lib.u16SIL3_DAQ__Get_FIFO_Max.argtypes = [ctypes.c_uint16]
+        self.lib.u16SIL3_DAQ__Get_FIFO_Max.restype = ctypes.c_uint16
         
         # -- Track Database -----
         
@@ -296,12 +298,12 @@ class Fcu:
         
         # -- Accelerometers -----
         
-        # DLL_DECLARATION void vMMA8451_WIN32__TriggerInterrupt(Luint8 u8DeviceIndex);
-        # DLL_DECLARATION void vMMA8451_WIN32__Set_ReadDataCallback(pMMA8451_WIN32__ReadDataCallback_FuncType pFunc);   # Handled in __init__    
+        # DLL_DECLARATION void vSIL3_MMA8451_WIN32__TriggerInterrupt(Luint8 u8DeviceIndex);
+        # DLL_DECLARATION void vSIL3_MMA8451_WIN32__Set_ReadDataCallback(pMMA8451_WIN32__ReadDataCallback_FuncType pFunc);   # Handled in __init__    
         
         #DLL_DECLARATION Lint16 s16MMA8451_FILTERING__Get_Average(Luint8 u8DeviceIndex, MMA8451__AXIS_E eAxis);
-        self.lib.s16MMA8451_FILTERING__Get_Average.argtypes = [ctypes.c_uint8, ctypes.c_uint8]
-        self.lib.s16MMA8451_FILTERING__Get_Average.restype = ctypes.c_int16
+        self.lib.s16SIL3_MMA8451_FILTERING__Get_Average.argtypes = [ctypes.c_uint8, ctypes.c_uint8]
+        self.lib.s16SIL3_MMA8451_FILTERING__Get_Average.restype = ctypes.c_int16
 
         # DLL_DECLARATION Lint32 s32FCU_ACCELL__Get_CurrentAccel_mmss(Luint8 u8Channel);
         self.lib.s32FCU_ACCELL__Get_CurrentAccel_mmss.argtypes = [ctypes.c_uint8]
@@ -357,10 +359,10 @@ class Fcu:
         #    pu8Payload = ctypes.create_string_buffer(packet)
         pu8Payload = ctypes.create_string_buffer(packet)
         
-        self.lib.vSAFE_UDP_RX__UDPPacket(ctypes.byref(pu8Payload), u16PacketLength, u16DestPort)
+        self.lib.vSIL3_SAFEUDP_RX__UDPPacket(ctypes.byref(pu8Payload), u16PacketLength, u16DestPort)
         
         # Note: If you have a full ethernet packet, you can use the following to inject it. 
-        #       vSAFE_UDP_RX__UDPPacket() is much easier here since we are only handling those and we don't have to reconstruct a full ethernet packet
+        #       vSIL3_SAFEUDP_RX__UDPPacket() is much easier here since we are only handling those and we don't have to reconstruct a full ethernet packet
         # self.lib.vETH_WIN32__Ethernet_Input(packet, len(byte_array))  # Just for knowing that this is an option
                 
                     
@@ -509,10 +511,10 @@ class Fcu:
 
         """
         Example (manual version):
-        vSTEPDRIVE_WIN32__UpdatePositionCallback = ctypes.CFUNCTYPE(None, ctypes.c_ubyte, ctypes.c_ubyte, ctypes.c_ubyte, ctypes.c_int32)
-        #vSTEPDRIVE_WIN32__Set_UpdatePositionCallback = lib.vSTEPDRIVE_WIN32__Set_UpdatePositionCallback
-        lib.vSTEPDRIVE_WIN32__Set_UpdatePositionCallback.argtypes = [vSTEPDRIVE_WIN32__UpdatePositionCallback]
-        vSTEPDRIVE_WIN32__Set_UpdatePositionCallback.restype = None
+        vSIL3_STEPDRIVE_WIN32__UpdatePositionCallback = ctypes.CFUNCTYPE(None, ctypes.c_ubyte, ctypes.c_ubyte, ctypes.c_ubyte, ctypes.c_int32)
+        #vSIL3_STEPDRIVE_WIN32__Set_UpdatePositionCallback = lib.vSIL3_STEPDRIVE_WIN32__Set_UpdatePositionCallback
+        lib.vSIL3_STEPDRIVE_WIN32__Set_UpdatePositionCallback.argtypes = [vSIL3_STEPDRIVE_WIN32__UpdatePositionCallback]
+        vSIL3_STEPDRIVE_WIN32__Set_UpdatePositionCallback.restype = None
         
         Ethernet_TxCallback = ctypes.CFUNCTYPE(None, ctypes.POINTER(ctypes.c_ubyte), ctypes.c_uint16)
         vETH_WIN32__Set_Ethernet_TxCallback = lib.vETH_WIN32__Set_Ethernet_TxCallback
@@ -539,7 +541,7 @@ class Fcu:
         
     def update_accel(self, index):
         if self.accel_listeners[index].has_samples():  # if the queue has something for us
-            self.lib.vMMA8451_WIN32__TriggerInterrupt(index)
+            self.lib.vSIL3_MMA8451_WIN32__TriggerInterrupt(index)
         
     def update_laser_opto(self, index):
         """ Update the raw value of the laser opto sensor in the FCU """
@@ -587,13 +589,13 @@ class Fcu:
         
         # Private Shared Sub vFCU__RTI_10MS_ISR()
         # Private Shared Sub vFCU__RTI_100MS_ISR()
-        # Private Shared Sub vSTEPDRIVE_TIMEBASE__ISR()   # Note: 50usec
+        # Private Shared Sub vSIL3_STEPDRIVE_TIMEBASE__ISR()   # Note: 50usec
 
         self.logger.info("Initializing timers")
-        #self.timers.append(Timer(Units.seconds("50 usec"), self.lib.vSTEPDRIVE_TIMEBASE__ISR))
+        #self.timers.append(Timer(Units.seconds("50 usec"), self.lib.vSIL3_STEPDRIVE_TIMEBASE__ISR))
         #self.timers.append(Timer(Units.seconds("10 ms"), self.lib.vFCU__RTI_10MS_ISR))
         #self.timers.append(Timer(Units.seconds("100 ms"), self.lib.vFCU__RTI_100MS_ISR))
-        self.timerunner.add_timer(CallbackTimer(Units.seconds("50 usec"), self.lib.vSTEPDRIVE_TIMEBASE__ISR, name="vSTEPDRIVE_TIMEBASE__ISR"))
+        self.timerunner.add_timer(CallbackTimer(Units.seconds("50 usec"), self.lib.vSIL3_STEPDRIVE_TIMEBASE__ISR, name="vSIL3_STEPDRIVE_TIMEBASE__ISR"))
         self.timerunner.add_timer(CallbackTimer(Units.seconds("10 ms"), self.lib.vFCU__RTI_10MS_ISR, name="vFCU__RTI_10MS_ISR"))
         self.timerunner.add_timer(CallbackTimer(Units.seconds("100 ms"), self.lib.vFCU__RTI_100MS_ISR, name="vFCU__RTI_100MS_ISR"))
         
@@ -707,11 +709,11 @@ class Fcu:
         
         #'needs to be done due to WIN32_ETH_Init
         #vETH_WIN32__Set_Ethernet_TxCallback(Me.m_pETH_TX__Delegate)
-        self.lib.vETH_WIN32__Set_Ethernet_TxCallback(self.callback_refs['vETH_WIN32__Set_Ethernet_TxCallback'])
+        self.lib.vSIL3_ETH_WIN32__Set_Ethernet_TxCallback(self.callback_refs['vSIL3_ETH_WIN32__Set_Ethernet_TxCallback'])
 
         # 'force the two motor positions to random so as we can simulate the cal process
-        self.lib.vSTEPDRIVE_WIN32__ForcePosition(0, -34)
-        self.lib.vSTEPDRIVE_WIN32__ForcePosition(1, 175)
+        self.lib.vSIL3_STEPDRIVE_WIN32__ForcePosition(0, -34)
+        self.lib.vSIL3_STEPDRIVE_WIN32__ForcePosition(1, 175)
 
         self.lib.vFCU_BRAKES_MLP_WIN32__ForceADC(0, 0)
         self.lib.vFCU_BRAKES_MLP_WIN32__ForceADC(1, 0)
@@ -723,10 +725,10 @@ class Fcu:
         
     def fcu_setup(self):
         self.logger.info("Initializing timers")
-        #self.timers.append(Timer(Units.seconds("50 usec"), self.lib.vSTEPDRIVE_TIMEBASE__ISR))
+        #self.timers.append(Timer(Units.seconds("50 usec"), self.lib.vSIL3_STEPDRIVE_TIMEBASE__ISR))
         #self.timers.append(Timer(Units.seconds("10 ms"), self.lib.vFCU__RTI_10MS_ISR))
         #self.timers.append(Timer(Units.seconds("100 ms"), self.lib.vFCU__RTI_100MS_ISR))
-        self.timerunner.add_timer(CallbackTimer(Units.seconds("50 usec"), self.lib.vSTEPDRIVE_TIMEBASE__ISR, name="vSTEPDRIVE_TIMEBASE__ISR"))
+        self.timerunner.add_timer(CallbackTimer(Units.seconds("50 usec"), self.lib.vSIL3_STEPDRIVE_TIMEBASE__ISR, name="vSIL3_STEPDRIVE_TIMEBASE__ISR"))
         self.timerunner.add_timer(CallbackTimer(Units.seconds("10 ms"), self.lib.vFCU__RTI_10MS_ISR, name="vFCU__RTI_10MS_ISR"))
         self.timerunner.add_timer(CallbackTimer(Units.seconds("100 ms"), self.lib.vFCU__RTI_100MS_ISR, name="vFCU__RTI_100MS_ISR"))
         
@@ -822,8 +824,8 @@ class Fcu:
             vETH_WIN32__Set_Ethernet_TxCallback(Me.m_pETH_TX__Delegate)
 
             'force the two motor positions to random so as we can simulate the cal process
-            vSTEPDRIVE_WIN32__ForcePosition(0, -34)
-            vSTEPDRIVE_WIN32__ForcePosition(1, 175)
+            vSIL3_STEPDRIVE_WIN32__ForcePosition(0, -34)
+            vSIL3_STEPDRIVE_WIN32__ForcePosition(1, 175)
 
             vFCU_BRAKES_MLP_WIN32__ForceADC(0, 0)
             vFCU_BRAKES_MLP_WIN32__ForceADC(1, 0)
@@ -857,11 +859,11 @@ class Fcu:
         
         #'needs to be done due to WIN32_ETH_Init
         #vETH_WIN32__Set_Ethernet_TxCallback(Me.m_pETH_TX__Delegate)
-        self.lib.vETH_WIN32__Set_Ethernet_TxCallback(self.callback_refs['vETH_WIN32__Set_Ethernet_TxCallback'])
+        self.lib.vSIL3_ETH_WIN32__Set_Ethernet_TxCallback(self.callback_refs['vSIL3_ETH_WIN32__Set_Ethernet_TxCallback'])
 
         # 'force the two motor positions to random so as we can simulate the cal process
-        self.lib.vSTEPDRIVE_WIN32__ForcePosition(0, -34)
-        self.lib.vSTEPDRIVE_WIN32__ForcePosition(1, 175)
+        self.lib.vSIL3_STEPDRIVE_WIN32__ForcePosition(0, -34)
+        self.lib.vSIL3_STEPDRIVE_WIN32__ForcePosition(1, 175)
 
         self.lib.vFCU_BRAKES_MLP_WIN32__ForceADC(0, 0)
         self.lib.vFCU_BRAKES_MLP_WIN32__ForceADC(1, 0)
@@ -912,13 +914,13 @@ class Fcu:
                 #pu8Payload = ctypes.create_string_buffer()
                 
                 #pu8Payload.contents = safeudp_payload
-                #self.lib.vSAFE_UDP_RX__UDPPacket(pu8Payload, ctypes.c_uint16(len(safeudp_payload)), ctypes.c_uint16(b_packet_type), ctypes.c_uint16(b_dest_port), ctypes.c_uint16(0))
-                # DLL_DECLARATION void vSAFE_UDP_RX__UDPPacket(Luint8 * pu8PacketBuffer, Luint16 u16PacketLength, Luint16 u16DestPort);
+                #self.lib.vSIL3_SAFEUDP_RX__UDPPacket(pu8Payload, ctypes.c_uint16(len(safeudp_payload)), ctypes.c_uint16(b_packet_type), ctypes.c_uint16(b_dest_port), ctypes.c_uint16(0))
+                # DLL_DECLARATION void vSIL3_SAFEUDP_RX__UDPPacket(Luint8 * pu8PacketBuffer, Luint16 u16PacketLength, Luint16 u16DestPort);
                 
                 u16PacketLength = ctypes.c_uint16(len(safeudp_payload))
                 u16DestPort = ctypes.c_uint16(b_dest_port)
                 pu8Payload = ctypes.create_string_buffer(safeudp_payload)
-                self.lib.vSAFE_UDP_RX__UDPPacket(ctypes.byref(pu8Payload), u16PacketLength, u16DestPort)
+                self.lib.vSIL3_SAFEUDP_RX__UDPPacket(ctypes.byref(pu8Payload), u16PacketLength, u16DestPort)
                 
             #'just wait a little bit
             #time.sleep(0.01)

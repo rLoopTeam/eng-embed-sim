@@ -150,8 +150,12 @@ class Brake:
         self.screw_pos = np.interp(self.gap, self.gap_range, self.screw_range)
         
         # Linear Position Sensor
-        self.mlp_range = [self.config.mlp_raw_retracted, self.config.mlp_raw_extended]
+        # @todo: check this to make sure the min/max are in the correct order -- should be retracted->extended
+        self.mlp_range = [self.config.mlp.raw_min, self.config.mlp.raw_max]
         # Calculate raw MLP value from the screw position
+
+        print("{}, {}, {}".format(self.screw_pos, self.screw_range, self.mlp_range))
+
         self.mlp_raw = np.interp(self.screw_pos, self.screw_range, self.mlp_range)
 
         # Negator 
