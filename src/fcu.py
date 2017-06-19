@@ -59,9 +59,13 @@ class Fcu:
 
         # Time Runner 
         self.timerunner = TimeRunner()
+        sim.add_end_listener(self.timerunner)
 
         # TESTING ONLY @todo: this should probably come from self.sim.networking
         #self.comms = PodComms(self, self.sim.config.networking)
+
+        # Should we stop?
+        self.end_flag = False
 
         # Load the DLL
         self.dll_path = self.config.dll_path
@@ -217,6 +221,9 @@ class Fcu:
         # AddHandler Me.m_pSafeUDP.UserEvent__NewPacket, AddressOf Me.InternalEvent__NewPacket
 
         self.set_return_types()
+
+    def end_callback(self, sim):
+        self.end_flag = True
 
     def set_return_types(self):
         """ Set the return types for various DLL methods. NOTE: You must do this or risk bad auto-conversions (e.g. int16 -2001 => int32 62259) """

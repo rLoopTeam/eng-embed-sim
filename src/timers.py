@@ -124,12 +124,26 @@ class TimeDialator(object):
 class TimeRunner:
     def __init__(self):
         self.timers = []
+        self.logger = logging.getLogger("TimeRunner")
         
+        self.end_flag = False
+
     def add_timer(self, timer):
         self.timers.append(timer)
-        
+    
+    def end_callback(self, sim):
+        self.logger.debug("TimeRunner.end_callback() called.")
+        self.end_flag = True
+
     def run(self):
         while True:
+
+            if self.end_flag:
+                # If the simulation has ended, stop the timers and break
+                for timer in self.timers:
+                    timer.stop()
+                break
+
             for timer in self.timers:
                 next(timer)
 
@@ -139,13 +153,10 @@ class TimeRunner:
         t.start()
         return t    
     
-    def stop(self):
-        self.stop_flag = True
-
     def get_timers(self):
         return self.timers
     
-class CallbackTimer:
+class CallbackTimer(Timer):
     
     def __init__(self, interval_sec, callback, **kwargs):
         self.interval = interval_sec

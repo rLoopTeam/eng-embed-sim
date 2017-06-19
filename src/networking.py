@@ -39,6 +39,12 @@ class PodComms:
             #self.port_node_map[node_config['rx_port']] = self.nodes[node_name]  # Map rx ports to network nodes @todo: do we need this? Each one listens on its own port...
             self.port_node_map[node_config['tx_port']] = self.nodes[node_name]  # Map rx ports to network nodes @todo: do we need this? Each one listens on its own port...
 
+    def end_callback(self, sim):
+        """ Simulation end callback. We should stop now. """
+        self.logger.debug("PodComms.end_callback() called.")
+        for node in self.nodes.values():
+            node.end_callback(sim)      
+
     def eth_tx_callback(self, raw_tx_packet, length):
         """ Callback for the FCU to send data """
         bytes = b"".join(map(chr, raw_tx_packet[34:length]))  # Strip off the IPv4
@@ -79,6 +85,9 @@ class NetworkNode:
         self.sim = sim
         self.config = config
         self.logger = logging.getLogger("NetworkNode")
+
+        # Should we stop yet? 
+        self.end_flag = False
         
         # Set up our addresses
         if self.sim.config.networking.force_loopback:
@@ -94,6 +103,10 @@ class NetworkNode:
         # Enable/disable rx. These can be set in __init__ of subclasses (or elsewhere...)  @todo: maybe add enable/disable tx too? 
         self.enable_rx = True
         self.enable_tx = True
+
+    def end_callback(self, sim):
+        self.logger.debug("NetworkNode.end_callback() called.")
+        self.end_flag = True
 
     def run_threaded(self):
         t = threading.Thread(target=self.run)
@@ -126,6 +139,10 @@ class NetworkNode:
 
         while True and self.enable_rx:
             #self.logger.debug('Waiting to receive message')
+
+            if self.end_flag:
+                break
+
             data, source_address = self.sock.recvfrom(self.buffer_len)
     
             dest_address = self.rx_address  # We are the destination, so use our rx_port
