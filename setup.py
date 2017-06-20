@@ -9,4 +9,7 @@ setup(name='rloopsim',
       license='',
       packages=['rloopsim'],
       install_requires=['numpy', 'pint', 'bokeh', 'pandas'],
-      zip_safe=False)
+      setup_requires=['pytest-runner'],
+      tests_require=['pytest'],
+      zip_safe=False
+      )
