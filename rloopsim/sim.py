@@ -294,7 +294,7 @@ class SimEndCondition(object):
 
         # If we've hit the wall...
         if sim.pod.position >= sim.track.length:
-            self.logger.info("Pod has destroyed the track and everything else within a 10 mile radius.")
+            self.logger.info("The pod has destroyed the track and everything else within a 10 mile radius.")
             return True
 
         return False

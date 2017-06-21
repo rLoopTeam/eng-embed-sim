@@ -34,7 +34,7 @@ from timers import TimeRunner, CallbackTimer
 import time
 import threading
 import struct
-import bitstring
+# import bitstring
 
 # Our stuff
 from config import Config
@@ -47,7 +47,7 @@ from sensors import QueueingListener, QueueingRawListener
 
 
 class Fcu:
-    
+    """ Flight Control Unit interface """
     
     def __init__(self, sim, config):
         self.sim = sim
