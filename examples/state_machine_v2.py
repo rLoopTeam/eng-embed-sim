@@ -2,6 +2,21 @@
 
 import time
 
+
+def mission_idle():
+    pass
+    
+def mission_test_mode():
+    pass
+    
+def 
+
+
+
+
+
+
+
 # Mission Phase
 mission_state = 'IDLE'  # IDLE, FLIGHT_SETUP, PUSHER_CHECK, READY, PUSH, COAST, BRAKE, SPINDOWN, POD_SAFE, EGRESS, FAULT/ABORT
 
@@ -9,11 +24,52 @@ mission_state = 'IDLE'  # IDLE, FLIGHT_SETUP, PUSHER_CHECK, READY, PUSH, COAST, 
 he_state = 'OFF'  # OFF, STARTING, RUNNING, SHUTDOWN, EMERGENCY_SHUTDOWN
 he_target_state = 'OFF'
 
+# Main State Machine
+MISSION_STATE = 'IDLE'
+MISSION_TRANSITIONS_ENABLED = []  # Just initialize -- process_*() will determine which transitions are enabled
+
+# Brake Subsystem State Machine
+BRAKE_STATE = 'HOLD'
+BRAKE_TRANSITIONS_ENABLED = []
+
 
 def process():
-    process_mission_phase()
-    process_hover_engines()
+    process_mission_sm()
+    process_brake_sm()
+
     # ...
+
+
+def process_mission_sm():
+    if MISSION_STATE == 'IDLE':
+        MISSION_TRANSITIONS_ENABLED = ['TEST_MODE', 'SHUTDOWN', 'FLIGHT_SETUP', 'FAULT']
+
+        # Check for commands to transition to another mode
+
+    elif MISSION_STATE == 'TEST_MODE':
+        MISSION_TRANSITIONS_ENABLED = ['IDLE', 'FAULT']
+
+        # Do test mode stuff
+    
+    elif MISSION_STATE == 'PRELOAD_TESTS':
+        MISSION_TRANSITIONS_ENABLED = ['IDLE', 'FAULT']
+        
+        # Run preload tests SM
+        
+        
+        if PRELOAD_TESTS_SM_STATE == 'COMPLETE':
+            if preload_tests_passed():
+                MISSION_TARGET_STATE = 'IDLE'
+            else:
+                MISSION_TARGET_STATE = 'FAULT'
+
+
+        
+    # If a transition has been requested (i.e. MISSION_TARGET_STATE is set), execute that if it's valid
+    if MISSION_TARGET_STATE is not None and MISSION_TARGET_STATE in MISSION_TRANSITIONS_ENABLED:
+        MISSION_STATE = MISSION_TARGET_STATE
+        MISSION_TARGET_STATE = None  # Indicates no request to transition
+
 
 def process_mission_phase():
     
@@ -21,23 +77,6 @@ def process_mission_phase():
     # @TODO: Manual override (in any state, interlocked command -- => spindown => pod_safe, no [automatic] brake movement)
     
     # @todo: maybe have startup/reset state? 
-    
-    if mission_target_state == 'MANUAL_OVERRIDE':
-        # Go directly to manual state -- this is available from any state, and should generally only be used in case of emergency during a run
-        # For instance, if we're prepped for a push (hovering, waiting) and SpaceX tells us there's a problem with the pusher, we may need to 
-        # drop to manual mode to shut things down. May want a state that we can trigger such as 'MISSION_ABORT_SAFE'
-
-        mission_state = 'MANUAL_OVERRIDE'
-        
-        # Powered safe mode -- brakes held in place, cooling system off, hover engines off, landing gear stopped, lasers off (?)
-        # @todo: do we want to go to powered safe, or keep things in their current state? 
-        # @todo: Maybe have a 'pause' function that would stop the brakes, keep HEs running if they're running, stops LG, etc. -- kind of a 'hold up' mode
-        goto_powered_safe()  
-        
-        
-    elif mission_target_state == 'EMERGENCY_STOP':
-        # Get the pod to a 'safe' state as quickly as possible
-    
     
     if mission_state == 'IDLE':
         # Pod must be totally idle in this state. No chance of movement or anything that could cause injury.
@@ -69,9 +108,6 @@ def process_mission_phase():
     elif mission_state == 'TEST_MODE':
         # Allow manual (and automated) tests to be run on the pod
         
-        
-
-
         if exit_test_mode_cmd():
             mission_state = 'IDLE'
 

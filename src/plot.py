@@ -174,6 +174,6 @@ class PlotPostProcessor:
         
 if __name__ == "__main__":
     logging.basicConfig(level=logging.DEBUG)
-    p = PlotPostProcessor(None, None, './data/test')
+    p = PlotPostProcessor(None, None, '../eng-embed-sim-data/test')
     p.create_plots()
     
