@@ -54,6 +54,14 @@ class Sim:
         
         self.ensure_working_dir()
 
+        # Simulator control
+        self.end_conditions = []
+        self.end_listeners = []
+        
+        # Pre and post 
+        self.preprocessors = []
+        self.postprocessors = []
+
         # Time
         self.fixed_timestep_usec = Units.usec(config.fixed_timestep)  # Convert to usec
         self.time_dialator = TimeDialator(self)  # We're going to step this
@@ -109,10 +117,12 @@ class Sim:
         
         # Networking
         self.comms = PodComms(self, self.config.networking)
+        self.add_end_listener(self.comms)
 
         # FCU (!)
         if self.config.fcu.enabled:
             self.fcu = Fcu(self, self.config.fcu)
+            self.add_end_listener(self.fcu)
         else:
             # @todo: will this have any side effects (e.g. not having an fcu?)
             self.logger.info("Not initializing FCU because it is disabled via config.")
@@ -124,13 +134,6 @@ class Sim:
         # Volatile
         self.elapsed_time_usec = 0
         self.n_steps_taken = 0
-        
-        # Simulator control
-        self.end_conditions = []
-        
-        # Pre and post 
-        self.preprocessors = []
-        self.postprocessors = []
         
         # Testing laser opto sensor class
         # self.laser_opto_sensors = LaserOptoSensors(self, self.config.sensors.laser_opto)
@@ -200,7 +203,7 @@ class Sim:
 
         self.logger.info("Starting simulation")
 
-        finished = False
+        self.end_flag = False
         sim_start_t = time.time()
         
         # Notify preprocessors
@@ -219,9 +222,13 @@ class Sim:
             # Check our end listener(s) to see if we should end the simulation (e.g. the pod has stopped)
             for listener in self.end_conditions:
                 if listener.is_finished(self):
-                    finished = True
+                    self.end_flag = True
             
-            if finished:
+            if self.end_flag:
+                # Notify our 'finished' listeners and break the loop
+                for end_listener in self.end_listeners:
+                    end_listener.end_callback(self)
+
                 break
             
             self.step(self.fixed_timestep_usec)
@@ -240,7 +247,11 @@ class Sim:
     def add_end_condition(self, listener):
         """ Add a listener that will tell us if we should end the simulator """
         self.end_conditions.append(listener)
-        
+    
+    def add_end_listener(self, listener):
+        """ Add a listener for when we've ended the sim """
+        self.end_listeners.append(listener)
+
     def add_preprocessor(self, processor):
         self.preprocessors.append(processor)
         
@@ -283,7 +294,7 @@ class SimEndCondition(object):
 
         # If we've hit the wall...
         if sim.pod.position >= sim.track.length:
-            self.logger.info("Pod has destroyed the track and everything else within a 10 mile radius.")
+            self.logger.info("The pod has destroyed the track and everything else within a 10 mile radius.")
             return True
 
         return False
@@ -295,7 +306,7 @@ if __name__ == "__main__":
     import logging.config
     import yaml
 
-    from debug import stacktracer
+    #from debug import stacktracer
     #stacktracer.trace_start("trace.html",interval=5,auto=True) # Set auto flag to always update file!
 
     with open('conf/logging.conf') as f:  # @todo: make this work when run from anywhere (this works if run from top directory)
@@ -320,11 +331,15 @@ if __name__ == "__main__":
     
     sim.run()
     
+    # Keep the script alive until we're done (works with both threading and non-threading cases)
     while True:
+        if sim.end_flag:
+            sys.exit(0)
+
         try:
             time.sleep(0.1)
         except:
-            stactracer.trace_stop()
+            #stacktracer.trace_stop()
             sys.exit(0)
     
     """

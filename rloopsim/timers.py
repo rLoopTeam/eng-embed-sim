@@ -16,7 +16,12 @@ from units import Units
 
 
 class Timer:
-    """ Basic timer with callback and time dialation """
+    """ 
+    Basic timer with callback and time dialation.
+    Note: This is a simple timer and must be run in a thread or as 
+          the main loop in a process. See CallbackTimer below for
+          a more sophisticated generator-based timer. 
+    """
 
     def __init__(self, interval_sec, callback):
         self.interval = interval_sec
@@ -30,34 +35,43 @@ class Timer:
 
     def update_dialation(self, dialation):
         """ set the time-dialated delay """
+        
         self.dialation = dialation
         self.delay = self.interval * self.dialation
 
     def start_threaded(self):
+        """ Run the timer in a separate thread """
+
         t = threading.Thread(target=self.run, args=())
         t.daemon = True
         t.start()
         return t
 
     def run(self):
+        """ Run the timer """
+
         t0 = time.clock()
         while True:
             if self.stop_flag:  # Break out if we need to
                 self.stop_flag = False  # so we can restart
                 break
+
             t1 = time.clock()
             if t1 - t0 >= self.delay:
                 self.callback()
                 t0 = t1        
 
     def stop(self):
+        """ Flag the timer to stop """
+
         self.stop_flag = True
 
 
 class TimeDialator(object):
-    """ A timer that controls the dialation of time (sim time vs real time) for other timers.
-        Note that this can either be run as a timer or stepped directly by the simulation (use either, but not both probably.)
-        @todo: Probably split this into two classes: one that can be run as a timer and one that is stepped by the simulator. Stepping will be more accurate. 
+    """ 
+    A timer that controls the dialation of time (sim time vs real time) for other timers.
+    Note that this can either be run as a timer or stepped directly by the simulation (use either, but not both probably.)
+    @todo: Probably split this into two classes: one that can be run as a timer and one that is stepped by the simulator. Stepping will be more accurate. 
     """
     
     def __init__(self, sim, config=None):
@@ -78,13 +92,16 @@ class TimeDialator(object):
         self.dialation = 1.0
 
     def add_timer(self, timer):
+        """ Add a timer whose dialation we will control """
         self.timers.append(timer)
     
     def add_timers(self, timers):
+        """ Add multiple timers (convenience method) """
         self.timers.extend(timers)
     
     def dialate_time(self, dt_usec=None):
         """ Calculate the time dialation and set it on our timers """
+
         if self.last_real_time is None:
             # Initialize here so that we can ignore thread startup times and whatnot
             self.last_real_time = time.clock()
@@ -93,25 +110,29 @@ class TimeDialator(object):
 
         real_time_diff = time.clock() - self.last_real_time
         if dt_usec is None:
-            # We didn't have one passed in, so calculate it. This is used if we're running as a timer rather than directly stepped. 
+            # We didn't have one passed in, so calculate it. 
+            # This is used if we're running as a timer rather than directly stepped. 
             sim_time_diff = (self.sim.elapsed_time_usec / 1000000.0) - self.last_sim_time 
         else:
             sim_time_diff = dt_usec / 1000000.0
             
         # Dialate time
-        # Dialation is the ratio of real time to sim time: 10s real time to 1s sim time = dialation factor of 10. Or 1s real time to 2s sim time = dialation factor of .5
+        # Dialation is the ratio of real time to sim time: 
+        # 10s real time to 1s sim time = dialation factor of 10. 
+        # Or 1s real time to 2s sim time = dialation factor of .5
         self.dialation = real_time_diff / sim_time_diff
 
-        # Apply a quick exponential moving average filter so dialation is not so jumpy
+        # Apply an exponential moving average filter so dialation is not so jittery
         self.ema_previous = self.ema_current   # Move us along
         self.ema_current = self.ema_alpha * self.dialation + (1 - self.ema_alpha) * self.ema_previous
         self.dialation = self.ema_current  # We could just set it in the line above, but doing this allows us to separate the code for the filter
         
+        # Update dialation factor for all of our timers
         for timer in self.timers:
             timer.update_dialation(self.dialation)
         #self.logger.debug("Set time dialation to {}".format(self.dialation))
         
-        # Update our times
+        # Update our timepoints
         self.last_real_time = time.clock()
         self.last_sim_time = self.sim.elapsed_time_usec / 1000000.0
 
@@ -122,14 +143,32 @@ class TimeDialator(object):
 # @todo: add a TimeAdjustor class that adjust delay (and maybe overhead) for timers that are lagging/speeding
 
 class TimeRunner:
+    """ Container for operating multiple callback timers simultaneously """
+
     def __init__(self):
         self.timers = []
+        self.logger = logging.getLogger("TimeRunner")
         
+        self.end_flag = False
+
     def add_timer(self, timer):
         self.timers.append(timer)
-        
+    
+    def end_callback(self, sim):
+        """ Called by the simulator when an end condition is triggered """
+
+        self.logger.debug("TimeRunner.end_callback() called.")
+        self.end_flag = True
+
     def run(self):
         while True:
+
+            if self.end_flag:
+                # If the simulation has ended, stop the timers and break
+                for timer in self.timers:
+                    timer.stop()
+                break
+
             for timer in self.timers:
                 next(timer)
 
@@ -139,19 +178,21 @@ class TimeRunner:
         t.start()
         return t    
     
-    def stop(self):
-        self.stop_flag = True
-
     def get_timers(self):
         return self.timers
-    
-class CallbackTimer:
-    
+
+
+class CallbackTimer(object):
+    """ Generator-based callback timer """
+
     def __init__(self, interval_sec, callback, **kwargs):
         self.interval = interval_sec
         self.callback = callback
         self.stop_flag = False
         self.dialation = 1.0
+
+        # Initialize delay
+        self.delay = self.interval * self.dialation
 
         # kwargs
         self.name = kwargs.get('name', "{}s timer".format(self.interval))
@@ -160,23 +201,30 @@ class CallbackTimer:
         self.gen = self._create_generator()
 
     def _create_generator(self):
+        """ 
+        Create a generator that calls the callback if enough time has
+        passed; otherwise just yield. 
+        """
+
         t0 = time.clock()
         while True:
             if self.stop_flag:
                 break
             t1 = time.clock()
-            delay = self.interval * self.dialation  # @todo: can we move this out of here for better performance? 
-            if t1 - t0 >= delay:
+            # delay = self.interval * self.dialation  # @todo: can we move this out of here for better performance? 
+            if t1 - t0 >= self.delay:
                 t0 = t1
                 if self.debug_callback is not None:
                     self.debug_callback(self)
                 yield self.callback()
             else:
                 yield
-    
-    
+        
     def next(self):
         next(self.gen)
+
+    def stop(self):
+        self.stop_flag = True
 
     def update_dialation(self, dialation):
         """ set the time-dialated delay """

@@ -1,5 +1,3 @@
-#eng-embed-sim
-
 # Installation
 
 1. Be on Windows
@@ -23,7 +21,7 @@
     ```
 
     By default, this will install to C:\Python27\ -- if you change the install location, make sure to change 
-    the appropriate arguments when setting up your virtualenv (see below).
+    the appropriate arguments when setting up your virtualenv as well (see below).
 
 4. Install virtualenv
     
