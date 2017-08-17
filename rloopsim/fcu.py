@@ -93,9 +93,9 @@ class Fcu:
         # debug_printf
         # The debugger callback
         #Public Delegate Sub DEBUG_PRINTF__CallbackDelegate(ByVal pu8String As IntPtr)
-        #Private Shared Sub vDEBUG_PRINTF_WIN32__Set_Callback(ByVal callback As MulticastDelegate)
+        #Private Shared Sub vSIL3_DEBUG_PRINTF_WIN32__Set_Callback(ByVal callback As MulticastDelegate)
         self.register_callback(self.debug_printf_callback, 
-            'vDEBUG_PRINTF_WIN32__Set_Callback', None, 
+            'vSIL3_DEBUG_PRINTF_WIN32__Set_Callback', None, 
             [ctypes.c_char_p])
         
         # 'Ethernet
@@ -953,7 +953,17 @@ class Fcu:
                 a.append("accel {}: ({})".format(dev_idx, dev_xyz))
             self.logger.debug("Accel values after vFCU__Process(): {}".format("; ".join(a)))
             """
-            
+
+class FcuRunner(object):
+    def __init__(self):
+        pass
+    
+    def run_forever(self):
+        # @todo: init stuff; run IRSs on their proper timers, run vFCU__Process() on a 1ms delay or thereabouts to simulate the run speed on the RM4
+        self.fcu_init()
+        while(True):
+            self.fcu_process()
+
 if __name__ == "__main__":
     # For windows admin
     #import admin
