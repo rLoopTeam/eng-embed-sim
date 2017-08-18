@@ -33,5 +33,5 @@ class Units:
 if __name__ == "__main__":
     a = ['1.25m', '3ft', '18psi', '4m/s', "100usec", '10min']
     for qty in a:
-        print "{} => {}".format(qty, Units.SI(qty))
+        print("{} => {}".format(qty, Units.SI(qty)))
         #print Units.SI(qty).magnitude
