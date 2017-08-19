@@ -129,12 +129,12 @@ sim:
                 id: 0
                 log_filename: accel_0.csv
                 sampling_rate: 100 Hz
-                noise: {scale: 0.0, center: 0.0}
+                noise: {enabled: True, scale: 0.05, center: 0.0}
             1:
                 id: 1
                 log_filename: accel_1.csv
                 sampling_rate: 100 Hz
-                noise: {enabled: False, scale: 0.0, center: 0.0}
+                noise: {enabled: True, scale: 0.05, center: 0.0}
         laser_dist: 
             sampling_rate: 50 Hz
             # Maximum distance the sensor can see
