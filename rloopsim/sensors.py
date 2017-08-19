@@ -327,7 +327,7 @@ class SensorCsvWriter(SensorListener):
         SensorListener.__init__(self, sim, config)
         self.logger = logging.getLogger("SensorCsvWriter")
         
-        self.enabled = self.config.enabled or True
+        # self.enabled = self.config.enabled or True
         
         # Internal
         self._started = False        
@@ -360,7 +360,7 @@ class SensorCsvWriter(SensorListener):
                     w.writerow(sensor.get_csv_headers())
                     self._headers_written = True
                 
-                if self.enabled:
+                if self.sim.data_logging_enabled(self):
                     for sample in step_samples:
                         w.writerow(list(sample))  # Note: each sample is assumed to be a namedtuple of some sort
                         
@@ -395,7 +395,7 @@ class SensorRawCsvWriter(SensorCsvWriter):
                     w.writerow(sensor.get_csv_headers())
                     self._headers_written = True
                 
-                if self.enabled:
+                if self.sim.data_logging_enabled(self):
                     for sample in step_samples:
                         w.writerow(list(sensor.to_raw(sample)))  # Note: each sample is assumed to be a namedtuple of some sort. @todo: include raw with the sensor data? 
 

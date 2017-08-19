@@ -31,7 +31,7 @@ from fcu import Fcu
 
 import threading
 
-# Testing
+    # Testing
 from sensor_laser_opto import *
 from sensors import *   # @todo: move this to the top once we're done testing
 
@@ -129,7 +129,9 @@ class Sim:
 
 
         # Initial setup
-        self.pusher.start_push()
+        # @todo: write a method by which we can maybe control the push from the ground station or rpod_control vb.net app
+        # @todo: write a means by which we can start the push some configurable amount of time after the pod enters READY state
+        #self.pusher.start_push()  # Only for testing
 
         # Volatile
         self.elapsed_time_usec = 0
@@ -165,6 +167,12 @@ class Sim:
     def set_working_dir(self, working_dir):
         """ Set our working directory (for file writing and whatnot) """
         self.config.working_dir = working_dir
+    
+    def data_logging_enabled(self, data_writer):
+        """ Tell data writers whether or not to log data (e.g. csv writers) """
+        # @todo: write something that gets a value from runtime config
+        # @todo: write something that turns data logging on and off based on FCU state (assuming the FCU is enabled)
+        return False  # Turn data logging off for now
     
     def step(self, dt_usec):        
 
