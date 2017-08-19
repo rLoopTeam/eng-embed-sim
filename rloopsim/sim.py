@@ -168,10 +168,11 @@ class Sim:
         """ Set our working directory (for file writing and whatnot) """
         self.config.working_dir = working_dir
     
-    def data_logging_enabled(self, data_writer):
+    def data_logging_enabled(self, data_writer, sensor):
         """ Tell data writers whether or not to log data (e.g. csv writers) """
         # @todo: write something that gets a value from runtime config
         # @todo: write something that turns data logging on and off based on FCU state (assuming the FCU is enabled)
+        # @todo: potentially turn on or off based on sensor, writer type, or a combination of the two
         return False  # Turn data logging off for now
     
     def step(self, dt_usec):        
