@@ -34,8 +34,8 @@ sim:
                 name: Flight Control
                 handler: FlightControlNode
                 ip: 192.168.0.100
-                tx_port: 9100
-                rx_port: 9100
+                tx_port: 9531
+                rx_port: 9531
                 MAC: 00:26:80:01:00:00
             
             #power_fwd: 
