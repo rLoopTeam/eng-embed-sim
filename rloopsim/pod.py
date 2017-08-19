@@ -231,7 +231,7 @@ class Pod:
         # Z physics
         # -------------------
         
-        # Subtract gravity
+        # Subtract gravity: F = mg
         self.net_force[2] += -9.80665 * self.mass
 
         # Calculate z acceleration, velocity, and height for this step. 

@@ -11,7 +11,7 @@ typedef int Luint16;
 
 // Supervisor
 enum {NORMAL_OPERATION_STATE, EMERGENCY_SAFE_STATE, MANUAL_OVERRIDE_STATE, EMERGENCY_PWR_OFF_STATE} E_SUPERVISOR_STATE_T;
-enum {EMERGENCY_SAFE, MANUAL_OVERRIDE, NORMAL_OPERATION, EMERGENCY_PWR_OFF, RESUME_POD_SAFE} E_SUPERVISOR_CMD_T;
+enum {NORMAL_OPERATION, MANUAL_OVERRIDE, EMERGENCY_SAFE, EMERGENCY_PWR_OFF, RESUME_POD_SAFE, RESUME_NORMAL_OPERATION} E_SUPERVISOR_CMD_T;
 
 // Main state machine states
 enum {IDLE_STATE, TEST_MODE_STATE, DRIVE_STATE, ARMED_WAIT_STATE, FLIGHT_PREP_STATE, READY_STATE, ACCEL_STATE, COAST_INTERLOCK_STATE, BRAKE_STATE, SPINDOWN_STATE, POD_SAFE_STATE, SHUTDOWN_STATE} E_MAIN_STATES_T;
@@ -21,9 +21,24 @@ enum {SUSPEND, RESUME, TEST_MODE, DRIVE, ARMED_WAIT, FLIGHT_PREP, POD_SAFE, IDLE
 // Basically the subsystems should always be run, whether the main SM has control or something else does (like the supervisor)
 
 // Brakes subsystem states
-enum {BRAKES_FREE_STATE, BRAKES_CONTROLLED_BRAKE_STATE, BRAKES_EMERGENCY_BRAKE_STATE, BRAKES_HOLD_STATE} E_BRAKE_STATES_T;
+enum {BRAKES_FREE_STATE, BRAKES_MANUAL_STATE, BRAKES_CONTROLLED_BRAKE_STATE, BRAKES_EMERGENCY_BRAKE_STATE, BRAKES_HOLD_STATE} E_BRAKE_STATES_T;
 // Brake subsystem commands
-enum {BRAKES_FREE, BRAKES_SEEK, BRAKES_HOLD, BRAKES_CONTROLLED_BRAKE, BRAKES_EMERGENCY_BRAKE, BRAKES_INTERLOCK, BRAKES_RELEASE_INTERLOCK} E_BRAKES_CMD_T;
+enum {BRAKES_FREE, BRAKES_MANUAL, BRAKES_SEEK, BRAKES_HOLD, BRAKES_CONTROLLED_BRAKE, BRAKES_EMERGENCY_BRAKE, BRAKES_INTERLOCK, BRAKES_RELEASE_INTERLOCK} E_BRAKES_CMD_T;
+
+
+// Some logging functions for convenience
+void log_debug(const char *msg) {
+    printf("DEBUG - %s\n", msg);
+}
+void log_info(const char *msg) {
+    printf("INFO - %s\n", msg);
+}
+void log_warn(const char *msg) {
+    printf("WARN - %s\n", msg);
+}
+void log_error(const char *msg) {
+    printf("ERROR - %s\n", msg);
+}
 
 
 // Command handling convenience methods
@@ -58,10 +73,15 @@ int get_cmd(int *p_command)
 struct _strFCU {
     
     // Supervisor state machine
-    StateMachine supervisor_sm;
+    struct {
+        StateMachine sm;
+    } supervisor;
 
     // Main state machine
-    StateMachine sm;
+    struct {
+        StateMachine sm;
+    } main;
+    
 
     // Pod Safe Indicator
     // This is the source of truth for whether or not the pod is safe
@@ -81,7 +101,8 @@ struct _strFCU {
     // e.g. sFCU.brakes.brake[0].some_setting
     struct {
         StateMachine sm;
-        int command;
+
+        bool interlocked;
 
         // Individual brakes
         struct {
@@ -124,7 +145,6 @@ struct _strFCU {
     
     struct {
         StateMachine sm;
-        int command;
         
         // Data members go here
         
@@ -132,7 +152,6 @@ struct _strFCU {
     
     struct {
         StateMachine sm;
-        int command;
 
         // Data members go here
 

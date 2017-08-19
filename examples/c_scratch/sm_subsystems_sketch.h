@@ -50,5 +50,13 @@ bool exiting(const StateMachine *sm, int test_state) {
     return sm->state != test_state;
 }
 
+
+// Sketch-specific structs
+
+struct _strFCU
+{
+    
+};
+
 #endif //_STATE_MACHINE_H_
 
