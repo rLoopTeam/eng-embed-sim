@@ -256,7 +256,7 @@ class UdpListener(object):
             self.address = "127.0.0.1"
         else:
             self.address = str(self.config.ip)
-        print "FcuUdpListener.address: {}".format(self.address)
+        self.logger.info("FcuUdpListener.address: {}".format(self.address))
         self.port = self.config.rx_port
         self.buffer = 4096  # @todo: get this from config? Or just use 4096?
 
