@@ -320,6 +320,9 @@ if __name__ == "__main__":
 
     with open('conf/logging.conf') as f:  # @todo: make this work when run from anywhere (this works if run from top directory)
         logging.config.dictConfig(yaml.load(f))
+        
+    test_logger = logging.getLogger("NetworkNode")
+    print(test_logger.__dict__)
 
     #logging.basicConfig(level=logging.DEBUG)
 
