@@ -129,12 +129,13 @@ sim:
                 id: 0
                 log_filename: accel_0.csv
                 sampling_rate: 100 Hz
-                noise: {enabled: True, scale: 0.05, center: 0.0}
+                # Note: scale of noise is in G force -- random distribution of 0.2gs, for instance
+                noise: {enabled: True, scale: 0.2, center: 0.0}
             1:
                 id: 1
                 log_filename: accel_1.csv
                 sampling_rate: 100 Hz
-                noise: {enabled: True, scale: 0.05, center: 0.0}
+                noise: {enabled: True, scale: 0.2, center: 0.0}
         laser_dist: 
             sampling_rate: 50 Hz
             # Maximum distance the sensor can see

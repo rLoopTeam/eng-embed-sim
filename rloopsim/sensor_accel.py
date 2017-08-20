@@ -54,6 +54,8 @@ class Accelerometer(PollingSensor):
 
             # Map 
             xyz = np.array((real_x, real_y, real_z))
+            # Add some noise (in G's)
+            xyz += np.random.normal(self.noise_center, self.noise_scale / 9.81, 3)
             xyz = np.interp(xyz, self.sensor_input_range, self.sensor_output_range)  
             xyz = xyz.astype(int)
             samples.append(self.data(t, xyz[0], xyz[1], xyz[2], real_x, real_y, real_z))
