@@ -58,7 +58,7 @@ class Accelerometer(PollingSensor):
             xyz = xyz.astype(int)
             samples.append(self.data(t, xyz[0], xyz[1], xyz[2], real_x, real_y, real_z))
 
-            samples += self._get_gaussian_noise(samples, self.noise_center, self.noise_scale)            
+            #samples += self._get_gaussian_noise(samples, self.noise_center, self.noise_scale)            
 
         return samples
                         

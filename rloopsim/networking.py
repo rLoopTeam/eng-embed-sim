@@ -129,11 +129,11 @@ class NetworkNode:
             if self.enable_rx:
                 # bind_address = ('0.0.0.0', self.rx_address[1])  # Testing listening to get around issues
                 bind_address = self.rx_address
-                self.logger.debug('Listening to {} port {}'.format(*bind_address))
+                self.logger.info('Listening to {} port {}'.format(*bind_address))
                 #self.sock.bind(self.rx_address)  # This won't work -- packets don't get sent through to the GS if we bind to 127.0.0.1
                 self.sock.bind(bind_address)
             else:
-                self.logger.debug("(not) listening to {} port {}".format(*self.rx_address))
+                self.logger.info("(not) listening to {} port {}".format(*self.rx_address))
         except Exception as e:
             self.logger.error(e)
 
@@ -180,7 +180,7 @@ class NetworkNode:
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)  # Reuse addresses
 
         if self.enable_tx:
-            self.logger.debug("(NetworkNode) Sending {} bytes to {}".format(len(packet), dest_address))
+            self.logger.debug("Sending {} bytes to {}".format(len(packet), dest_address))
             #self.sock.sendto(packet, dest_address)
             sock.sendto(packet, dest_address)
         else:
@@ -195,7 +195,6 @@ class FlightControlNode(NetworkNode):
         #self.rx_address = ('0.0.0.0', self.rx_address[1])
     
     def handle_udp_packet(self, packet, source_address, dest_address):
-        self.logger.debug("handle_udp_packet called")
         if self.sim.config.fcu.enabled:
             #self.sim.fcu.handle_udp_packet(packet, source_address, self.rx_address)  # Note: self.rx_address is supplied by subclasses
             self.sim.fcu.handle_udp_packet(packet, source_address, self.tx_address)  # Note: using tx_address instead of rx address for the node since we're using different ports for the GS
@@ -277,7 +276,7 @@ class UdpListener(object):
 
         # Bind the socket to the port
         server_address = (self.address, self.port)
-        self.logger.debug('Starting up on %s port %s' % server_address)
+        self.logger.info('Starting up on %s port %s' % server_address)
         sock.bind(server_address)
 
         # RAW only

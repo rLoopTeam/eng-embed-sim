@@ -324,8 +324,6 @@ if __name__ == "__main__":
     test_logger = logging.getLogger("NetworkNode")
     print(test_logger.__dict__)
 
-    #logging.basicConfig(level=logging.DEBUG)
-
     from config import *
 
     import pprint

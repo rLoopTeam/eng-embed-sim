@@ -299,7 +299,8 @@ class QueueingListener(SensorListener):
 class QueueingRawListener(QueueingListener):
     def __init__(self, sim, config):
         QueueingListener.__init__(self, sim, config)
-        
+        self.logger = logging.getLogger("SensorListener")
+
     def step_callback(self, sensor, step_samples):
         """ Add the raw values to the queue """
         self.q.extendleft([sensor.to_raw(s) for s in step_samples])

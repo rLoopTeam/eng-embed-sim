@@ -332,7 +332,7 @@ class Fcu:
         
     def debug_printf_callback(self, message):
         # Public Delegate Sub DEBUG_PRINTF__CallbackDelegate(ByVal pu8String As IntPtr)
-        self.logger.info("FCU: {}".format(message))
+        self.logger.info(message)
 
     def eth_tx_callback(self, pu8Buffer, u16BufferLength):
         # Public Delegate Sub ETH_WIN32__TxCallbackDelegate(ByVal pu8Buffer As IntPtr, ByVal u16BufferLength As UInt16)
