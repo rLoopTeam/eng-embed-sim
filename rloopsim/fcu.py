@@ -68,7 +68,7 @@ class Fcu:
         self.end_flag = False
 
         # Load the DLL
-        self.dll_path = self.config.dll_path
+        self.dll_path = os.path.normpath(self.config.dll_path)
         self.dll_filename = self.config.dll_filename
         self.dll_filepath = (os.path.join(self.dll_path, self.dll_filename))
         self.logger.info("Loading FCU DLL '{}'".format(self.dll_filepath))
