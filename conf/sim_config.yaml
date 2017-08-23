@@ -70,14 +70,15 @@ sim:
     # Working directory for output files, relative to the cwd from which the simulator was run. Can be overridden by SimRunner.
     working_dir: data
     pusher:
-        max_velocity: 150.0 m/s
-        max_accel: 1 G  # @todo: implement
-        max_decel: -2 G # @todo: implement
+        max_push_velocity: 150.0 m/s
+        max_push_time: 20 s
+        push_accel: 9.81 m/s^2  # @todo: implement
+        brake_decel: -18 m/s^2 # @todo: implement
         
-        push_end_position: 475m  # NOTE: This is where the push will stop regardless of speed -- @todo: work this into the pusher
-        push_force: 8000 N  # @todo: remove this -- pusher is velocity controlled
-        coast_time_usec: 1000000 usec  # @todo: rename this to pusher_coast_time and use it for the pusher position. It should be pretty small (find out from SpaceX?)
-        brake_force: -8000 N   # Doesn't really matter, just needs to be big and negative  # @todo: switch to using max_decel
+        push_end_position: 475 m  # NOTE: This is where the push will stop regardless of speed -- @todo: work this into the pusher
+        #push_force: 8000 N  # @todo: remove this -- pusher is velocity controlled
+        coast_duration: 300 ms  # @todo: rename this to pusher_coast_time and use it for the pusher position. It should be pretty small (find out from SpaceX?)
+        #brake_force: -8000 N   # Doesn't really matter, just needs to be big and negative  # @todo: switch to using max_decel
 
     track:
         length: 1260 m

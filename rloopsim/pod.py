@@ -238,7 +238,7 @@ class Pod:
             self.acceleration = pod_natural_accel
 
         
-        t_sec = dt_usec / 1000000
+        t_sec = dt_usec / 1000000.0
         
         # v*t + 1/2*a*t^2
         self.position += self.velocity * t_sec + 0.5 * self.acceleration * (t_sec ** 2)
