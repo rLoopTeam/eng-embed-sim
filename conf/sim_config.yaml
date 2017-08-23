@@ -266,6 +266,9 @@ sim:
         physical:
             nose_tip_offset: 1.0m
             pusher_plate_offset: -2.9m
+            # Distance that the pusher pin travels before registering disengagement
+            # @todo: get an accurate measurement for this
+            pusher_pin_travel: 5cm 
         hover_engines:
             # @see pod.py -- these are for a single hover engine drag based on velocity and height 
             mu_naught: 4 *pi 

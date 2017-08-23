@@ -51,7 +51,9 @@ class Pod:
         # @see http://confluence.rloop.org/display/SD/2.+Determine+Pod+Kinematics
 
         self.mass = Units.SI(self.config.mass)
-
+        self.pusher_plate_offset = Units.SI(self.config.physical.pusher_plate_offset) 
+        self.pusher_pin_travel = Units.SI(self.config.physical.pusher_pin_travel)
+        
         # Forces that can act on the pod (note: these are cleared at the end of each step)        
         self.net_force = np.array((0.0, 0.0, 0.0))  # Newtons; (x, y, z). +x pushes the pod forward, +z force lifts the pod, y is not currently used. 
 
@@ -200,7 +202,7 @@ class Pod:
             # Also need to determine by position of the pusher and pod whether the pusher is engaged
             # use pod.physical.pusher_plate_offset (use that as start position for the pusher)
             # Note: probably need a disengage distance for when the pin switches disengage
-
+        pass  # @todo: delete this method; maybe keep the notes
 
     # -------------------------
     # Simulation methods
@@ -298,25 +300,14 @@ class Pod:
     # -------------------------
     # Physical methods
     # -------------------------
-    def connect_pusher(self, pusher):
-        """ Update internal state to reflect that the pusher is connected """
-        # @todo: make this work
-        self.pusher = pusher
-        # @todo: set internal flags that emulate the physical and electronic brake lockout
-        pass
-    
-    def disconnect_pusher(self):
-        """ Update the internal state to reflect a disconnection of the pusher """
-        # @todo: make this work
-        pass
-    
+
     def pusher_in_contact(self):
         """ Is the pusher in contact with the pod (calculated by relative distance)? """
-        pass
+        return self.sim.pusher.position >= self.position + self.pusher_plate_offset
 
-    def pusher_pin_engaged(self)
+    def pusher_pin_engaged(self):
         # Determine if the pusher pin is engaged based on relative distance
-        pass
+        return self.sim.pusher.position + self.pusher_pin_travel >= self.position + self.pusher_plate_offset
 
     # -------------------------
     # State machine helpers
