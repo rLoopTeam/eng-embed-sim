@@ -131,7 +131,7 @@ class Sim:
         # Initial setup
         # @todo: write a method by which we can maybe control the push from the ground station or rpod_control vb.net app
         # @todo: write a means by which we can start the push some configurable amount of time after the pod enters READY state
-        #self.pusher.start_push()  # Only for testing
+        self.pusher.start_push()  # Only for testing
 
         # Volatile
         self.elapsed_time_usec = 0
@@ -196,7 +196,16 @@ class Sim:
         self.time_dialator.step(dt_usec)
         if self.n_steps_taken % 500 == 0:
             self.logger.debug("Time dialation factor is {} after {} steps".format(self.time_dialator.dialation, self.n_steps_taken))
-        
+            info = {
+                'psa': self.pusher.acceleration,
+                'psv': self.pusher.velocity,
+                'psp': self.pusher.position,
+                'pda': self.pod.acceleration,
+                'pdv': self.pod.velocity,
+                'pdp': self.pod.position,
+            }
+            self.logger.debug("Pusher avp:  {psa}  {psv}  {psp};  Pod avp:  {pda}  {pdv}  {pdp}".format(**info))
+
         self.elapsed_time_usec += dt_usec
         self.n_steps_taken += 1
 
