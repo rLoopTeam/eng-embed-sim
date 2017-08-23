@@ -36,7 +36,7 @@ from sensor_laser_opto import *
 from sensors import *   # @todo: move this to the top once we're done testing
 
 
-class Sim:
+class Sim(object):
     
     def __init__(self, config, working_dir=None):
         self.logger = logging.getLogger("Sim")
@@ -55,6 +55,7 @@ class Sim:
         self.ensure_working_dir()
 
         # Simulator control
+        self.step_listeners = []  # For in-sim control (per step)
         self.end_conditions = []
         self.end_listeners = []
         
@@ -131,7 +132,7 @@ class Sim:
         # Initial setup
         # @todo: write a method by which we can maybe control the push from the ground station or rpod_control vb.net app
         # @todo: write a means by which we can start the push some configurable amount of time after the pod enters READY state
-        self.pusher.start_push()  # Only for testing
+        #self.pusher.start_push()  # Only for testing
 
         # Volatile
         self.elapsed_time_usec = 0
@@ -150,6 +151,9 @@ class Sim:
         
         # End condition checker (to stop the simulation)
         self.add_end_condition(SimEndCondition())
+
+        # Testing run controller (with pod state machine control)
+        self.add_step_listener(StateMachineRunController())
         
         # Handle data writing
         # @ todo: handle data writing. Note: Each sim instance should be handed a directory to use for writing data
@@ -174,7 +178,7 @@ class Sim:
         # @todo: write something that turns data logging on and off based on FCU state (assuming the FCU is enabled)
         # @todo: potentially turn on or off based on sensor, writer type, or a combination of the two
         return False  # Turn data logging off for now
-    
+
     def step(self, dt_usec):        
 
         # Step the pusher first (will apply pressure and handle disconnection)
@@ -208,6 +212,9 @@ class Sim:
 
         self.elapsed_time_usec += dt_usec
         self.n_steps_taken += 1
+
+        for step_listener in self.step_listeners:
+            step_listener.step_callback(self)
 
     def run_threaded(self):
         """ Run the simulator in a thread and return the thread (don't join it here) """
@@ -261,7 +268,14 @@ class Sim:
         for processor in self.postprocessors:
             processor.process(self)
 
-        
+    def add_step_listener(self, listener):
+        """ 
+        Register a listener that will be called every step. 
+        A step listener can be any class that implements the following method:
+        - step_callback(sim)
+        """
+        self.step_listeners.append(listener)    
+
     def add_end_condition(self, listener):
         """ Add a listener that will tell us if we should end the simulator """
         self.end_conditions.append(listener)
@@ -290,6 +304,33 @@ class Sim:
                 pass
             else:
                 raise
+
+
+class StateMachineRunController(object):
+    """ Control the FCU state and pusher for a simulated run """
+
+    def __init__(self):
+        self.logger = logging.getLogger("StateMachineRunController")
+        self.started = False
+        self.pushed = False
+
+    def step_callback(self, sim):
+        POD_STATE__IDLE = 2
+        POD_STATE__READY = 7
+
+        # Move to ready state once we're in Idle
+        if not self.started:
+            if sim.fcu.get_sm_state() == POD_STATE__IDLE:
+                self.logger.info("StateMachineRunController moving FCU to POD_STATE__READY")
+                sim.fcu.force_ready_state()
+                self.started = True
+
+        # If we're in READY state, go ahead and start the push
+        if not self.pushed:
+            if sim.fcu.get_sm_state() == POD_STATE__READY:
+                self.logger.info("StateMachineRunController signaling pusher to start push")
+                sim.pusher.start_push()
+                self.pushed = True
 
 
 class SimEndCondition(object):

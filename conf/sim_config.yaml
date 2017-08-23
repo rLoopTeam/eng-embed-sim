@@ -17,7 +17,8 @@ sim:
         # DLL path relative to the top level of the simulator. Typically you would have eng-software-pod checked out in a sibling directory of this (eng-embed-sim)
         dll_path: "../eng-software-pod/APPLICATIONS/PROJECT_CODE/DLLS/LDLL174__RLOOP__LCCM655/bin/Debug/"  # Relative to top level of this repo (../)
         dll_filename: "LDLL174__RLOOP__LCCM655.dll"
-
+        force_ready_state: True
+        
     networking:
         # Use force_loopback to send and receive everything on 127.0.0.1
         force_loopback: True
