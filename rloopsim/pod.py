@@ -192,8 +192,16 @@ class Pod:
         
         return ",".join([str(x) for x in out])
             
-    
-    
+    def get_accel(self):
+        # If the pusher is connected, get accel from the pusher
+        # If not, get it from the net force. Must call apply forces before this.
+        # Actually, if the pusher is in the process of disconnecting, don't get it from the pusher
+            # If the deceleration of the pod is less than that of the pusher, use the pod forces
+            # Also need to determine by position of the pusher and pod whether the pusher is engaged
+            # use pod.physical.pusher_plate_offset (use that as start position for the pusher)
+            # Note: probably need a disengage distance for when the pin switches disengage
+
+
     # -------------------------
     # Simulation methods
     # -------------------------
@@ -212,8 +220,23 @@ class Pod:
         # X physics
         # -------------------
         
+        # Calculate the pod's natural accel (decel) based on outside forces (except for the pusher)
         # F = ma, a = F/m
-        self.acceleration = self.net_force[0] / self.mass
+        pod_natural_accel = self.net_force[0] / self.mass
+        
+        # If the pusher is in contact, we may want to use the pusher's acceleration as our own
+        if self.pusher_in_contact():
+            # If the pusher's acceleration > ours, use its accel directly
+            # instead of our forces to calculate our acceleration
+            if self.sim.pusher.acceleration > pod_natural_accel:
+                self.acceleration = self.sim.pusher.acceleration
+            else:
+                # Pusher is pulling back from the pod; use our own decel
+                self.acceleration = pod_natural_accel
+        else:
+            # Pusher is not in contact
+            self.acceleration = pod_natural_accel
+
         
         t_sec = dt_usec / 1000000
         
@@ -287,6 +310,13 @@ class Pod:
         # @todo: make this work
         pass
     
+    def pusher_in_contact(self):
+        """ Is the pusher in contact with the pod (calculated by relative distance)? """
+        pass
+
+    def pusher_pin_engaged(self)
+        # Determine if the pusher pin is engaged based on relative distance
+        pass
 
     # -------------------------
     # State machine helpers

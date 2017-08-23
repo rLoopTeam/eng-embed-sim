@@ -17,7 +17,7 @@ from units import Units
 import logging
 
 
-class Pusher:
+class Pusher(object):
     
     def __init__(self, sim, config):
          
@@ -38,12 +38,19 @@ class Pusher:
 
         self.data = namedtuple('Force', ['x', 'y', 'z'])
     
+        
+    
     # -------------------------
     # Simulation methods
     # -------------------------
 
     def step(self, dt_usec):
         """ Handle the pusher state machine and simulation interactions """
+
+        # @todo: update this to use velocity control (or something that approximates it -- limited accel?)
+        # @todo: allow disconnect/reconnect of pod based on relative position
+            # Need to be able to have the pusher 'take over' the accel/pos/velocity of the pod
+            # Maybe extract the physics calculation and allow switching between the physics of the pusher and that of the pod? 
 
         if self.state == "HOLD":
             pass
@@ -70,8 +77,8 @@ class Pusher:
             # Note: pusher is disconnected from the pod at start of braking, because there will almost 
             # certainly be drag forces that keep the pod against the pusher during pusher coast. 
             self.disconnect_pod()
-            self.set_state("DONE")  # just 'stop' immediately because we don't care about the pusher after it disconnects
-        elif self.state == "DONE":
+            self.set_state("STOPPED")  # just 'stop' immediately because we don't care about the pusher after it disconnects
+        elif self.state == "STOPPED":
             pass   # Not much to do, just state that we're done
         else:
             raise Exception("Unknown state {}".format(self.state))
