@@ -73,6 +73,12 @@ class Sim(object):
         self.pod = Pod(self, self.config.pod)      
         #self.fcu = Fcu(self, self.config.fcu)  
 
+        # Component setup
+
+        # Set the initial pusher position to meet the pusher plate
+        # @todo: should we set this somewhere else? Like in a run controller? 
+        self.pusher.position = self.pod.pusher_plate_offset
+
         # Sensors
         self.sensors = {}
         self.sensors['pod'] = PodSensor(self, self.config.sensors.pod)
@@ -200,6 +206,7 @@ class Sim(object):
         self.time_dialator.step(dt_usec)
         if self.n_steps_taken % 500 == 0:
             self.logger.debug("Time dialation factor is {} after {} steps".format(self.time_dialator.dialation, self.n_steps_taken))
+
             info = {
                 'psa': self.pusher.acceleration,
                 'psv': self.pusher.velocity,
@@ -326,7 +333,7 @@ class StateMachineRunController(object):
                 self.started = True
 
         # If we're in READY state, go ahead and start the push
-        if not self.pushed:
+        elif not self.pushed:  # elif to give the FCU a chance to get to ready state
             if sim.fcu.get_sm_state() == POD_STATE__READY:
                 self.logger.info("StateMachineRunController signaling pusher to start push")
                 sim.pusher.start_push()
