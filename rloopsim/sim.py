@@ -321,6 +321,9 @@ class StateMachineRunController(object):
         self.started = False
         self.pushed = False
 
+    def setup_mission_profile(self):
+        pass
+
     def step_callback(self, sim):
         POD_STATE__IDLE = 2
         POD_STATE__READY = 7

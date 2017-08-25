@@ -73,8 +73,8 @@ sim:
     pusher:
         max_push_velocity: 150.0 m/s
         max_push_time: 20 s
-        push_accel: 9.81 m/s^2  # @todo: implement
-        brake_decel: -18 m/s^2 # @todo: implement
+        push_accel: 9.81 m/s^2
+        brake_decel: -2 G
         
         push_end_position: 475 m  # NOTE: This is where the push will stop regardless of speed -- @todo: work this into the pusher
         #push_force: 8000 N  # @todo: remove this -- pusher is velocity controlled

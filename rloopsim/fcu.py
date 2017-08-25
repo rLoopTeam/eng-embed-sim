@@ -45,10 +45,69 @@ from sensors import QueueingListener, QueueingRawListener
 # IMPORTANT: This must be run as administrator (PowerShell on Windows) or it will encounter a write error.
 
 
+class MissionProfile(object):
+    """
+    DLL_DECLARATION void vFCU_FCTL_TRACKDB_WIN32__Clear_Array(void);
+    DLL_DECLARATION void vFCU_FCTL_TRACKDB_WIN32__Get_Array(Luint8 *pu8ByteArray);
+    DLL_DECLARATION Luint16 u16FCU_FCTL_TRACKDB_WIN32__Get_StructureSize(void);
+    DLL_DECLARATION void vFCU_FCTL_TRACKDB_WIN32__Set_Array(Luint8 *pu8ByteArray);
+    DLL_DECLARATION void vFCU_FCTL_TRACKDB_WIN32__Set_Header(Luint32 u32Value);
+
+    //accel system
+    DLL_DECLARATION void vFCU_FCTL_TRACKDB_WIN32__Set_Accel__Use(Luint8 u8TrackIndex, Luint8 u8Value);
+    DLL_DECLARATION void vFCU_FCTL_TRACKDB_WIN32__Set_Accel__Threshold_mm_ss(Luint8 u8TrackIndex, Lint32 s32Thresh_mm_ss);
+    DLL_DECLARATION void vFCU_FCTL_TRACKDB_WIN32__Set_Accel__Threshold_x10ms(Luint8 u8TrackIndex, Luint16 u16Thresh_x10ms);
+    DLL_DECLARATION void vFCU_FCTL_TRACKDB_WIN32__Set_Decel__Threshold_mm_ss(Luint8 u8TrackIndex, Lint32 s32Thresh_mm_ss);
+    DLL_DECLARATION void vFCU_FCTL_TRACKDB_WIN32__Set_Decel__Threshold_x10ms(Luint8 u8TrackIndex, Luint16 u16Thresh_x10ms);
+
+    //track system
+    DLL_DECLARATION void vFCU_FCTL_TRACKDB_WIN32__Set_Track__TrackStart_mm(Luint8 u8TrackIndex, Luint32 u32Value);
+    DLL_DECLARATION void vFCU_FCTL_TRACKDB_WIN32__Set_Track__TrackEnd_mm(Luint8 u8TrackIndex, Luint32 u32Value);
+    DLL_DECLARATION void vFCU_FCTL_TRACKDB_WIN32__Set_Track__TrackLength_mm(Luint8 u8TrackIndex, Luint32 u32Value);
+    DLL_DECLARATION void vFCU_FCTL_TRACKDB_WIN32__Set_Time__Accel_Coast_x10ms(Luint8 u8TrackIndex, Luint32 u32Value);
+    DLL_DECLARATION void vFCU_FCTL_TRACKDB_WIN32__Set_Time__Coast_Brake_x10ms(Luint8 u8TrackIndex, Luint32 u32Value);
+    DLL_DECLARATION void vFCU_FCTL_TRACKDB_WIN32__Set_UsePusherSeparation(Luint8 u8TrackIndex, Luint8 u8Value);
+
+    //CRC control
+    DLL_DECLARATION Luint16 u16FCTL_TRAKDB_WIN32__ComputeCRC(void);
+    DLL_DECLARATION void vFCU_FCTL_TRACKDB_WIN32__Set_CRC(Luint16 u16Value);
+    """
+
+    mp_test_yaml = """
+    mission_profile:
+      accel:
+        enabled: True
+        # Acceleration at or above accel_threshold must be sustained for accel_time to confirm push
+        accel_threshold: 0.1 G
+        # accel_time must be a multiple of 10ms
+        accel_time: 300 ms
+        # Acceleration at or below decel_threshold must be sustained for decel_time to confirm end of push
+        decel_threshold: 0.0 G
+        # decel_time must be a multiple of 10ms
+        decel_time: 300 ms
+
+    """
+
+    def __init__(self, mp_yaml):
+        pass
+
+
+
+
 
 class Fcu:
     """ Flight Control Unit interface """
     
+    def setup_mission_profile(self):
+        """
+        self.lib.vFCU_FCTL_TRACKDB_WIN32__Set_Accel__Use(Luint8 u8TrackIndex, Luint8 u8Value);
+        self.lib.vFCU_FCTL_TRACKDB_WIN32__Set_Accel__Threshold_mm_ss(Luint8 u8TrackIndex, Lint32 s32Thresh_mm_ss);
+        self.lib.vFCU_FCTL_TRACKDB_WIN32__Set_Accel__Threshold_x10ms(Luint8 u8TrackIndex, Luint16 u16Thresh_x10ms);
+        self.lib.vFCU_FCTL_TRACKDB_WIN32__Set_Decel__Threshold_mm_ss(Luint8 u8TrackIndex, Lint32 s32Thresh_mm_ss);
+        self.lib.vFCU_FCTL_TRACKDB_WIN32__Set_Decel__Threshold_x10ms(Luint8 u8TrackIndex, Luint16 u16Thresh_x10ms);
+        """
+        pass
+
     def __init__(self, sim, config):
         self.sim = sim
         self.config = config
@@ -233,13 +292,17 @@ class Fcu:
         self.lib.vSIL3_STEPDRIVE_WIN32__ForcePosition.restype = None
         
         # DLL_DECLARATION Luint16 u16DAQ__Get_FIFO_Level(Luint16 u16Index);
-        self.lib.u16SIL3_DAQ__Get_FIFO_Level.argtypes = [ctypes.c_uint16]
-        self.lib.u16SIL3_DAQ__Get_FIFO_Level.restype = ctypes.c_uint16
+        try:
+            self.lib.u16SIL3_DAQ__Get_FIFO_Level.argtypes = [ctypes.c_uint16]
+            self.lib.u16SIL3_DAQ__Get_FIFO_Level.restype = ctypes.c_uint16
+
+            # DLL_DECLARATION Luint16 u16DAQ__Get_FIFO_Max(Luint16 u16Index);
+            self.lib.u16SIL3_DAQ__Get_FIFO_Max.argtypes = [ctypes.c_uint16]
+            self.lib.u16SIL3_DAQ__Get_FIFO_Max.restype = ctypes.c_uint16
         
-        # DLL_DECLARATION Luint16 u16DAQ__Get_FIFO_Max(Luint16 u16Index);
-        self.lib.u16SIL3_DAQ__Get_FIFO_Max.argtypes = [ctypes.c_uint16]
-        self.lib.u16SIL3_DAQ__Get_FIFO_Max.restype = ctypes.c_uint16
-        
+        except:
+            pass
+
         # -- Track Database -----
         
         # There is a set of trackdbs in the FCU, keyed by index (?)
@@ -324,7 +387,80 @@ class Fcu:
         self.lib.s32FCU_ACCELL__Get_CurrentDisplacement_mm.argtypes = [ctypes.c_uint8]
         self.lib.s32FCU_ACCELL__Get_CurrentDisplacement_mm.restype = ctypes.c_int32
         
+        # Track DB
         
+        # void vFCU_FCTL_TRACKDB_WIN32__Clear_Array(void);
+        self.lib.vFCU_FCTL_TRACKDB_WIN32__Clear_Array.argtypes = []
+        self.lib.vFCU_FCTL_TRACKDB_WIN32__Clear_Array.restype = None
+
+        # void vFCU_FCTL_TRACKDB_WIN32__Get_Array(Luint8 *pu8ByteArray);
+        self.lib.vFCU_FCTL_TRACKDB_WIN32__Get_Array.argtypes = [ctypes.POINTER(ctypes.c_uint8)]
+        self.lib.vFCU_FCTL_TRACKDB_WIN32__Get_Array.restype = None
+
+        # Luint16 u16FCU_FCTL_TRACKDB_WIN32__Get_StructureSize(void);
+        self.lib.u16FCU_FCTL_TRACKDB_WIN32__Get_StructureSize.argtypes = []
+        self.lib.u16FCU_FCTL_TRACKDB_WIN32__Get_StructureSize.restype = ctypes.c_uint16
+
+        # void vFCU_FCTL_TRACKDB_WIN32__Set_Array(Luint8 *pu8ByteArray);
+        self.lib.vFCU_FCTL_TRACKDB_WIN32__Set_Array.argtypes = [ctypes.POINTER(ctypes.c_uint8)]
+        self.lib.vFCU_FCTL_TRACKDB_WIN32__Set_Array.restype = None
+
+        # void vFCU_FCTL_TRACKDB_WIN32__Set_Header(Luint32 u32Value);
+        self.lib.vFCU_FCTL_TRACKDB_WIN32__Set_Header.argtypes = [ctypes.c_uint32]
+        self.lib.vFCU_FCTL_TRACKDB_WIN32__Set_Header.restype = None
+
+        # void vFCU_FCTL_TRACKDB_WIN32__Set_Accel__Use(Luint8 u8TrackIndex, Luint8 u8Value);
+        self.lib.vFCU_FCTL_TRACKDB_WIN32__Set_Accel__Use.argtypes = [ctypes.c_uint8, ctypes.c_uint8]
+        self.lib.vFCU_FCTL_TRACKDB_WIN32__Set_Accel__Use.restype = None
+
+        # void vFCU_FCTL_TRACKDB_WIN32__Set_Accel__Threshold_mm_ss(Luint8 u8TrackIndex, Lint32 s32Thresh_mm_ss);
+        self.lib.vFCU_FCTL_TRACKDB_WIN32__Set_Accel__Threshold_mm_ss.argtypes = [ctypes.c_uint8, ctypes.c_int32]
+        self.lib.vFCU_FCTL_TRACKDB_WIN32__Set_Accel__Threshold_mm_ss.restype = None
+
+        # void vFCU_FCTL_TRACKDB_WIN32__Set_Accel__Threshold_x10ms(Luint8 u8TrackIndex, Luint16 u16Thresh_x10ms);
+        self.lib.vFCU_FCTL_TRACKDB_WIN32__Set_Accel__Threshold_x10ms.argtypes = [ctypes.c_uint8, ctypes.c_uint16]
+        self.lib.vFCU_FCTL_TRACKDB_WIN32__Set_Accel__Threshold_x10ms.restype = None
+
+        # void vFCU_FCTL_TRACKDB_WIN32__Set_Decel__Threshold_mm_ss(Luint8 u8TrackIndex, Lint32 s32Thresh_mm_ss);
+        self.lib.vFCU_FCTL_TRACKDB_WIN32__Set_Decel__Threshold_mm_ss.argtypes = [ctypes.c_uint8, ctypes.c_int32]
+        self.lib.vFCU_FCTL_TRACKDB_WIN32__Set_Decel__Threshold_mm_ss.restype = None
+
+        # void vFCU_FCTL_TRACKDB_WIN32__Set_Decel__Threshold_x10ms(Luint8 u8TrackIndex, Luint16 u16Thresh_x10ms);
+        self.lib.vFCU_FCTL_TRACKDB_WIN32__Set_Decel__Threshold_x10ms.argtypes = [ctypes.c_uint8, ctypes.c_uint16]
+        self.lib.vFCU_FCTL_TRACKDB_WIN32__Set_Decel__Threshold_x10ms.restype = None
+
+        # void vFCU_FCTL_TRACKDB_WIN32__Set_Track__TrackStart_mm(Luint8 u8TrackIndex, Luint32 u32Value);
+        self.lib.vFCU_FCTL_TRACKDB_WIN32__Set_Track__TrackStart_mm.argtypes = [ctypes.c_uint8, ctypes.c_uint32]
+        self.lib.vFCU_FCTL_TRACKDB_WIN32__Set_Track__TrackStart_mm.restype = None
+
+        # void vFCU_FCTL_TRACKDB_WIN32__Set_Track__TrackEnd_mm(Luint8 u8TrackIndex, Luint32 u32Value);
+        self.lib.vFCU_FCTL_TRACKDB_WIN32__Set_Track__TrackEnd_mm.argtypes = [ctypes.c_uint8, ctypes.c_uint32]
+        self.lib.vFCU_FCTL_TRACKDB_WIN32__Set_Track__TrackEnd_mm.restype = None
+
+        # void vFCU_FCTL_TRACKDB_WIN32__Set_Track__TrackLength_mm(Luint8 u8TrackIndex, Luint32 u32Value);
+        self.lib.vFCU_FCTL_TRACKDB_WIN32__Set_Track__TrackLength_mm.argtypes = [ctypes.c_uint8, ctypes.c_uint32]
+        self.lib.vFCU_FCTL_TRACKDB_WIN32__Set_Track__TrackLength_mm.restype = None
+
+        # void vFCU_FCTL_TRACKDB_WIN32__Set_Time__Accel_Coast_x10ms(Luint8 u8TrackIndex, Luint32 u32Value);
+        self.lib.vFCU_FCTL_TRACKDB_WIN32__Set_Time__Accel_Coast_x10ms.argtypes = [ctypes.c_uint8, ctypes.c_uint32]
+        self.lib.vFCU_FCTL_TRACKDB_WIN32__Set_Time__Accel_Coast_x10ms.restype = None
+
+        # void vFCU_FCTL_TRACKDB_WIN32__Set_Time__Coast_Brake_x10ms(Luint8 u8TrackIndex, Luint32 u32Value);
+        self.lib.vFCU_FCTL_TRACKDB_WIN32__Set_Time__Coast_Brake_x10ms.argtypes = [ctypes.c_uint8, ctypes.c_uint32]
+        self.lib.vFCU_FCTL_TRACKDB_WIN32__Set_Time__Coast_Brake_x10ms.restype = None
+
+        # void vFCU_FCTL_TRACKDB_WIN32__Set_UsePusherSeparation(Luint8 u8TrackIndex, Luint8 u8Value);
+        self.lib.vFCU_FCTL_TRACKDB_WIN32__Set_UsePusherSeparation.argtypes = [ctypes.c_uint8, ctypes.c_uint8]
+        self.lib.vFCU_FCTL_TRACKDB_WIN32__Set_UsePusherSeparation.restype = None
+
+        # Luint16 u16FCTL_TRAKDB_WIN32__ComputeCRC(void);
+        self.lib.u16FCTL_TRAKDB_WIN32__ComputeCRC.argtypes = []
+        self.lib.u16FCTL_TRAKDB_WIN32__ComputeCRC.restype = ctypes.c_uint16
+
+        # void vFCU_FCTL_TRACKDB_WIN32__Set_CRC(Luint16 u16Value);
+        self.lib.vFCU_FCTL_TRACKDB_WIN32__Set_CRC.argtypes = [ctypes.c_uint16]
+        self.lib.vFCU_FCTL_TRACKDB_WIN32__Set_CRC.restype = None
+
     def errcheck_callback(self, result, func, arguments):
         """ Function that can be set as a callback on methods in a dll to check the return values (search ctypes errcheck) """
         pass

@@ -11,7 +11,10 @@ from pint import UnitRegistry
 class Units:
 
     ureg = UnitRegistry()
-        
+
+    # Define G as g force in the ureg
+    ureg.define('gforce = 9.80665 m/s^2 = G')
+
     @classmethod
     def SI(cls, quantity_str):
         """ Convert to standard units """
