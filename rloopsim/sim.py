@@ -84,6 +84,9 @@ class Sim(object):
         self.sensors['pod'] = PodSensor(self, self.config.sensors.pod)
         self.sensors['pod'].add_step_listener( SensorCsvWriter(self, self.config.sensors.pod) )
 
+        self.sensors['pusher'] = PusherSensor(self, self.config.sensors.pusher)
+        self.sensors['pusher'].add_step_listener( SensorCsvWriter(self, self.config.sensors.pusher) )
+
         # - Accelerometers
         self.sensors['accel'] = []
                 
@@ -96,6 +99,7 @@ class Sim(object):
             #sensor.add_step_listener(SensorRawCsvWriter(self, sensor.config))
         
         # - Laser Contrast Sensors
+        """
         self.sensors['laser_contrast'] = []
         for idx, sensor_config in self.config.sensors.laser_contrast.iteritems():
             self.sensors['laser_contrast'].append(LaserContrastSensor(self, Config(sensor_config)))
@@ -118,6 +122,7 @@ class Sim(object):
         sensor = self.sensors['laser_dist']
         sensor.add_step_listener(SensorCsvWriter(self, sensor.config))
         #sensor.add_step_listener(SensorRawCsvWriter(self, sensor.config))
+        """
 
         # - Brake Sensors: MLP, limit switches (for both)
         pass
@@ -156,10 +161,7 @@ class Sim(object):
         #self.brake_1.gap = 0.025 # Set it to test forces
         
         # End condition checker (to stop the simulation)
-        self.add_end_condition(SimEndCondition())
-
-        # Testing run controller (with pod state machine control)
-        self.add_step_listener(StateMachineRunController())
+        #self.add_end_condition(SimEndCondition())  # Currently disabled in favor of using the RunController
         
         # Handle data writing
         # @ todo: handle data writing. Note: Each sim instance should be handed a directory to use for writing data
@@ -183,7 +185,7 @@ class Sim(object):
         # @todo: write something that gets a value from runtime config
         # @todo: write something that turns data logging on and off based on FCU state (assuming the FCU is enabled)
         # @todo: potentially turn on or off based on sensor, writer type, or a combination of the two
-        return False  # Turn data logging off for now
+        return True  # Turn data logging off for now
 
     def step(self, dt_usec):        
 
@@ -206,6 +208,18 @@ class Sim(object):
         self.time_dialator.step(dt_usec)
         if self.n_steps_taken % 500 == 0:
             self.logger.debug("Time dialation factor is {} after {} steps".format(self.time_dialator.dialation, self.n_steps_taken))
+
+            # Debugging
+            self.logger.debug("Track DB {}".format(self.fcu.lib.u32FCU_FCTL_TRACKDB__Get_CurrentDB()))
+
+            info = [
+                #self.fcu.lib.u8FCU_FCTL_TRACKDB__Accel__Get_Use(),  # Deprecated
+                self.fcu.lib.s32FCU_FCTL_TRACKDB__Accel__Get_Accel_Threshold_mm_ss(),
+                self.fcu.lib.s16FCU_FCTL_TRACKDB__Accel__Get_Accel_ThresholdTime_x10ms(),
+                self.fcu.lib.s32FCU_FCTL_TRACKDB__Accel__Get_Decel_Threshold_mm_ss(),
+                self.fcu.lib.s16FCU_FCTL_TRACKDB__Accel__Get_Decel_ThresholdTime_x10ms(),
+            ]
+            self.logger.debug("Track DB: Accel: {}".format(info))
 
             info = {
                 'psa': self.pusher.acceleration,
@@ -321,10 +335,161 @@ class StateMachineRunController(object):
         self.started = False
         self.pushed = False
 
+        self.push_step_counter = 0
+        self.ready_state_counter = 0
+
+        # Do we want to automatically jump to ready state and push?
+        self.wait_steps_push = 0  # number of steps to wait for the push after entering POD_STATE__READY
+
+        self.jump_to_ready_state = True
+        self.fake_accel_transition = False
+        self.end_after_spindown = True
+
+        self.sim_finished = False
+
+        self.state = "INIT"
+
     def setup_mission_profile(self):
         pass
 
     def step_callback(self, sim):
+        POD_STATE__IDLE = 2
+        POD_STATE__READY = 7
+        POD_STATE__ACCEL = 8
+        POD_STATE__SPINDOWN = 11
+
+        if self.state is "INIT":
+            # Wait for the FCU to get to IDLE
+            if sim.fcu.get_sm_state() == POD_STATE__IDLE:
+                self.state = "IDLE"
+
+        elif self.state is "IDLE":
+            u8TrackIndex = 0
+            u8Use = 1
+
+            s32AccelThresh_mm_ss = 20
+            u16AccelThresh_x10ms = 30
+            s32DecelThresh_mm_ss = 21
+            u16DecelThresh_x10ms = 31
+
+            # FCU is in IDLE -- set our accel thresholding values
+            """ # This didn't work -- probably need to set the header and handle CRC stuff -- see the RPOD_CONTROL for more detail
+            sim.fcu.lib.vFCU_FCTL_TRACKDB_WIN32__Set_Accel__Use(u8TrackIndex, u8Use);
+            sim.fcu.lib.vFCU_FCTL_TRACKDB_WIN32__Set_Accel__Threshold_mm_ss(u8TrackIndex, s32AccelThresh_mm_ss);
+            sim.fcu.lib.vFCU_FCTL_TRACKDB_WIN32__Set_Accel__Threshold_x10ms(u8TrackIndex, u16AccelThresh_x10ms);
+            sim.fcu.lib.vFCU_FCTL_TRACKDB_WIN32__Set_Decel__Threshold_mm_ss(u8TrackIndex, s32DecelThresh_mm_ss);
+            sim.fcu.lib.vFCU_FCTL_TRACKDB_WIN32__Set_Decel__Threshold_x10ms(u8TrackIndex, u16DecelThresh_x10ms);
+            """
+            # @todo: check that the values were set properly
+            #sim.fcu.lib.vFCU_ACCEL_THRESH__Set_Accel_Threshold(s32AccelThresh_mm_ss, u16AccelThresh_x10ms);
+            #sim.fcu.lib.vFCU_ACCEL_THRESH__Set_Decel_Threshold(s32DecelThresh_mm_ss, u16DecelThresh_x10ms);
+            """
+            DLL_DECLARATION void vFCU_FCTL_TRACKDB_WIN32__Set_Accel__Threshold_mm_ss(Luint8 u8TrackIndex, Lint32 s32Thresh_mm_ss);
+            DLL_DECLARATION void vFCU_FCTL_TRACKDB_WIN32__Set_Accel__Threshold_x10ms(Luint8 u8TrackIndex, Luint16 u16Thresh_x10ms);
+            DLL_DECLARATION void vFCU_FCTL_TRACKDB_WIN32__Set_Decel__Threshold_mm_ss(Luint8 u8TrackIndex, Lint32 s32Thresh_mm_ss);
+            DLL_DECLARATION void vFCU_FCTL_TRACKDB_WIN32__Set_Decel__Threshold_x10ms(Luint8 u8TrackIndex, Luint16 u16Thresh_x10ms);
+
+            //track system
+            DLL_DECLARATION void vFCU_FCTL_TRACKDB_WIN32__Set_Time__Accel_Coast_x10ms(Luint8 u8TrackIndex, Luint32 u32Value);
+            DLL_DECLARATION void vFCU_FCTL_TRACKDB_WIN32__Set_Time__Coast_Brake_x10ms(Luint8 u8TrackIndex, Luint32 u32Value);
+            DLL_DECLARATION void vFCU_FCTL_TRACKDB_WIN32__Set_Time__Brake_Spindown_x10ms(Luint8 u8TrackIndex, Luint32 u32Value);
+            """
+            """
+            sim:
+                mission_profile:
+                    selected_profile: 0
+                    profiles:
+                      0:
+                        sAccel:
+                          AccelThresh_mm_ss: 30
+                          AccelThresh_x10ms: 30
+                          DecelThresh_mm_ss: 0
+                          DecelThresh_x10ms: 300
+                        sTime:
+                          Accel_Coast_x10ms: 200
+                          Coast_Brake_x10ms: 200
+                          Brake_Spindown_x10ms: 100
+            """
+            u8TrackIndex = sim.config.mission_profile.selected_profile
+            sAccel = sim.config.mission_profile.profiles[u8TrackIndex].sAccel
+            sTime = sim.config.mission_profile.profiles[u8TrackIndex].sTime
+
+            sim.fcu.lib.vFCU_FCTL_TRACKDB_WIN32__Set_Accel__Threshold_mm_ss(u8TrackIndex,  sAccel.AccelThresh_mm_ss);
+            sim.fcu.lib.vFCU_FCTL_TRACKDB_WIN32__Set_Accel__Threshold_x10ms(u8TrackIndex, sAccel.AccelThresh_x10ms);
+            sim.fcu.lib.vFCU_FCTL_TRACKDB_WIN32__Set_Decel__Threshold_mm_ss(u8TrackIndex, sAccel.DecelThresh_mm_ss);
+            sim.fcu.lib.vFCU_FCTL_TRACKDB_WIN32__Set_Decel__Threshold_x10ms(u8TrackIndex, sAccel.DecelThresh_x10ms);
+            sim.fcu.lib.vFCU_FCTL_TRACKDB_WIN32__Set_Time__Accel_Coast_x10ms(u8TrackIndex, sTime.Accel_Coast_x10ms);
+            sim.fcu.lib.vFCU_FCTL_TRACKDB_WIN32__Set_Time__Coast_Brake_x10ms(u8TrackIndex, sTime.Coast_Brake_x10ms);
+            sim.fcu.lib.vFCU_FCTL_TRACKDB_WIN32__Set_Time__Brake_Spindown_x10ms(u8TrackIndex, sTime.Brake_Spindown_x10ms);
+
+            if self.jump_to_ready_state:
+                self.logger.info("StateMachineRunController moving FCU to POD_STATE__READY")
+                sim.fcu.force_ready_state()
+                self.state = "RUN_START"
+
+        elif self.state is "RUN_START":
+            # Wait until the FCU says we're in READY state
+            if sim.fcu.get_sm_state() == POD_STATE__READY:
+                self.ready_state_counter += 1
+
+            if self.ready_state_counter >= self.wait_steps_push:  # Wait some steps before pushing
+                self.logger.info("StateMachineRunController signaling pusher to start push")
+                self.push_step_counter = 0  # Reset the push counter
+                self.state = "START_PUSH"
+
+        elif self.state is "START_PUSH":
+            sim.pusher.start_push()
+            self.pushed = True
+            self.push_step_counter += 1
+            self.state = "RUNNING"
+
+        elif self.state is "RUNNING":
+            if self.push_step_counter == 10:  # rough approx of accel detection
+                # Pretend that we've detected acceleration
+                # Note: This might get reset before it's checked to trigger the transition...
+                # @todo: make this a bit better by using actual accel values?
+                # Note: this will be replaced once accelerometers are working
+                #sim.fcu.lib.u8FCU_ACCEL_THRESH__Debug_Set_Accel_Threshold_Met(1)
+
+                if self.fake_accel_transition:
+                    sim.fcu.lib.vFCU_FCTL_MAINSM__Debug__ForceState(POD_STATE__ACCEL);
+
+            if sim.pusher.state is not "COAST":
+                self.push_step_counter += 1
+
+            if sim.fcu.get_sm_state() is POD_STATE__SPINDOWN:
+                self.state = "FINISHING"
+
+        elif self.state is "FINISHING":
+            # If we've returned to IDLE after spindown
+            if sim.fcu.get_sm_state() is POD_STATE__IDLE:
+                if self.end_after_spindown:
+                    self.sim_finished = True
+
+    # @todo: add this as the only sim end listener
+    def is_finished(self, sim):
+        if self.sim_finished:
+            return True
+        else:
+            return False
+
+
+class StateMachineInteractiveController(object):
+    """ Control the FCU state and pusher for a simulated run """
+
+    def __init__(self):
+        self.logger = logging.getLogger("StateMachineInteractiveController")
+        """
+        self.started = False
+        self.pushed = False
+        """
+
+    def setup_mission_profile(self):
+        pass
+
+    def step_callback(self, sim):
+        pass
+        """
         POD_STATE__IDLE = 2
         POD_STATE__READY = 7
 
@@ -341,7 +506,7 @@ class StateMachineRunController(object):
                 self.logger.info("StateMachineRunController signaling pusher to start push")
                 sim.pusher.start_push()
                 self.pushed = True
-
+        """
 
 class SimEndCondition(object):
 
@@ -382,7 +547,7 @@ if __name__ == "__main__":
         logging.config.dictConfig(yaml.load(f))
         
     test_logger = logging.getLogger("NetworkNode")
-    print(test_logger.__dict__)
+    #print(test_logger.__dict__)
 
     from config import *
 
@@ -398,7 +563,19 @@ if __name__ == "__main__":
     sim = Sim( Sim.load_config_files(args.configfile), '../eng-embed-sim-data/test')
     #t = sim.run_threaded()
     #t.join()
-    
+
+    # @todo: add command line arguments to specify which mode to run in (interactive/auto)
+
+    # Testing run controller (with pod state machine control)
+
+    # @todo: consider moving end listeners into a 'sim controller' concept
+    run_controller = StateMachineRunController()
+    sim.add_step_listener(run_controller)
+    sim.add_end_listener(run_controller)
+
+    # Testing interactive controller (can talk to it with the RPOD_CONTROL app)
+    #sim.add_step_listener(StateMachineInteractiveController())
+
     sim.run()
     
     # Keep the script alive until we're done (works with both threading and non-threading cases)

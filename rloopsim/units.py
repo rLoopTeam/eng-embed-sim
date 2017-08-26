@@ -31,10 +31,17 @@ class Units:
     @classmethod  
     def seconds(cls, quantity_time):
         return cls.ureg.parse_expression(quantity_time).to(cls.ureg.seconds).magnitude
-        
     
+    @classmethod
+    def convert(cls, quantity, target_units):
+        return cls.ureg.parse_expression(quantity).to(cls.ureg.parse_expression(target_units)).magnitude
+
+
 if __name__ == "__main__":
     a = ['1.25m', '3ft', '18psi', '4m/s', "100usec", '10min']
     for qty in a:
         print("{} => {}".format(qty, Units.SI(qty)))
         #print Units.SI(qty).magnitude
+
+    starting_quantity = '12 ft/s^2'
+    print("{} => {} mm/s^2".format(starting_quantity, Units.convert(starting_quantity, 'mm/s^2')))

@@ -11,6 +11,21 @@ sim:
     fixed_timestep: 5000 usec
     # Interval to recalculate time dialation (real time vs sim time) for the FCU timers
     time_dialation_interval: 100msec
+
+    mission_profile:
+        selected_profile: 0
+        profiles:
+          0:
+            sAccel:
+              AccelThresh_mm_ss: 30
+              AccelThresh_x10ms: 30
+              DecelThresh_mm_ss: 0
+              DecelThresh_x10ms: 300
+            sTime:
+              Accel_Coast_x10ms: 200
+              Coast_Brake_x10ms: 200
+              Brake_Spindown_x10ms: 100
+
     fcu:
         # @todo: make this work
         enabled: True
@@ -71,10 +86,10 @@ sim:
     # Working directory for output files, relative to the cwd from which the simulator was run. Can be overridden by SimRunner.
     working_dir: data
     pusher:
-        max_push_velocity: 150.0 m/s
-        max_push_time: 20 s
-        push_accel: 9.81 m/s^2
-        brake_decel: -2 G
+        max_push_velocity: 100.0 m/s
+        max_push_time: 2 s
+        push_accel: 0.5 G
+        brake_decel: -1 G
         
         push_end_position: 475 m  # NOTE: This is where the push will stop regardless of speed -- @todo: work this into the pusher
         #push_force: 8000 N  # @todo: remove this -- pusher is velocity controlled
@@ -128,19 +143,31 @@ sim:
         pod:
             enabled: True
             log_filename: pod.csv
+        pusher:
+            enabled: True
+            log_filename: pusher.csv
 
         accel:
             0:
                 id: 0
                 log_filename: accel_0.csv
-                sampling_rate: 100 Hz
+                sampling_rate: 50 Hz
+                raw_min: -8192
+                raw_max: 8192
+                real_min: -4 G
+                real_max: 4 G
                 # Note: scale of noise is in G force -- random distribution of 0.2gs, for instance
-                noise: {enabled: True, scale: 0.2, center: 0.0}
-            1:
-                id: 1
-                log_filename: accel_1.csv
-                sampling_rate: 100 Hz
-                noise: {enabled: True, scale: 0.2, center: 0.0}
+                noise: {enabled: True, scale: 0.02 G, center: 0.0}
+#            1:
+#                id: 1
+#                log_filename: accel_1.csv
+#                sampling_rate: 50 Hz
+#                sampling_rate: 50 Hz
+#                raw_min: -8192
+#                raw_max: 8192
+#                real_min: -4 G
+#                real_max: 4 G
+#                noise: {enabled: True, scale: 0.02 G, center: 0.0}
         laser_dist: 
             sampling_rate: 50 Hz
             # Maximum distance the sensor can see
@@ -224,7 +251,7 @@ sim:
                 noise: {enabled: False, scale: 0.0, center: 0.0}
 
     pod:
-        mass: 350 kg
+        mass: 441 kg
         position: 0.0 m  # from start of track
         velocity: 0.0 m/s
         acceleration: 0.0 m/s^2
@@ -237,6 +264,7 @@ sim:
                 air_density: 0.100098 kg/m^3
             brakes:
                 # Put brake drag/lift force constants and configuration here. Include units! (any provided units will be converted to SI)
+                gap: 2.5 mm
             gimbals:
                 # Put gimbal drag/lift force constants and configuration here. Include units! (any provided units will be converted to SI)
             hover_engines:

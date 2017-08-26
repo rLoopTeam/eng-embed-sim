@@ -4,6 +4,7 @@ import numpy as np
 import logging 
 from collections import namedtuple
 from operator import attrgetter  # For sorting named tuples
+from units import Units
 
 from sensors import PollingSensor    
     
@@ -18,12 +19,13 @@ class Accelerometer(PollingSensor):
         self.data = namedtuple('AccelerometerData', ['t_usec', 'raw_x', 'raw_y', 'raw_z', 'real_x', 'real_y', 'real_z'])
 
         # Quantities for converting to raw values
-        self.sensor_input_range = (-4 * 9.81, 4 * 9.81)  # Gravity * g force (to convert 4 G to m/s^2)
-        self.sensor_output_range = (-2048, 2048)  # @todo: get this from config
+        raw_min = self.config.raw_min
+        raw_max = self.config.raw_max
+        real_min = Units.SI(self.config.real_min)
+        real_max = Units.SI(self.config.real_max)
 
-        # Conversion
-        self._ms2_to_g = 1.0/9.81  # Conversion multiplier for m/s^2 to G force
-
+        self.sensor_input_range = (real_min, real_max)
+        self.sensor_output_range = (raw_min, raw_max)
         
     def create_step_samples(self, dt_usec):
         
@@ -55,7 +57,7 @@ class Accelerometer(PollingSensor):
             # Map 
             xyz = np.array((real_x, real_y, real_z))
             # Add some noise (in G's)
-            xyz += np.random.normal(self.noise_center, self.noise_scale / 9.81, 3)
+            xyz += np.random.normal(self.noise_center, Units.SI(self.noise_scale), 3)
             xyz = np.interp(xyz, self.sensor_input_range, self.sensor_output_range)  
             xyz = xyz.astype(int)
             samples.append(self.data(t, xyz[0], xyz[1], xyz[2], real_x, real_y, real_z))
@@ -75,12 +77,12 @@ class Accelerometer(PollingSensor):
         xyz = np.array((sample.real_x, sample.real_y, sample.real_z))
         # xyz = np.clip(xyz, *self.sensor_input_range)   # Clip to the input range (4g) to avoid  (Note: np.interp clips)
         xyz = np.interp(xyz, self.sensor_input_range, self.sensor_output_range)  
-        return self.data(sample.t, *xyz.astype(int))
+        return self.data(sample.t_usec, *xyz.astype(int))
         
     def from_raw(self, sample):
         """ Convert the raw data format to SI units """
         xyz = np.array((sample.x, sample.y, sample.z))
-        return self.data(sample.t, *np.interp(xyz, self.sensor_output_range, self.sensor_input_range))
+        return self.data(sample.t_usec, *np.interp(xyz, self.sensor_output_range, self.sensor_input_range))
         
     def get_csv_headers(self):
         return self.data._fields
@@ -94,3 +96,4 @@ class AccelerometerTestListener(object):
         for sample in samples:
             pass
             #print "AccelerometerSensor sample: {}; raw: {}; from_raw: {}".format(sample, sensor.to_raw(sample), sensor.from_raw(sensor.to_raw(sample)))
+            #print(samples)

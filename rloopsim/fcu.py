@@ -106,7 +106,47 @@ class Fcu:
         self.lib.vFCU_FCTL_TRACKDB_WIN32__Set_Decel__Threshold_mm_ss(Luint8 u8TrackIndex, Lint32 s32Thresh_mm_ss);
         self.lib.vFCU_FCTL_TRACKDB_WIN32__Set_Decel__Threshold_x10ms(Luint8 u8TrackIndex, Luint16 u16Thresh_x10ms);
         """
-        pass
+        
+        # Read a binary file into a byte array
+        with open('conf/database2.bin', 'rb') as fh:
+            pu8ByteArray = bytearray(fh.read())
+
+        # Set the track db from a binary file produced by the RPOD_CONTROL vb app
+        #vFCU_FCTL_TRACKDB_WIN32__Set_Array(Luint8 *pu8ByteArray)
+        self.lib.vFCU_FCTL_TRACKDB_WIN32__Set_Array(pu8ByteArray)
+
+
+
+        """
+        # @todo: load the mission profile into a Config object
+        # The pod can store several tracks. We'll just use track 1 for now
+        track_index = 1  
+        accel_thresh_mm_ss = Units.convert(mission_profile.accel.accel_threshold, 'mm/s^2')
+        # Note: div by 10 to take care of the fact that it's a 10ms incrementing counter
+        accel_thresh_x10ms = int(Units.convert(mission_profile.accel.accel_time_required, 'ms') / 10)
+
+        decel_thresh_mm_ss = Units.convert(mission_profile.accel.decel_threshold, 'mm/s^2')
+        # Note: div by 10 to take care of the fact that it's a 10ms incrementing counter
+        decel_thresh_x10ms = int(Units.convert(mission_profile.accel.decel_time_required, 'ms') / 10)
+
+        # Set the memory location of the track db (@see fcu__fctl__track_database__mem.c)
+        memory_location = 0x00180000
+        self.lib.vFCU_FCTL_TRACKDB_WIN32__Set_Header(memory_location)
+
+        # Indicate whether we want to use thresholding
+        self.lib.vFCU_FCTL_TRACKDB_WIN32__Set_Accel__Use(mission_profile.accel.enabled)
+
+        # Set the accel and decel values
+        self.lib.vFCU_FCTL_TRACKDB_WIN32__Set_Accel__Threshold_mm_ss(track_index, accel_thresh_mm_ss)
+        self.lib.vFCU_FCTL_TRACKDB_WIN32__Set_Accel__Threshold_x10ms(track_index, accel_thresh_x10ms)
+        self.lib.vFCU_FCTL_TRACKDB_WIN32__Set_Decel__Threshold_mm_ss(track_index, decel_thresh_mm_ss)
+        self.lib.vFCU_FCTL_TRACKDB_WIN32__Set_Decel__Threshold_x10ms(track_index, decel_thresh_x10ms)
+
+
+        # Handle the CRC so the FCU will know the db is valid
+        trackdb_crc = u16FCTL_TRAKDB_WIN32__ComputeCRC(void)
+        self.lib.vFCU_FCTL_TRACKDB_WIN32__Set_CRC(trackdb_crc)
+        """
 
     def __init__(self, sim, config):
         self.sim = sim
@@ -335,22 +375,6 @@ class Fcu:
 
         # Note: only setting return/arg types for the special ones (returns a value, takes a pointer, etc.)
 
-        # DLL_DECLARATION Luint32 u32FCU_FCTL_TRACKDB__Get_CurrentDB(void);
-        self.lib.u32FCU_FCTL_TRACKDB__Get_CurrentDB.restype = ctypes.c_uint32
-        
-        # DLL_DECLARATION void vFCU_FCTL_TRACKDB_WIN32__Get_Array(Luint8 *pu8ByteArray);
-        # Note: call this with a byte array that will be filled with the trackdb (?)
-        self.lib.vFCU_FCTL_TRACKDB_WIN32__Get_Array.argtypes = [ctypes.POINTER(ctypes.c_ubyte)]
-        
-        # DLL_DECLARATION Luint16 u16FCU_FCTL_TRACKDB_WIN32__Get_StructureSize(void);
-        self.lib.u16FCU_FCTL_TRACKDB_WIN32__Get_StructureSize.restype = ctypes.c_uint16
-
-        # DLL_DECLARATION void vFCU_FCTL_TRACKDB_WIN32__Set_Array(Luint8 *pu8ByteArray);
-        self.lib.vFCU_FCTL_TRACKDB_WIN32__Set_Array.argtypes = [ctypes.POINTER(ctypes.c_ubyte)]
-        
-        # DLL_DECLARATION Luint16 u16FCTL_TRAKDB_WIN32__ComputeCRC(void);
-        self.lib.u16FCTL_TRAKDB_WIN32__ComputeCRC.restype = ctypes.c_uint16
-
         # -- Laser Sensors: Contrast (reflective strips on tube walls), Distance (forward distance), and Opto (height and yaw sensors) -----
         
 		# DLL_DECLARATION void vFCU_LASERCONT_TL__ISR(E_FCU__LASER_CONT_INDEX_T eLaser, Luint32 u32Register);
@@ -387,8 +411,8 @@ class Fcu:
         self.lib.s32FCU_ACCELL__Get_CurrentDisplacement_mm.argtypes = [ctypes.c_uint8]
         self.lib.s32FCU_ACCELL__Get_CurrentDisplacement_mm.restype = ctypes.c_int32
         
-        # Track DB
-        
+        # -- Track DB -----
+
         # void vFCU_FCTL_TRACKDB_WIN32__Clear_Array(void);
         self.lib.vFCU_FCTL_TRACKDB_WIN32__Clear_Array.argtypes = []
         self.lib.vFCU_FCTL_TRACKDB_WIN32__Clear_Array.restype = None
@@ -410,8 +434,8 @@ class Fcu:
         self.lib.vFCU_FCTL_TRACKDB_WIN32__Set_Header.restype = None
 
         # void vFCU_FCTL_TRACKDB_WIN32__Set_Accel__Use(Luint8 u8TrackIndex, Luint8 u8Value);
-        self.lib.vFCU_FCTL_TRACKDB_WIN32__Set_Accel__Use.argtypes = [ctypes.c_uint8, ctypes.c_uint8]
-        self.lib.vFCU_FCTL_TRACKDB_WIN32__Set_Accel__Use.restype = None
+        #self.lib.vFCU_FCTL_TRACKDB_WIN32__Set_Accel__Use.argtypes = [ctypes.c_uint8, ctypes.c_uint8]
+        #self.lib.vFCU_FCTL_TRACKDB_WIN32__Set_Accel__Use.restype = None
 
         # void vFCU_FCTL_TRACKDB_WIN32__Set_Accel__Threshold_mm_ss(Luint8 u8TrackIndex, Lint32 s32Thresh_mm_ss);
         self.lib.vFCU_FCTL_TRACKDB_WIN32__Set_Accel__Threshold_mm_ss.argtypes = [ctypes.c_uint8, ctypes.c_int32]
@@ -430,16 +454,16 @@ class Fcu:
         self.lib.vFCU_FCTL_TRACKDB_WIN32__Set_Decel__Threshold_x10ms.restype = None
 
         # void vFCU_FCTL_TRACKDB_WIN32__Set_Track__TrackStart_mm(Luint8 u8TrackIndex, Luint32 u32Value);
-        self.lib.vFCU_FCTL_TRACKDB_WIN32__Set_Track__TrackStart_mm.argtypes = [ctypes.c_uint8, ctypes.c_uint32]
-        self.lib.vFCU_FCTL_TRACKDB_WIN32__Set_Track__TrackStart_mm.restype = None
+        #self.lib.vFCU_FCTL_TRACKDB_WIN32__Set_Track__TrackStart_mm.argtypes = [ctypes.c_uint8, ctypes.c_uint32]
+        #self.lib.vFCU_FCTL_TRACKDB_WIN32__Set_Track__TrackStart_mm.restype = None
 
         # void vFCU_FCTL_TRACKDB_WIN32__Set_Track__TrackEnd_mm(Luint8 u8TrackIndex, Luint32 u32Value);
-        self.lib.vFCU_FCTL_TRACKDB_WIN32__Set_Track__TrackEnd_mm.argtypes = [ctypes.c_uint8, ctypes.c_uint32]
-        self.lib.vFCU_FCTL_TRACKDB_WIN32__Set_Track__TrackEnd_mm.restype = None
+        #self.lib.vFCU_FCTL_TRACKDB_WIN32__Set_Track__TrackEnd_mm.argtypes = [ctypes.c_uint8, ctypes.c_uint32]
+        #self.lib.vFCU_FCTL_TRACKDB_WIN32__Set_Track__TrackEnd_mm.restype = None
 
         # void vFCU_FCTL_TRACKDB_WIN32__Set_Track__TrackLength_mm(Luint8 u8TrackIndex, Luint32 u32Value);
-        self.lib.vFCU_FCTL_TRACKDB_WIN32__Set_Track__TrackLength_mm.argtypes = [ctypes.c_uint8, ctypes.c_uint32]
-        self.lib.vFCU_FCTL_TRACKDB_WIN32__Set_Track__TrackLength_mm.restype = None
+        #self.lib.vFCU_FCTL_TRACKDB_WIN32__Set_Track__TrackLength_mm.argtypes = [ctypes.c_uint8, ctypes.c_uint32]
+        #self.lib.vFCU_FCTL_TRACKDB_WIN32__Set_Track__TrackLength_mm.restype = None
 
         # void vFCU_FCTL_TRACKDB_WIN32__Set_Time__Accel_Coast_x10ms(Luint8 u8TrackIndex, Luint32 u32Value);
         self.lib.vFCU_FCTL_TRACKDB_WIN32__Set_Time__Accel_Coast_x10ms.argtypes = [ctypes.c_uint8, ctypes.c_uint32]
@@ -450,8 +474,8 @@ class Fcu:
         self.lib.vFCU_FCTL_TRACKDB_WIN32__Set_Time__Coast_Brake_x10ms.restype = None
 
         # void vFCU_FCTL_TRACKDB_WIN32__Set_UsePusherSeparation(Luint8 u8TrackIndex, Luint8 u8Value);
-        self.lib.vFCU_FCTL_TRACKDB_WIN32__Set_UsePusherSeparation.argtypes = [ctypes.c_uint8, ctypes.c_uint8]
-        self.lib.vFCU_FCTL_TRACKDB_WIN32__Set_UsePusherSeparation.restype = None
+        #self.lib.vFCU_FCTL_TRACKDB_WIN32__Set_UsePusherSeparation.argtypes = [ctypes.c_uint8, ctypes.c_uint8]
+        #self.lib.vFCU_FCTL_TRACKDB_WIN32__Set_UsePusherSeparation.restype = None
 
         # Luint16 u16FCTL_TRAKDB_WIN32__ComputeCRC(void);
         self.lib.u16FCTL_TRAKDB_WIN32__ComputeCRC.argtypes = []
@@ -460,6 +484,35 @@ class Fcu:
         # void vFCU_FCTL_TRACKDB_WIN32__Set_CRC(Luint16 u16Value);
         self.lib.vFCU_FCTL_TRACKDB_WIN32__Set_CRC.argtypes = [ctypes.c_uint16]
         self.lib.vFCU_FCTL_TRACKDB_WIN32__Set_CRC.restype = None
+
+        # void vFCU_FCTL_TRACKDB_WIN32__Set_Accel__Threshold_mm_ss(Luint8 u8TrackIndex, Lint32 s32Thresh_mm_ss);
+        self.lib.vFCU_FCTL_TRACKDB_WIN32__Set_Accel__Threshold_mm_ss.argtypes = [ctypes.c_uint8, ctypes.c_int32]
+        self.lib.vFCU_FCTL_TRACKDB_WIN32__Set_Accel__Threshold_mm_ss.restype = None
+
+        # void vFCU_FCTL_TRACKDB_WIN32__Set_Accel__Threshold_x10ms(Luint8 u8TrackIndex, Luint16 u16Thresh_x10ms);
+        self.lib.vFCU_FCTL_TRACKDB_WIN32__Set_Accel__Threshold_x10ms.argtypes = [ctypes.c_uint8, ctypes.c_uint16]
+        self.lib.vFCU_FCTL_TRACKDB_WIN32__Set_Accel__Threshold_x10ms.restype = None
+
+        # void vFCU_FCTL_TRACKDB_WIN32__Set_Decel__Threshold_mm_ss(Luint8 u8TrackIndex, Lint32 s32Thresh_mm_ss);
+        self.lib.vFCU_FCTL_TRACKDB_WIN32__Set_Decel__Threshold_mm_ss.argtypes = [ctypes.c_uint8, ctypes.c_int32]
+        self.lib.vFCU_FCTL_TRACKDB_WIN32__Set_Decel__Threshold_mm_ss.restype = None
+
+        # void vFCU_FCTL_TRACKDB_WIN32__Set_Decel__Threshold_x10ms(Luint8 u8TrackIndex, Luint16 u16Thresh_x10ms);
+        self.lib.vFCU_FCTL_TRACKDB_WIN32__Set_Decel__Threshold_x10ms.argtypes = [ctypes.c_uint8, ctypes.c_uint16]
+        self.lib.vFCU_FCTL_TRACKDB_WIN32__Set_Decel__Threshold_x10ms.restype = None
+
+        # void vFCU_FCTL_TRACKDB_WIN32__Set_Time__Accel_Coast_x10ms(Luint8 u8TrackIndex, Luint32 u32Value);
+        self.lib.vFCU_FCTL_TRACKDB_WIN32__Set_Time__Accel_Coast_x10ms.argtypes = [ctypes.c_uint8, ctypes.c_uint32]
+        self.lib.vFCU_FCTL_TRACKDB_WIN32__Set_Time__Accel_Coast_x10ms.restype = None
+
+        # void vFCU_FCTL_TRACKDB_WIN32__Set_Time__Coast_Brake_x10ms(Luint8 u8TrackIndex, Luint32 u32Value);
+        self.lib.vFCU_FCTL_TRACKDB_WIN32__Set_Time__Coast_Brake_x10ms.argtypes = [ctypes.c_uint8, ctypes.c_uint32]
+        self.lib.vFCU_FCTL_TRACKDB_WIN32__Set_Time__Coast_Brake_x10ms.restype = None
+
+        # void vFCU_FCTL_TRACKDB_WIN32__Set_Time__Brake_Spindown_x10ms(Luint8 u8TrackIndex, Luint32 u32Value);
+        self.lib.vFCU_FCTL_TRACKDB_WIN32__Set_Time__Brake_Spindown_x10ms.argtypes = [ctypes.c_uint8, ctypes.c_uint32]
+        self.lib.vFCU_FCTL_TRACKDB_WIN32__Set_Time__Brake_Spindown_x10ms.restype = None
+
 
     def errcheck_callback(self, result, func, arguments):
         """ Function that can be set as a callback on methods in a dll to check the return values (search ctypes errcheck) """
@@ -630,7 +683,9 @@ class Fcu:
     def SC16IS_txdata_callback(self, u8DeviceIndex, pu8Data, u8Length):
         """ When the SC16 subsystem wants to transmit """
         # Public Delegate Sub SC16IS_WIN32__Set_TxData_CallbackDelegate(u8DeviceIndex As Byte, pu8Data As IntPtr, u8Length As Byte)
-        self.logger.debug("Fcu.SC16IS_txdata_callback({}, {}, {})".format(u8DeviceIndex, pu8Data, u8Length))
+        
+        # self.logger.debug("Fcu.SC16IS_txdata_callback({}, {}, {})".format(u8DeviceIndex, pu8Data, u8Length))
+        pass  # Disabling chatty SC16IS notifications for now
 
     def AMC7812_DAC_volts_callback(self, u8Channel, f32Volts):
         """ When the DAC voltage is updated """
@@ -771,6 +826,7 @@ class Fcu:
             self.sim.sensors['accel'][i].add_step_listener(self.accel_listeners[i])
             # Now we have a handle to a listener for each accel. We'll use those in MMA8451_readdata_callback
     
+        """ Disabling due to issues sending packets when these are not enabled
         # 'Laser Distance
         # Private Shared Sub vFCU_LASERDIST_WIN32__Set_DistanceRaw(f32Value As Single)
         self.laser_dist_listener = None  # Just for clarity, declare it here
@@ -800,7 +856,7 @@ class Fcu:
             self.laser_opto_listeners.append( QueueingRawListener(self.sim, None) )  # Note: we tie it to the sensor in the next line
             self.sim.sensors['laser_opto'][i].add_step_listener(self.laser_opto_listeners[i])
             # Now we have a handle to a queue (listener) for each sensor
-
+        """
 
         # Add our timers to the sim's time dialator so that we can stay in sync
         self.logger.info("Initializing time dialator")
@@ -903,6 +959,7 @@ class Fcu:
             self.sim.sensors['accel'][i].add_step_listener(self.accel_listeners[i])
             # Now we have a handle to a listener for each accel. We'll use those in MMA8451_readdata_callback
     
+        """ @TODO: This fixes network problems that happen when these sensors are disabled
         # 'Laser Distance
         # Private Shared Sub vFCU_LASERDIST_WIN32__Set_DistanceRaw(f32Value As Single)
         self.laser_dist_listener = None  # Just for clarity, declare it here
@@ -933,7 +990,7 @@ class Fcu:
             self.sim.sensors['laser_opto'][i].add_step_listener(self.laser_opto_listeners[i])
             # Now we have a handle to a queue (listener) for each sensor
 
-
+        """
         # Add our timers to the sim's time dialator so that we can stay in sync
         self.logger.info("Initializing time dialator")
         self.sim.time_dialator.add_timers(self.timerunner.get_timers())
@@ -960,7 +1017,7 @@ class Fcu:
         self.fcu_init()        
 
         # Set up to call fcu_process using a timer
-        self.timerunner.add_timer(CallbackTimer(0.01, self.fcu_process, name="FCU Process Loop Timer"))
+        self.timerunner.add_timer(CallbackTimer(0.001, self.fcu_process, name="FCU Process Loop Timer"))
 
         self.timerunner.run()    
 

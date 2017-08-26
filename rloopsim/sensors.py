@@ -72,6 +72,32 @@ class Sensor(object):
         pass  # deferred to subclasses
         
         
+class PusherSensor(Sensor):
+    def __init__(self, sim, config):
+        """ A sensor for the pod actual values """
+        # @todo: Is this actually a sensor? Kinda works like a sensor, but kinda doesn't (e.g. needs to be stepped?)
+        Sensor.__init__(self, sim, config)
+
+        self.name = "pod_actual"
+
+        pod_fields = ['t_usec', 'pusher_position', 'pusher_velocity', 'pusher_acceleration']
+        self.data = namedtuple('pusher_actual', pod_fields)
+        
+    def step(self, dt_usec):
+        """ Create a list of samples containing a single sample for this step """
+        pusher = self.sim.pusher
+        
+        # Note: sensors always return a list of namedtuples. In this case, we always only return 1 'sample' per step. 
+        data = [self.sim.elapsed_time_usec, pusher.position, pusher.velocity, pusher.acceleration]
+        samples = [self.data(*data)]  # List containing a single named tuple
+        
+        for step_listener in self.step_listeners:
+            step_listener.step_callback(self, samples)
+        
+    def get_csv_headers(self):
+        return self.data._fields
+
+
 class PodSensor(Sensor):
     def __init__(self, sim, config):
         """ A sensor for the pod actual values """
