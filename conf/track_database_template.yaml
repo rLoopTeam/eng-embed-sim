@@ -22,14 +22,15 @@ sim:
       extended_gap: 2.5mm
       retracted_gap: 25.4mm
       # Testing only
-      gap_close_min_time: 2.5s  track:
+      gap_close_min_time: 2.5s
     1:
       initial_gap: 24.5mm
       # Min and max gap correspond to the locations that the limit switches are triggered
       extended_gap: 2.5mm
       retracted_gap: 25.4mm
       # Testing only
-      gap_close_min_time: 2.5s  track:
+      gap_close_min_time: 2.5s  
+  track:
     length: 37 m
     air_pressure: 14.7 psi
     air_temperature: 293 degK

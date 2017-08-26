@@ -170,11 +170,22 @@ class Sim(object):
     def load_config_files(cls, config_files):
         """ Load one or more config files (later files overlay earlier ones) """
         
-        config = Config()
+        ymls = []
         for configfile in config_files:
-            # Note: each file loaded by the config will overlay on the previously loaded files
-            config.loadfile(configfile)
+            with open(configfile, 'rb') as f:
+                ymls.append(yaml.load(f))
+        merged = {}
+        for yml in ymls:
+            merged = yaml_merge(merged, yml)
+
+        config = Config(merged)
         return config.sim
+
+        #config = Config()
+        #for configfile in config_files:
+            # Note: each file loaded by the config will overlay on the previously loaded files
+        #    config.loadfile(configfile)
+        #return config.sim
 
     def set_working_dir(self, working_dir):
         """ Set our working directory (for file writing and whatnot) """
@@ -353,9 +364,16 @@ class StateMachineRunController(object):
         pass
 
     def step_callback(self, sim):
+        POD_STATE__INIT = 1
         POD_STATE__IDLE = 2
+        POD_STATE__TEST_MODE = 3
+        POD_STATE__DRIVE = 4
+        POD_STATE__ARMED_WAIT = 5
+        POD_STATE__FLIGHT_PREP = 6
         POD_STATE__READY = 7
         POD_STATE__ACCEL = 8
+        POD_STATE__COAST_INTERLOCK = 9
+        POD_STATE__BRAKE = 10
         POD_STATE__SPINDOWN = 11
 
         if self.state is "INIT":
@@ -410,6 +428,8 @@ class StateMachineRunController(object):
                           Coast_Brake_x10ms: 200
                           Brake_Spindown_x10ms: 100
             """
+
+            # Set up the trackDB
             u8TrackIndex = sim.config.mission_profile.selected_profile
             sAccel = sim.config.mission_profile.profiles[u8TrackIndex].sAccel
             sTime = sim.config.mission_profile.profiles[u8TrackIndex].sTime
@@ -454,6 +474,13 @@ class StateMachineRunController(object):
                 if self.fake_accel_transition:
                     sim.fcu.lib.vFCU_FCTL_MAINSM__Debug__ForceState(POD_STATE__ACCEL);
 
+            if sim.fcu.get_sm_state() is POD_STATE__BRAKE:
+                # Apply the brakes
+                sim.pod.brakes.apply()
+            else:
+                # Stop the brakes
+                sim.pod.brakes.hold()
+
             if sim.pusher.state is not "COAST":
                 self.push_step_counter += 1
 
@@ -461,10 +488,20 @@ class StateMachineRunController(object):
                 self.state = "FINISHING"
 
         elif self.state is "FINISHING":
-            # If we've returned to IDLE after spindown
-            if sim.fcu.get_sm_state() is POD_STATE__IDLE:
+            self.sim_finished = True
+
+
+            if sim.fcu.get_sm_state() is POD_STATE__SPINDOWN:
                 if self.end_after_spindown:
                     self.sim_finished = True
+
+            # If we've returned to IDLE after spindown
+            elif sim.fcu.get_sm_state() is POD_STATE__IDLE:
+                if self.end_after_spindown:
+                    self.sim_finished = True
+            else:
+                # keep going
+                pass
 
     # @todo: add this as the only sim end listener
     def is_finished(self, sim):
@@ -571,7 +608,7 @@ if __name__ == "__main__":
     # @todo: consider moving end listeners into a 'sim controller' concept
     run_controller = StateMachineRunController()
     sim.add_step_listener(run_controller)
-    sim.add_end_listener(run_controller)
+    sim.add_end_condition(run_controller)
 
     # Testing interactive controller (can talk to it with the RPOD_CONTROL app)
     #sim.add_step_listener(StateMachineInteractiveController())

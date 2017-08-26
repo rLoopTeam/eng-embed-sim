@@ -90,8 +90,8 @@ class Config(MutableMapping):
         "merges b into a"
         # @see http://stackoverflow.com/questions/7204805/dictionaries-of-dictionaries-merge
         if path is None: path = []
-        for key in b.keys():
-            if key in a.keys():
+        for key in b:
+            if key in a:
                 if isinstance(a[key], dict) and isinstance(b[key], dict):
                     Config.merge(a[key], b[key], path + [str(key)])
                 elif a[key] == b[key]:
@@ -106,8 +106,8 @@ def yaml_merge(a, b, path=None):
     "merges b into a"
     # @see http://stackoverflow.com/questions/7204805/dictionaries-of-dictionaries-merge
     if path is None: path = []
-    for key in b.keys():
-        if key in a.keys():
+    for key in b:
+        if key in a:
             if isinstance(a[key], dict) and isinstance(b[key], dict):
                 yaml_merge(a[key], b[key], path + [str(key)])
             elif a[key] == b[key]:
@@ -127,10 +127,20 @@ if __name__ == "__main__":
     with open(sys.argv[2]) as f:
         b = yaml.load(f)
 
-#    a = Config()
-#    a.loadfile(sys.argv[1])
-#    b = Config()
-    #b.loadfile(sys.argv[2])
-    c = yaml_merge(a, b)
-    print(yaml.dump(c))
+    #a = Config.loadfile(sys.argv[1])
+    #b = Config.loadfile(sys.argv[2])
+    #c = Config.merge(a, b)
+    #c = yaml_merge(a, b)
+    #print(yaml.dump(c))
     #print(c)
+    
+    #a = Config()
+    #a.loadfile(sys.argv[1])
+    #b = Config()
+    #b.loadfile(sys.argv[2])
+    #c = Config.merge(a, b)
+
+    x = yaml_merge(a, b)
+    c = Config(x)
+
+    print(c)

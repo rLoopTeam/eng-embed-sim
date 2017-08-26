@@ -567,7 +567,7 @@ class Fcu:
         # Note: this has to be called AFTER calling vFCU__Init() for it to work
 
         POD_STATE__READY = 7  # @see fcu__flight_controller__state_types.h in LCCM655__RLOOP__FCU_CORE
-        self.logger.debug("force_ready_state() forcing pod state machine into POD_STATE__READY")
+        self.logger.debug("Moving pod state machine to POD_STATE__READY to prepare for a run")
         self.lib.vFCU_FCTL_MAINSM__Debug__ForceState(POD_STATE__READY)
 
     def get_sm_state(self):
