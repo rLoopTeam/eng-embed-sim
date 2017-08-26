@@ -1,0 +1,37 @@
+# Case #55 
+sim:
+  mission_profile:
+    selected_profile: 0
+    profiles:
+      0:
+        sAccel:
+          AccelThresh_mm_ss: 1962  # .2 G
+          AccelThresh_x10ms: 30
+          DecelThresh_mm_ss: 0.0
+          DecelThresh_x10ms: 300
+        sTime:
+          Accel_Coast_x10ms: 200
+          Coast_Brake_x10ms: 200
+          Brake_Spindown_x10ms: 100
+  pod:
+    mass: 441 kg
+  brakes:
+    0:
+      initial_gap: 25.4mm
+      # Min and max gap correspond to the locations that the limit switches are triggered
+      extended_gap: 2.5mm
+      retracted_gap: 25.4mm
+      # Testing only
+      gap_close_min_time: 2.5s  track:
+    1:
+      initial_gap: 24.5mm
+      # Min and max gap correspond to the locations that the limit switches are triggered
+      extended_gap: 2.5mm
+      retracted_gap: 25.4mm
+      # Testing only
+      gap_close_min_time: 2.5s  track:
+    length: 37 m
+    air_pressure: 14.7 psi
+    air_temperature: 293 degK
+
+# Hover height: 12mm -- this is calculated -- what is the landing gear height? Probably need to set that instead.
