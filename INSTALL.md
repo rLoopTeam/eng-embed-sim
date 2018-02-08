@@ -2,7 +2,7 @@
 
 1. Be on Windows
 
-    The simulator should work on Mac and probably linux, but the FCU is a compiled DLL and will only work on Windows (tested on 8.1, 10.x should also be fine). I've had good success with parallels and Windows 8.1.
+    The simulator should work on Mac and probably linux, but the FCU is a compiled DLL and will only work on Windows (tested on 8.1, 10.x should also be fine). I've had good success with parallels and Windows 8.1. You wil also need Visual Studio's C++ toolset (VC++ 2017 v141 toolset (x86,x64)) - Visual Studio 2017's [community edition](https://www.visualstudio.com/vs/) with the aforementioned toolset should work (you might be able to also get the toolset without Visual Studio).
 
 2. Make a directory and check out the following repositories as siblings: 
     
