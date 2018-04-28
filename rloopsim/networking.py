@@ -268,7 +268,7 @@ class PySimControlNode(NetworkNode):
 
     def handle_udp_packet(self, packet, source_address, dest_address):
         #self.sim.fcu.handle_udp_packet(packet, source_address, self.rx_address)  # Note: self.rx_address is supplied by subclasses
-        self.logger.debug("Handling UDP packet ({} bytes from {} to {}): {}".format(len(packet), source_address, dest_address), packet)
+        self.logger.debug("Handling UDP packet ({} bytes from {} to {}): {}".format(len(packet), source_address, dest_address, packet)
         
 
 
