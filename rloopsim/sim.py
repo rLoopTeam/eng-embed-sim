@@ -442,7 +442,6 @@ class StateMachineRunController(object):
             sim.fcu.lib.vFCU_FCTL_TRACKDB_WIN32__Set_Time__Coast_Brake_x10ms(u8TrackIndex, sTime.Coast_Brake_x10ms);
             sim.fcu.lib.vFCU_FCTL_TRACKDB_WIN32__Set_Time__Brake_Spindown_x10ms(u8TrackIndex, sTime.Brake_Spindown_x10ms);
 
-=
 
         elif self.state is "RUN_START":
             # Wait until the FCU says we're in READY state
