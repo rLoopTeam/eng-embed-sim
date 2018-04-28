@@ -57,8 +57,8 @@ sim:
                 name: Python Simulator Control
                 handler: PySimControlNode
                 ip: 192.168.0.100
-                tx_port: 9200
-                rx_port: 9200
+                tx_port: 9222
+                rx_port: 9222
                 MAC: 00:26:80:01:00:00
             #power_fwd: 
             #    name: Power FWD
