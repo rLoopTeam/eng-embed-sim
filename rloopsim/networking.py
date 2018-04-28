@@ -223,6 +223,49 @@ class PySimControlNode(NetworkNode):
         self.logger.info("Testing INFO message")
         self.logger.debug("Testing DEBUG message")
 
+    def run(self):
+        """ Listen for udp packets on our rx address. We can also send UDP, but that doesn't require 'running' since we can just send them out """
+        
+        # Create a socket
+        self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  # UDP
+        self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)  # Reuse addresses
+
+        #self.clientSock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  # UDP
+        #self.clientSock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1) 
+
+        # Bind the socket to the port
+        try:
+            if self.enable_rx:
+                # bind_address = ('0.0.0.0', self.rx_address[1])  # Testing listening to get around issues
+                bind_address = self.rx_address
+                self.logger.info('Listening to {} port {}'.format(*bind_address))
+                #self.sock.bind(self.rx_address)  # This won't work -- packets don't get sent through to the GS if we bind to 127.0.0.1
+                self.sock.bind(bind_address)
+            else:
+                self.logger.info("(not) listening to {} port {}".format(*self.rx_address))
+        except Exception as e:
+            self.logger.error(e)
+
+        while True and self.enable_rx:
+            #self.logger.debug('Waiting to receive message')
+
+            if self.end_flag:
+                break
+
+            data, source_address = self.sock.recvfrom(self.buffer_len)
+    
+            dest_address = self.rx_address  # We are the destination, so use our rx_port
+            self.logger.debug('Received {} bytes from {}. Dest is {}'.format(len(data), source_address, dest_address))
+            #print >>sys.stderr, data
+
+            if data:
+                # We've received a packet -- send it along to our overridden method for handling
+                self.handle_udp_packet(data, source_address, dest_address)
+                #self.logger.debug("Data received: {}".format([chr(x) for x in byte_array]))
+            else:
+                self.logger.debug("Got a packet but no data!")
+
+
     def handle_udp_packet(self, packet, source_address, dest_address):
         #self.sim.fcu.handle_udp_packet(packet, source_address, self.rx_address)  # Note: self.rx_address is supplied by subclasses
         self.logger.debug("Handling UDP packet ({} bytes from {} to {}): {}".format(len(packet), source_address, dest_address), packet)
