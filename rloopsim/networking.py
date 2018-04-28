@@ -220,6 +220,8 @@ class PySimControlNode(NetworkNode):
     def __init__(self, sim, config):
         NetworkNode.__init__(self, sim, config)
         self.logger = logging.getLogger("PySimControlNode")
+        self.logger.info("Testing INFO message")
+        self.logger.debug("Testing DEBUG message")
 
     def handle_udp_packet(self, packet, source_address, dest_address):
         #self.sim.fcu.handle_udp_packet(packet, source_address, self.rx_address)  # Note: self.rx_address is supplied by subclasses
