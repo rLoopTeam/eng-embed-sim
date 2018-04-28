@@ -202,7 +202,6 @@ class FlightControlNode(NetworkNode):
             self.logger.debug("Handling UDP packet ({} bytes from {} to {} -- dropping since FCU is not enabled)".format(len(packet), source_address, dest_address))
     
 
-    
 class SpacexNode(NetworkNode):
     def __init__(self, sim, config):
         NetworkNode.__init__(self, sim, config)
@@ -215,6 +214,18 @@ class SpacexNode(NetworkNode):
         # Just send it out
         # @todo: do we need to filter out packets meant for the ground station? 
         self.send_udp(packet, dest_address)
+
+
+class PySimControlNode(NetworkNode):
+    def __init__(self, sim, config):
+        NetworkNode.__init__(self, sim, config)
+        self.logger = logging.getLogger("PySimControlNode")
+
+    def handle_udp_packet(self, packet, source_address, dest_address):
+        #self.sim.fcu.handle_udp_packet(packet, source_address, self.rx_address)  # Note: self.rx_address is supplied by subclasses
+        self.logger.debug("Handling UDP packet ({} bytes from {} to {}): {}".format(len(packet), source_address, dest_address), packet)
+        
+
 
 # ---- Not used below here
 
