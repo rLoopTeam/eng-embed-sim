@@ -442,10 +442,7 @@ class StateMachineRunController(object):
             sim.fcu.lib.vFCU_FCTL_TRACKDB_WIN32__Set_Time__Coast_Brake_x10ms(u8TrackIndex, sTime.Coast_Brake_x10ms);
             sim.fcu.lib.vFCU_FCTL_TRACKDB_WIN32__Set_Time__Brake_Spindown_x10ms(u8TrackIndex, sTime.Brake_Spindown_x10ms);
 
-            if self.jump_to_ready_state:
-                self.logger.info("StateMachineRunController moving FCU to POD_STATE__READY")
-                sim.fcu.force_ready_state()
-                self.state = "RUN_START"
+=
 
         elif self.state is "RUN_START":
             # Wait until the FCU says we're in READY state
@@ -608,7 +605,7 @@ if __name__ == "__main__":
     # @todo: consider moving end listeners into a 'sim controller' concept
     run_controller = StateMachineRunController()
     sim.add_step_listener(run_controller)
-    sim.add_end_condition(run_controller)
+    # sim.add_end_condition(run_controller)  # Temporarily disabled for testing / integration of network-based control
 
     # Testing interactive controller (can talk to it with the RPOD_CONTROL app)
     #sim.add_step_listener(StateMachineInteractiveController())
