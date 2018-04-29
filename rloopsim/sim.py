@@ -43,6 +43,10 @@ class Sim(object):
 
         self.logger.info("Initializing simulation")
         
+        # Control flags
+        self.end_flag = False
+        self.paused_flag = False
+
         # Config
         self.config = config
         
@@ -280,7 +284,7 @@ class Sim(object):
                 # Check our end listener(s) to see if we should end the simulation (e.g. the pod has stopped)
                 for listener in self.end_conditions:
                     if listener.is_finished(self):
-                        self.end_flag = True
+                        self.stop()
             
                 if self.end_flag:
                     # Notify our 'finished' listeners and break the loop
@@ -288,10 +292,12 @@ class Sim(object):
                         end_listener.end_callback(self)
 
                     break  # Break out of our run loop
-                    
-                self.step(self.fixed_timestep_usec)
+                
+                if not self.paused_flag:
+                    self.step(self.fixed_timestep_usec)
             
             except KeyboardInterrupt:
+                self.logger.info("Received KeyboardInterrupt -- stopping simulation.")
                 self.stop()
 
 
@@ -306,6 +312,14 @@ class Sim(object):
 
     def stop(self):
         self.end_flag = True
+
+    def pause(self):
+        self.logger.info("Simulation paused")
+        self.paused_flag = True
+
+    def unpause(self):
+        self.logger.info("Resuming simulation")
+        self.paused_flag = False
 
     def add_step_listener(self, listener):
         """ 
