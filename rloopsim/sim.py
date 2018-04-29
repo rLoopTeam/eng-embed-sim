@@ -276,19 +276,23 @@ class Sim(object):
 
         while(True):
 
-            # Check our end listener(s) to see if we should end the simulation (e.g. the pod has stopped)
-            for listener in self.end_conditions:
-                if listener.is_finished(self):
-                    self.end_flag = True
+            try: 
+                # Check our end listener(s) to see if we should end the simulation (e.g. the pod has stopped)
+                for listener in self.end_conditions:
+                    if listener.is_finished(self):
+                        self.end_flag = True
             
-            if self.end_flag:
-                # Notify our 'finished' listeners and break the loop
-                for end_listener in self.end_listeners:
-                    end_listener.end_callback(self)
+                if self.end_flag:
+                    # Notify our 'finished' listeners and break the loop
+                    for end_listener in self.end_listeners:
+                        end_listener.end_callback(self)
 
-                break
+                    break  # Break out of our run loop
+                    
+                self.step(self.fixed_timestep_usec)
             
-            self.step(self.fixed_timestep_usec)
+            except KeyboardInterrupt:
+                self.stop()
 
 
         sim_end_t = time.time()
@@ -299,6 +303,9 @@ class Sim(object):
         # Notify postprocessors
         for processor in self.postprocessors:
             processor.process(self)
+
+    def stop(self):
+        self.end_flag = True
 
     def add_step_listener(self, listener):
         """ 
