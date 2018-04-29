@@ -1,0 +1,20 @@
+syntax = "proto3";
+package simproto;
+
+service SimControlService {
+    rpc SendSimCommand(SimCommand) returns (Ack) {}
+}
+
+message SimCommand {
+    enum SimCommandEnum {
+        StartSimulator = 0;
+        PauseSimulator = 1;
+        ResumeSimulator = 2;
+        StopSimulator = 3;
+    }
+    SimCommandEnum Command = 1;
+}
+
+message Ack {
+    bool CommandExecuted = 1;
+}
