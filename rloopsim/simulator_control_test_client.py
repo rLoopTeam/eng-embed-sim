@@ -3,6 +3,7 @@
 from __future__ import print_function
 
 import random
+import time
 
 import grpc
 
@@ -32,10 +33,13 @@ def run():
     stub = simulator_control_pb2_grpc.SimControlStub(channel)
     print("-------------- Start --------------")
     start(stub)
+    time.sleep(5)
     print("-------------- Pause --------------")
     pause(stub)
+    time.sleep(1)
     print("-------------- Unpause --------------")
     unpause(stub)
+    time.sleep(3)
     print("-------------- Stop --------------")
     stop(stub)
 

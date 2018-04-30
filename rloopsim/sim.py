@@ -11,9 +11,14 @@ import os
 import errno    
 import time
 import logging
+import logging.config
+import yaml
+
 
 from units import *
-from config import Config
+#from config import Config
+from config import *
+
 from timers import TimeDialator
 
 from pod import Pod
@@ -315,13 +320,14 @@ class Sim(object):
             processor.process(self)
 
     def stop(self):
+        self.logger.info("Stopping Simulation")
         self.end_flag = True
 
     def pause(self):
         self.logger.info("Simulation paused")
         self.paused_flag = True
 
-    def unpause(self):
+    def resume(self):
         self.logger.info("Resuming simulation")
         self.paused_flag = False
 
@@ -594,9 +600,6 @@ class SimEndCondition(object):
 
 if __name__ == "__main__":
     import sys
-    import logging
-    import logging.config
-    import yaml
 
     #from debug import stacktracer
     #stacktracer.trace_start("trace.html",interval=5,auto=True) # Set auto flag to always update file!
@@ -607,7 +610,6 @@ if __name__ == "__main__":
     test_logger = logging.getLogger("NetworkNode")
     #print(test_logger.__dict__)
 
-    from config import *
 
     import pprint
     
