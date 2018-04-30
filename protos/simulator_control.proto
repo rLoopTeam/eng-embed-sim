@@ -1,8 +1,8 @@
 syntax = "proto3";
 package simproto;
 
-service SimControlService {
-    rpc SendSimCommand(SimCommand) returns (Ack) {}
+service SimControl {
+    rpc ControlSim(SimCommand) returns (Ack) {}
 }
 
 message SimCommand {
@@ -16,5 +16,6 @@ message SimCommand {
 }
 
 message Ack {
-    bool CommandExecuted = 1;
+    bool success = 1;
+	string message = 2;
 }

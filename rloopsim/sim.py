@@ -202,6 +202,10 @@ class Sim(object):
         # @todo: potentially turn on or off based on sensor, writer type, or a combination of the two
         return True  # Turn data logging off for now
 
+    def pre_run(self):
+        pass
+
+
     def step(self, dt_usec):        
 
         # Step the pusher first (will apply pressure and handle disconnection)
