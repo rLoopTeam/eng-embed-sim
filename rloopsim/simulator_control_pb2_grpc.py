@@ -24,11 +24,6 @@ class SimControlStub(object):
         request_serializer=simulator__control__pb2.SimInit.SerializeToString,
         response_deserializer=simulator__control__pb2.Ack.FromString,
         )
-    self.ControlPusher = channel.unary_unary(
-        '/simproto.SimControl/ControlPusher',
-        request_serializer=simulator__control__pb2.PusherCommand.SerializeToString,
-        response_deserializer=simulator__control__pb2.Ack.FromString,
-        )
 
 
 class SimControlServicer(object):
@@ -49,13 +44,6 @@ class SimControlServicer(object):
     context.set_details('Method not implemented!')
     raise NotImplementedError('Method not implemented!')
 
-  def ControlPusher(self, request, context):
-    # missing associated documentation comment in .proto file
-    pass
-    context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-    context.set_details('Method not implemented!')
-    raise NotImplementedError('Method not implemented!')
-
 
 def add_SimControlServicer_to_server(servicer, server):
   rpc_method_handlers = {
@@ -67,11 +55,6 @@ def add_SimControlServicer_to_server(servicer, server):
       'InitSim': grpc.unary_unary_rpc_method_handler(
           servicer.InitSim,
           request_deserializer=simulator__control__pb2.SimInit.FromString,
-          response_serializer=simulator__control__pb2.Ack.SerializeToString,
-      ),
-      'ControlPusher': grpc.unary_unary_rpc_method_handler(
-          servicer.ControlPusher,
-          request_deserializer=simulator__control__pb2.PusherCommand.FromString,
           response_serializer=simulator__control__pb2.Ack.SerializeToString,
       ),
   }

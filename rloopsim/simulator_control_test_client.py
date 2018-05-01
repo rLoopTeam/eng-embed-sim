@@ -14,7 +14,7 @@ SIM_CTRL_RUN = 0
 SIM_CTRL_PAUSE = 1
 SIM_CTRL_STOP = 2
 
-PUSHER_CTRL_PUSH = 0
+PUSHER_CTRL_PUSH = 3
 
 def start(stub):
     result = stub.ControlSim(simulator_control_pb2.SimCommand(command=SIM_CTRL_RUN))
@@ -33,7 +33,8 @@ def stop(stub):
     print("Stop result: {}".format(result))
 
 def start_push(stub):
-    result = stub.ControlPusher(simulator_control_pb2.PusherCommand(command=PUSHER_CTRL_PUSH))
+    result = stub.ControlSim(simulator_control_pb2.SimCommand(command=PUSHER_CTRL_PUSH))
+    print("Start Push result: {}".format(result))
 
 def run():
     print("Starting test client")

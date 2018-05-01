@@ -18,7 +18,7 @@ SIM_CTRL_RUN = 0
 SIM_CTRL_PAUSE = 1
 SIM_CTRL_STOP = 2
 
-PUSHER_CTRL_PUSH = 0
+PUSHER_CTRL_PUSH = 3
 
 class SimControlServicer(simulator_control_pb2_grpc.SimControlServicer):
     
@@ -75,13 +75,19 @@ class SimControlServicer(simulator_control_pb2_grpc.SimControlServicer):
                 # @todo: wait/check for pause
                 msg = "Simulation (not) paused"
                 success = False
-                self.sim_state = SIM_CTRL_PAUSE
+                # self.sim_state = SIM_CTRL_PAUSE  # Disabled until we can truly pause the sim
             elif cmd == SIM_CTRL_STOP:
                 # Stop and reset the sim
                 self._reset_sim()
                 msg = "Simulation stopped"
                 success = True
                 self.sim_state = SIM_CTRL_STOP
+            elif cmd == PUSHER_CTRL_PUSH:
+                self.sim.pusher.start_push()
+                # @todo: wait/ensure success
+                msg = "Push started"
+                return simulator_control_pb2.Ack(success=True, message=msg)
+
             else:
                 success = False
                 msg = "Command not allowed in while simulator is running"
@@ -141,15 +147,6 @@ class SimControlServicer(simulator_control_pb2_grpc.SimControlServicer):
         self.output_dir = output_dir
         self._init_sim()
 
-    def ControlPusher(self, request, context):
-        """ Control the pusher """
-        if request.command == PUSHER_CTRL_PUSH:
-            self.sim.pusher.start_push()
-            # @todo: wait/ensure success
-            msg = "Push started"
-            return simulator_control_pb2.Ack(success=False, message=msg)
-        else:
-            raise RuntimeError("Unrecognized pusher command '{}' received".format(request.command))
 
 
 def serve(sim_config, working_dir):
