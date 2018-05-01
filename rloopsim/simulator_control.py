@@ -18,11 +18,33 @@ SIM_CTRL_RUN = 0
 SIM_CTRL_PAUSE = 1
 SIM_CTRL_STOP = 2
 
+PUSHER_CTRL_PUSH = 0
+
 class SimControlServicer(simulator_control_pb2_grpc.SimControlServicer):
     
     def __init__(self):
         self.sim = None
+        self.sim_initialized = False
         self.sim_state = SIM_CTRL_STOP
+
+        # Keep track of these so we can re-initialize the sim after a run
+        self.sim_config = None
+        self.output_dir = None
+
+    def _init_sim(self):
+        self.sim = Sim(self.sim_config, self.output_dir)
+        # Wait until the sim is ready (@todo: do we need this? Doesn't the constructor block until it's done?)
+        while not self.sim.is_ready:
+            time.sleep(0.1)
+        self.sim_initialized = True
+
+    def _reset_sim(self):
+        self.sim.stop()
+        # Wait until we're sure it's done
+        while not self.sim.is_ended:
+            time.sleep(0.1)
+        self._init_sim()
+
 
     def ControlSim(self, request, context):
         cmd = request.command
@@ -32,6 +54,10 @@ class SimControlServicer(simulator_control_pb2_grpc.SimControlServicer):
 
         if self.sim_state is SIM_CTRL_STOP:
             # Can transition to start (run)
+
+            # 
+            # @todo: *** need to reset the simulator when it is stopped. 
+
             if cmd == SIM_CTRL_RUN:
                 self.sim.run_threaded()
                 # @todo: wait/check for proper startup
@@ -51,8 +77,8 @@ class SimControlServicer(simulator_control_pb2_grpc.SimControlServicer):
                 success = True
                 self.sim_state = SIM_CTRL_PAUSE
             elif cmd == SIM_CTRL_STOP:
-                self.sim.stop()
-                # @todo: wait/check for stop
+                # Stop and reset the sim
+                self._reset_sim()
                 msg = "Simulation stopped"
                 success = True
                 self.sim_state = SIM_CTRL_STOP
@@ -88,14 +114,53 @@ class SimControlServicer(simulator_control_pb2_grpc.SimControlServicer):
         #raise NotImplementedError('Method not implemented!')
 
 
-def serve(config):
+    def InitSim(self, request, context):
+        """ Initialize a new Simulator, possibly with different config/settings """
+        # NOTE: UNTESTED
+        # @todo: Testing and error handling (e.g. config files won't load)
 
+        # Initialize the simulator with the provided config files and output dir (or defaults)
+        # Note: this should only work when the simulator is stopped
+        if self.sim_state is not SIM_CTRL_STOP:
+            msg = "Simulator must be stopped before initializing"
+            return simulator_control_pb2.Ack(success=False, message=msg)
+
+
+        config_files = ['conf/sim_config.yaml']
+        # @todo: change this to something better, maybe a tmp file?
+        output_dir = "../eng-embed-sim-data/test"
+        if len(request.config_files):
+            config_files = request.config_files
+
+        if request.output_dir is not "":
+            output_dir = request.output_dir
+            
+        # Load the configuration files 
+        # @todo: error checking for config loading and output directory viability
+        self.sim_config = Sim.load_config_files(config_files)
+        self.output_dir = output_dir
+        self._init_sim()
+
+    def ControlPusher(self, request, context):
+        """ Control the pusher """
+        if request.command == PUSHER_CTRL_PUSH:
+            self.sim.pusher.start_push()
+            # @todo: wait/ensure success
+            msg = "Push started"
+            return simulator_control_pb2.Ack(success=False, message=msg)
+        else:
+            raise RuntimeError("Unrecognized pusher command '{}' received".format(request.command))
+
+
+def serve(sim_config, working_dir):
 
     # Note: 'configfile' is a list of one or more config files. Later files overlay previous ones. 
-    sim = Sim(config, '../eng-embed-sim-data/test')
+    #sim = Sim(sim_config, '../eng-embed-sim-data/test')
 
     servicer = SimControlServicer()
-    servicer.sim = sim
+    servicer.sim_config = sim_config
+    servicer.output_dir = working_dir
+    servicer._init_sim()
 
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
     simulator_control_pb2_grpc.add_SimControlServicer_to_server(
@@ -115,6 +180,8 @@ def serve(config):
 
 
 if __name__ == '__main__':
+
+    # @todo: rework this to maybe have the initially specified config file optional (i.e. require initialization via servicer)
 
     # Temporary imputs -- copied from sim.py
     import sys
@@ -139,6 +206,7 @@ if __name__ == '__main__':
         help='Simulation configuration file(s) -- later files overlay on previous files')
     args = parser.parse_args()
 
-    config = Sim.load_config_files(args.configfile)
+    sim_config = Sim.load_config_files(args.configfile)
+    output_dir = "../eng-embed-sim-data/test"  # @todo: get this from command line args or something
 
-    serve(config)
+    serve(sim_config, output_dir)

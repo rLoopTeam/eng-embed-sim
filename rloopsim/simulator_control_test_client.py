@@ -14,6 +14,7 @@ SIM_CTRL_RUN = 0
 SIM_CTRL_PAUSE = 1
 SIM_CTRL_STOP = 2
 
+PUSHER_CTRL_PUSH = 0
 
 def start(stub):
     result = stub.ControlSim(simulator_control_pb2.SimCommand(command=SIM_CTRL_RUN))
@@ -31,6 +32,9 @@ def stop(stub):
     result = stub.ControlSim(simulator_control_pb2.SimCommand(command=SIM_CTRL_STOP))
     print("Stop result: {}".format(result))
 
+def start_push(stub):
+    result = stub.ControlPusher(simulator_control_pb2.PusherCommand(command=PUSHER_CTRL_PUSH))
+
 def run():
     print("Starting test client")
     channel = grpc.insecure_channel('localhost:9333')
@@ -41,6 +45,10 @@ def run():
     print("-------------- Start again (should error) --------------")
     start(stub)
     time.sleep(2)
+
+    print("-------------- Start Push --------------")
+    start_push(stub)
+    time.sleep(5)
     print("-------------- Pause --------------")
     pause(stub)
     time.sleep(1)

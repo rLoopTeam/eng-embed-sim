@@ -3,6 +3,8 @@ package simproto;
 
 service SimControl {
     rpc ControlSim(SimCommand) returns (Ack) {}
+	rpc InitSim(SimInit) returns (Ack) {}
+	rpc ControlPusher(PusherCommand) returns (Ack) {}
 }
 
 message SimCommand {
@@ -19,3 +21,14 @@ message Ack {
 	string message = 2;
 }
 
+message SimInit {
+	repeated string config_files = 1;
+	string output_dir = 2;
+}
+
+message PusherCommand {
+	enum PusherCommandEnum {
+		StartPush = 0;
+	}
+	PusherCommandEnum command = 1;
+}

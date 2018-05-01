@@ -19,7 +19,7 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   name='simulator_control.proto',
   package='simproto',
   syntax='proto3',
-  serialized_pb=_b('\n\x17simulator_control.proto\x12\x08simproto\"\x8d\x01\n\nSimCommand\x12\x34\n\x07\x63ommand\x18\x01 \x01(\x0e\x32#.simproto.SimCommand.SimCommandEnum\"I\n\x0eSimCommandEnum\x12\x10\n\x0cRunSimulator\x10\x00\x12\x12\n\x0ePauseSimulator\x10\x01\x12\x11\n\rStopSimulator\x10\x02\"\'\n\x03\x41\x63k\x12\x0f\n\x07success\x18\x01 \x01(\x08\x12\x0f\n\x07message\x18\x02 \x01(\t2A\n\nSimControl\x12\x33\n\nControlSim\x12\x14.simproto.SimCommand\x1a\r.simproto.Ack\"\x00\x62\x06proto3')
+  serialized_pb=_b('\n\x17simulator_control.proto\x12\x08simproto\"\x8d\x01\n\nSimCommand\x12\x34\n\x07\x63ommand\x18\x01 \x01(\x0e\x32#.simproto.SimCommand.SimCommandEnum\"I\n\x0eSimCommandEnum\x12\x10\n\x0cRunSimulator\x10\x00\x12\x12\n\x0ePauseSimulator\x10\x01\x12\x11\n\rStopSimulator\x10\x02\"\'\n\x03\x41\x63k\x12\x0f\n\x07success\x18\x01 \x01(\x08\x12\x0f\n\x07message\x18\x02 \x01(\t\"3\n\x07SimInit\x12\x14\n\x0c\x63onfig_files\x18\x01 \x03(\t\x12\x12\n\noutput_dir\x18\x02 \x01(\t\"o\n\rPusherCommand\x12:\n\x07\x63ommand\x18\x01 \x01(\x0e\x32).simproto.PusherCommand.PusherCommandEnum\"\"\n\x11PusherCommandEnum\x12\r\n\tStartPush\x10\x00\x32\xab\x01\n\nSimControl\x12\x33\n\nControlSim\x12\x14.simproto.SimCommand\x1a\r.simproto.Ack\"\x00\x12-\n\x07InitSim\x12\x11.simproto.SimInit\x1a\r.simproto.Ack\"\x00\x12\x39\n\rControlPusher\x12\x17.simproto.PusherCommand\x1a\r.simproto.Ack\"\x00\x62\x06proto3')
 )
 
 
@@ -49,6 +49,24 @@ _SIMCOMMAND_SIMCOMMANDENUM = _descriptor.EnumDescriptor(
   serialized_end=179,
 )
 _sym_db.RegisterEnumDescriptor(_SIMCOMMAND_SIMCOMMANDENUM)
+
+_PUSHERCOMMAND_PUSHERCOMMANDENUM = _descriptor.EnumDescriptor(
+  name='PusherCommandEnum',
+  full_name='simproto.PusherCommand.PusherCommandEnum',
+  filename=None,
+  file=DESCRIPTOR,
+  values=[
+    _descriptor.EnumValueDescriptor(
+      name='StartPush', index=0, number=0,
+      options=None,
+      type=None),
+  ],
+  containing_type=None,
+  options=None,
+  serialized_start=352,
+  serialized_end=386,
+)
+_sym_db.RegisterEnumDescriptor(_PUSHERCOMMAND_PUSHERCOMMANDENUM)
 
 
 _SIMCOMMAND = _descriptor.Descriptor(
@@ -120,10 +138,84 @@ _ACK = _descriptor.Descriptor(
   serialized_end=220,
 )
 
+
+_SIMINIT = _descriptor.Descriptor(
+  name='SimInit',
+  full_name='simproto.SimInit',
+  filename=None,
+  file=DESCRIPTOR,
+  containing_type=None,
+  fields=[
+    _descriptor.FieldDescriptor(
+      name='config_files', full_name='simproto.SimInit.config_files', index=0,
+      number=1, type=9, cpp_type=9, label=3,
+      has_default_value=False, default_value=[],
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='output_dir', full_name='simproto.SimInit.output_dir', index=1,
+      number=2, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=_b("").decode('utf-8'),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None, file=DESCRIPTOR),
+  ],
+  extensions=[
+  ],
+  nested_types=[],
+  enum_types=[
+  ],
+  options=None,
+  is_extendable=False,
+  syntax='proto3',
+  extension_ranges=[],
+  oneofs=[
+  ],
+  serialized_start=222,
+  serialized_end=273,
+)
+
+
+_PUSHERCOMMAND = _descriptor.Descriptor(
+  name='PusherCommand',
+  full_name='simproto.PusherCommand',
+  filename=None,
+  file=DESCRIPTOR,
+  containing_type=None,
+  fields=[
+    _descriptor.FieldDescriptor(
+      name='command', full_name='simproto.PusherCommand.command', index=0,
+      number=1, type=14, cpp_type=8, label=1,
+      has_default_value=False, default_value=0,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None, file=DESCRIPTOR),
+  ],
+  extensions=[
+  ],
+  nested_types=[],
+  enum_types=[
+    _PUSHERCOMMAND_PUSHERCOMMANDENUM,
+  ],
+  options=None,
+  is_extendable=False,
+  syntax='proto3',
+  extension_ranges=[],
+  oneofs=[
+  ],
+  serialized_start=275,
+  serialized_end=386,
+)
+
 _SIMCOMMAND.fields_by_name['command'].enum_type = _SIMCOMMAND_SIMCOMMANDENUM
 _SIMCOMMAND_SIMCOMMANDENUM.containing_type = _SIMCOMMAND
+_PUSHERCOMMAND.fields_by_name['command'].enum_type = _PUSHERCOMMAND_PUSHERCOMMANDENUM
+_PUSHERCOMMAND_PUSHERCOMMANDENUM.containing_type = _PUSHERCOMMAND
 DESCRIPTOR.message_types_by_name['SimCommand'] = _SIMCOMMAND
 DESCRIPTOR.message_types_by_name['Ack'] = _ACK
+DESCRIPTOR.message_types_by_name['SimInit'] = _SIMINIT
+DESCRIPTOR.message_types_by_name['PusherCommand'] = _PUSHERCOMMAND
 _sym_db.RegisterFileDescriptor(DESCRIPTOR)
 
 SimCommand = _reflection.GeneratedProtocolMessageType('SimCommand', (_message.Message,), dict(
@@ -140,6 +232,20 @@ Ack = _reflection.GeneratedProtocolMessageType('Ack', (_message.Message,), dict(
   ))
 _sym_db.RegisterMessage(Ack)
 
+SimInit = _reflection.GeneratedProtocolMessageType('SimInit', (_message.Message,), dict(
+  DESCRIPTOR = _SIMINIT,
+  __module__ = 'simulator_control_pb2'
+  # @@protoc_insertion_point(class_scope:simproto.SimInit)
+  ))
+_sym_db.RegisterMessage(SimInit)
+
+PusherCommand = _reflection.GeneratedProtocolMessageType('PusherCommand', (_message.Message,), dict(
+  DESCRIPTOR = _PUSHERCOMMAND,
+  __module__ = 'simulator_control_pb2'
+  # @@protoc_insertion_point(class_scope:simproto.PusherCommand)
+  ))
+_sym_db.RegisterMessage(PusherCommand)
+
 
 
 _SIMCONTROL = _descriptor.ServiceDescriptor(
@@ -148,8 +254,8 @@ _SIMCONTROL = _descriptor.ServiceDescriptor(
   file=DESCRIPTOR,
   index=0,
   options=None,
-  serialized_start=222,
-  serialized_end=287,
+  serialized_start=389,
+  serialized_end=560,
   methods=[
   _descriptor.MethodDescriptor(
     name='ControlSim',
@@ -157,6 +263,24 @@ _SIMCONTROL = _descriptor.ServiceDescriptor(
     index=0,
     containing_service=None,
     input_type=_SIMCOMMAND,
+    output_type=_ACK,
+    options=None,
+  ),
+  _descriptor.MethodDescriptor(
+    name='InitSim',
+    full_name='simproto.SimControl.InitSim',
+    index=1,
+    containing_service=None,
+    input_type=_SIMINIT,
+    output_type=_ACK,
+    options=None,
+  ),
+  _descriptor.MethodDescriptor(
+    name='ControlPusher',
+    full_name='simproto.SimControl.ControlPusher',
+    index=2,
+    containing_service=None,
+    input_type=_PUSHERCOMMAND,
     output_type=_ACK,
     options=None,
   ),

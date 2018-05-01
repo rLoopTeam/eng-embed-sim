@@ -48,9 +48,13 @@ class Sim(object):
 
         self.logger.info("Initializing simulation")
         
-        # Control flags
+        # Control flags (these act as requests)
         self.end_flag = False
         self.paused_flag = False
+
+        # Status vars (these indicate actual status)
+        self.is_ready = False  # Simulation is ready to run
+        self.is_ended = False  # Simulation has ended
 
         # Config
         self.config = config
@@ -175,6 +179,9 @@ class Sim(object):
         # Handle data writing
         # @ todo: handle data writing. Note: Each sim instance should be handed a directory to use for writing data
     
+        self.logger.info("Simulator initialized")
+        self.is_ready = True
+
     @classmethod
     def load_config_files(cls, config_files):
         """ Load one or more config files (later files overlay earlier ones) """
@@ -206,9 +213,6 @@ class Sim(object):
         # @todo: write something that turns data logging on and off based on FCU state (assuming the FCU is enabled)
         # @todo: potentially turn on or off based on sensor, writer type, or a combination of the two
         return True  # Turn data logging off for now
-
-    def pre_run(self):
-        pass
 
 
     def step(self, dt_usec):        
@@ -303,6 +307,8 @@ class Sim(object):
                     break  # Break out of our run loop
                 
                 if not self.paused_flag:
+                    # @todo: do we need to handle pausing on other threads? Time runner for instance? 
+                    # @todo: Maybe implement a pause listener or something? 
                     self.step(self.fixed_timestep_usec)
             
             except KeyboardInterrupt:
@@ -319,13 +325,17 @@ class Sim(object):
         for processor in self.postprocessors:
             processor.process(self)
 
+        self.is_ended = True
+
     def stop(self):
         self.logger.info("Stopping Simulation")
-        self.end_flag = True
+        self.end_flag = True  # Request that the sim stop
 
     def pause(self):
-        self.logger.info("Simulation paused")
-        self.paused_flag = True
+        # @todo: *** This needs more work -- need to pause all threads...
+        self.logger.info("Simulation (not) paused")
+        #self.paused_flag = True
+        self.paused_flag = False  # Disabling this for now until we can work out pausing for all threads
 
     def resume(self):
         self.logger.info("Resuming simulation")
