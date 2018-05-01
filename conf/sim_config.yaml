@@ -92,10 +92,10 @@ sim:
     # Working directory for output files, relative to the cwd from which the simulator was run. Can be overridden by SimRunner.
     working_dir: data
     pusher:
-        max_push_velocity: 100.0 m/s
-        max_push_time: 2 s
-        push_accel: 0.5 G
-        brake_decel: -1 G
+        max_push_velocity: 250.0 m/s
+        max_push_time: 20 s
+        push_accel: 1.0 G
+        brake_decel: -1.5 G
         
         push_end_position: 475 m  # NOTE: This is where the push will stop regardless of speed -- @todo: work this into the pusher
         #push_force: 8000 N  # @todo: remove this -- pusher is velocity controlled
