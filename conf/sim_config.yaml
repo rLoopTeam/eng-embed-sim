@@ -97,7 +97,7 @@ sim:
         push_accel: 1.0 G
         brake_decel: -1.5 G
         
-        push_end_position: 475 m  # NOTE: This is where the push will stop regardless of speed -- @todo: work this into the pusher
+        push_end_position: 2000 m  # NOTE: This is where the push will stop regardless of speed -- @todo: work this into the pusher
         #push_force: 8000 N  # @todo: remove this -- pusher is velocity controlled
         coast_duration: 300 ms  # @todo: rename this to pusher_coast_time and use it for the pusher position. It should be pretty small (find out from SpaceX?)
         #brake_force: -8000 N   # Doesn't really matter, just needs to be big and negative  # @todo: switch to using max_decel
