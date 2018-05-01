@@ -7,15 +7,15 @@ service SimControl {
 
 message SimCommand {
     enum SimCommandEnum {
-        StartSimulator = 0;
+        RunSimulator = 0;
         PauseSimulator = 1;
-        ResumeSimulator = 2;
-        StopSimulator = 3;
+        StopSimulator = 2;
     }
-    SimCommandEnum Command = 1;
+    SimCommandEnum command = 1;
 }
 
 message Ack {
     bool success = 1;
 	string message = 2;
 }
+

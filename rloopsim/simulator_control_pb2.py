@@ -19,7 +19,7 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   name='simulator_control.proto',
   package='simproto',
   syntax='proto3',
-  serialized_pb=_b('\n\x17simulator_control.proto\x12\x08simproto\"\xa4\x01\n\nSimCommand\x12\x34\n\x07\x43ommand\x18\x01 \x01(\x0e\x32#.simproto.SimCommand.SimCommandEnum\"`\n\x0eSimCommandEnum\x12\x12\n\x0eStartSimulator\x10\x00\x12\x12\n\x0ePauseSimulator\x10\x01\x12\x13\n\x0fResumeSimulator\x10\x02\x12\x11\n\rStopSimulator\x10\x03\"\'\n\x03\x41\x63k\x12\x0f\n\x07success\x18\x01 \x01(\x08\x12\x0f\n\x07message\x18\x02 \x01(\t2A\n\nSimControl\x12\x33\n\nControlSim\x12\x14.simproto.SimCommand\x1a\r.simproto.Ack\"\x00\x62\x06proto3')
+  serialized_pb=_b('\n\x17simulator_control.proto\x12\x08simproto\"\x8d\x01\n\nSimCommand\x12\x34\n\x07\x63ommand\x18\x01 \x01(\x0e\x32#.simproto.SimCommand.SimCommandEnum\"I\n\x0eSimCommandEnum\x12\x10\n\x0cRunSimulator\x10\x00\x12\x12\n\x0ePauseSimulator\x10\x01\x12\x11\n\rStopSimulator\x10\x02\"\'\n\x03\x41\x63k\x12\x0f\n\x07success\x18\x01 \x01(\x08\x12\x0f\n\x07message\x18\x02 \x01(\t2A\n\nSimControl\x12\x33\n\nControlSim\x12\x14.simproto.SimCommand\x1a\r.simproto.Ack\"\x00\x62\x06proto3')
 )
 
 
@@ -31,7 +31,7 @@ _SIMCOMMAND_SIMCOMMANDENUM = _descriptor.EnumDescriptor(
   file=DESCRIPTOR,
   values=[
     _descriptor.EnumValueDescriptor(
-      name='StartSimulator', index=0, number=0,
+      name='RunSimulator', index=0, number=0,
       options=None,
       type=None),
     _descriptor.EnumValueDescriptor(
@@ -39,18 +39,14 @@ _SIMCOMMAND_SIMCOMMANDENUM = _descriptor.EnumDescriptor(
       options=None,
       type=None),
     _descriptor.EnumValueDescriptor(
-      name='ResumeSimulator', index=2, number=2,
-      options=None,
-      type=None),
-    _descriptor.EnumValueDescriptor(
-      name='StopSimulator', index=3, number=3,
+      name='StopSimulator', index=2, number=2,
       options=None,
       type=None),
   ],
   containing_type=None,
   options=None,
   serialized_start=106,
-  serialized_end=202,
+  serialized_end=179,
 )
 _sym_db.RegisterEnumDescriptor(_SIMCOMMAND_SIMCOMMANDENUM)
 
@@ -63,7 +59,7 @@ _SIMCOMMAND = _descriptor.Descriptor(
   containing_type=None,
   fields=[
     _descriptor.FieldDescriptor(
-      name='Command', full_name='simproto.SimCommand.Command', index=0,
+      name='command', full_name='simproto.SimCommand.command', index=0,
       number=1, type=14, cpp_type=8, label=1,
       has_default_value=False, default_value=0,
       message_type=None, enum_type=None, containing_type=None,
@@ -83,7 +79,7 @@ _SIMCOMMAND = _descriptor.Descriptor(
   oneofs=[
   ],
   serialized_start=38,
-  serialized_end=202,
+  serialized_end=179,
 )
 
 
@@ -120,11 +116,11 @@ _ACK = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=204,
-  serialized_end=243,
+  serialized_start=181,
+  serialized_end=220,
 )
 
-_SIMCOMMAND.fields_by_name['Command'].enum_type = _SIMCOMMAND_SIMCOMMANDENUM
+_SIMCOMMAND.fields_by_name['command'].enum_type = _SIMCOMMAND_SIMCOMMANDENUM
 _SIMCOMMAND_SIMCOMMANDENUM.containing_type = _SIMCOMMAND
 DESCRIPTOR.message_types_by_name['SimCommand'] = _SIMCOMMAND
 DESCRIPTOR.message_types_by_name['Ack'] = _ACK
@@ -152,8 +148,8 @@ _SIMCONTROL = _descriptor.ServiceDescriptor(
   file=DESCRIPTOR,
   index=0,
   options=None,
-  serialized_start=245,
-  serialized_end=310,
+  serialized_start=222,
+  serialized_end=287,
   methods=[
   _descriptor.MethodDescriptor(
     name='ControlSim',

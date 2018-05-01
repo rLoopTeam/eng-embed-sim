@@ -480,7 +480,7 @@ class StateMachineRunController(object):
                 self.ready_state_counter += 1
 
             if self.ready_state_counter >= self.wait_steps_push:  # Wait some steps before pushing
-                self.logger.info("StateMachineRunController signaling pusher to start push")
+                self.logger.info("Signaling pusher to start push")
                 self.push_step_counter = 0  # Reset the push counter
                 self.state = "START_PUSH"
 
