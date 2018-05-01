@@ -91,11 +91,11 @@ class SimControlServicer(simulator_control_pb2_grpc.SimControlServicer):
             if cmd == SIM_CTRL_RUN:
                 self.sim.resume()
                 # @todo: wait/check for resume
-                msg = "Simulation resumed"
+                msg = "Simulation (not) resumed"
                 success = True
                 self.sim_state = SIM_CTRL_RUN
             elif cmd == SIM_CTRL_STOP:
-                self.sim.stop()
+                self._reset_sim()
                 # @todo: wait/check for stop
                 msg = "Simulation stopped"
                 success = True
