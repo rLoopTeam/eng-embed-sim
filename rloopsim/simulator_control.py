@@ -73,8 +73,8 @@ class SimControlServicer(simulator_control_pb2_grpc.SimControlServicer):
             if cmd == SIM_CTRL_PAUSE:
                 self.sim.pause()
                 # @todo: wait/check for pause
-                msg = "Simulation paused"
-                success = True
+                msg = "Simulation (not) paused"
+                success = False
                 self.sim_state = SIM_CTRL_PAUSE
             elif cmd == SIM_CTRL_STOP:
                 # Stop and reset the sim
