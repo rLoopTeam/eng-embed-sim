@@ -4,8 +4,7 @@ package simproto;
 service SimControl {
     rpc ControlSim(SimCommand) returns (Ack) {}
 	rpc InitSim(SimInit) returns (Ack) {}
-	rpc ControlPusher(PusherCommand) returns (Ack) {}
-	rpc EditConfig (Parameter) returns (Ack) {}
+	rpc EditConfig (Parameters) returns (Ack) {}
 }
 
 message SimCommand {
@@ -28,14 +27,7 @@ message SimInit {
 	string output_dir = 2;
 }
 
-message PusherCommand {
-	enum PusherCommandEnum {
-		StartPush = 0;
-	}
-	PusherCommandEnum command = 1;
-}
-
-message Parameter {
-	repeated string config = 1;
+message Parameters {
+	repeated string value = 1;
 }
 
