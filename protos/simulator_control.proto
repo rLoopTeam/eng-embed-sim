@@ -4,7 +4,6 @@ package simproto;
 service SimControl {
     rpc ControlSim(SimCommand) returns (Ack) {}
 	rpc InitSim(SimInit) returns (Ack) {}
-	rpc EditConfig (Parameters) returns (Ack) {}
 }
 
 message SimCommand {
@@ -24,10 +23,11 @@ message Ack {
 
 message SimInit {
 	repeated string config_files = 1;
-	string output_dir = 2;
+	repeated ConfigParameter config_params = 2;
+	string output_dir = 3;
 }
-
-message Parameters {
-	repeated string value = 1;
+message ConfigParameter {
+	string config_path = 1;
+	string value = 2;
 }
 

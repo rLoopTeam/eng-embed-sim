@@ -129,13 +129,14 @@ class Sim(object):
             #sensor.add_step_listener(LaserOptoTestListener(self, sensor.config))  # For debugging
             sensor.add_step_listener(SensorCsvWriter(self, sensor.config))
             #sensor.add_step_listener(SensorRawCsvWriter(self, sensor.config))   
-        
+        """
+
         # - Laser Distance Sensor
         self.sensors['laser_dist'] = LaserDistSensor(self, Config(self.config.sensors.laser_dist))
         sensor = self.sensors['laser_dist']
-        sensor.add_step_listener(SensorCsvWriter(self, sensor.config))
+        #sensor.add_step_listener(SensorCsvWriter(self, sensor.config))
         #sensor.add_step_listener(SensorRawCsvWriter(self, sensor.config))
-        """
+
 
         # - Brake Sensors: MLP, limit switches (for both)
         pass

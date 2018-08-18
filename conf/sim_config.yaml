@@ -176,8 +176,8 @@ sim:
 #                noise: {enabled: True, scale: 0.02 G, center: 0.0}
         laser_dist: 
             sampling_rate: 50 Hz
-            # Maximum distance the sensor can see
-            max_dist: 100m
+            # Maximum distance the sensor can see: 100m
+            max_dist: 1260m
             log_filename: laser_dist.csv
             noise:
                 enabled: False
